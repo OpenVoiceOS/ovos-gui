@@ -1,0 +1,2 @@
+ovos-core~=0.0.2a1
+tornado~=6.0, >=6.0.3
