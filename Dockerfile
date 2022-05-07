@@ -16,4 +16,7 @@ USER mycroft
 COPY . /tmp/ovos-gui
 RUN pip3 install /tmp/ovos-gui
 
+# TODO remove this, missing dependency in ovos-core
+RUN pip3 install python-dateutil
+
 ENTRYPOINT mycroft-gui-service
