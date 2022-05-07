@@ -10,7 +10,7 @@ RUN apt-get update && \
   apt-get clean && \
   useradd --no-log-init mycroft -m
 
-
+RUN pip3 install ovos_workshop==0.0.7a3
 # the lines above are kept static so that docker layer is shared and cached among all containers
 
 COPY . /tmp/ovos-gui
