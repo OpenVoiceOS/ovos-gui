@@ -1,4 +1,4 @@
-FROM openvoiceos/core:dev
+FROM ghcr.io/openvoiceos/core:dev
 
 COPY . /tmp/ovos-gui
 RUN pip3 install /tmp/ovos-gui
