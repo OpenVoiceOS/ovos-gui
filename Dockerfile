@@ -10,7 +10,7 @@ RUN apt-get update && \
   apt-get clean && \
   useradd --no-log-init mycroft -m
 
-USER mycroft
+
 # the lines above are kept static so that docker layer is shared and cached among all containers
 
 COPY . /tmp/ovos-gui
@@ -19,4 +19,5 @@ RUN pip3 install /tmp/ovos-gui
 # TODO remove this, missing dependency in ovos-core
 RUN pip3 install python-dateutil
 
+USER mycroft
 ENTRYPOINT mycroft-gui-service
