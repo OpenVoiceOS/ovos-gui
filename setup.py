@@ -33,8 +33,13 @@ setup(
     name='ovos-gui',
     version="0.0.2",
     license='Apache-2.0',
-    url='https://github.com/OpenVoiceOS/ovos-core',
-    description='ovos-core metapackage for gui daemon',
+    url='https://github.com/OpenVoiceOS/ovos-gui',
+    description='ovos-core gui service daemon',
     include_package_data=True,
-    install_requires=required('requirements.txt')
+    install_requires=required('requirements.txt'),
+    entry_points={
+        'console_scripts': [
+            'ovos-gui-service=ovos_gui.__main__:main'
+        ]
+    }
 )
