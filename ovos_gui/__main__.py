@@ -1,6 +1,7 @@
 from ovos_config.locale import setup_locale
 from ovos_utils import wait_for_exit_signal
 from ovos_utils.log import LOG, init_service_logger
+from ovos_utils.process_utils import reset_sigint_handler, PIDLock
 
 from ovos_gui.service import GUIService
 
@@ -18,7 +19,9 @@ def on_error(e='Unknown'):
 
 
 def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping):
+    reset_sigint_handler()
     init_service_logger("gui")
+    PIDLock("gui")
     LOG.debug("GUI websocket created")
     try:
         setup_locale()
