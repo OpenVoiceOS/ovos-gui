@@ -146,11 +146,13 @@ class GUIWebsocketHandler(WebSocketHandler):
             msg_type = '{}.{}'.format(msg['namespace'], 'set')
             msg_data = msg['data']
         else:
-            LOG.error(f"unknown message type, ignoring: {msg}")
+            # message not in SPEC
+            # https://github.com/MycroftAI/mycroft-gui/blob/master/transportProtocol.md
+            LOG.error(f"unknown GUI protocol message type, ignoring: {msg}")
             return
 
         message = Message(msg_type, msg_data)
-        LOG.info('Forwarding to bus...')
+        LOG.info('Forwarding to core bus...')
         self.application.enclosure.core_bus.emit(message)
         LOG.info('Done!')
 
