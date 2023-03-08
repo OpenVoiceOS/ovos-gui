@@ -19,6 +19,7 @@ def on_error(e='Unknown'):
 
 
 def main(ready_hook=on_ready, error_hook=on_error, stopping_hook=on_stopping):
+    PIDLock.init()
     reset_sigint_handler()
     init_service_logger("gui")
     PIDLock("gui")
