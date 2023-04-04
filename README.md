@@ -1,6 +1,6 @@
 # OVOS GUI MessageBus
 
-GUI messagebus service, manages GUI state and implements the [gui protocol]()
+GUI messagebus service, manages GUI state and implements the [gui protocol](./protocol.md)
 
 GUI clients (the application that actually draws the GUI) connect to this service
 
