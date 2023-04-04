@@ -29,9 +29,34 @@ def required(requirements_file):
                 if pkg.strip() and not pkg.startswith("#")]
 
 
+def get_version():
+    """ Find the version of ovos-core"""
+    version = None
+    version_file = os.path.join(BASEDIR, 'ovos_gui', 'version.py')
+    major, minor, build, alpha = (None, None, None, None)
+    with open(version_file) as f:
+        for line in f:
+            if 'VERSION_MAJOR' in line:
+                major = line.split('=')[1].strip()
+            elif 'VERSION_MINOR' in line:
+                minor = line.split('=')[1].strip()
+            elif 'VERSION_BUILD' in line:
+                build = line.split('=')[1].strip()
+            elif 'VERSION_ALPHA' in line:
+                alpha = line.split('=')[1].strip()
+
+            if ((major and minor and build and alpha) or
+                    '# END_VERSION_BLOCK' in line):
+                break
+    version = f"{major}.{minor}.{build}"
+    if int(alpha):
+        version += f"a{alpha}"
+    return version
+
+
 setup(
     name='ovos-gui',
-    version="0.0.2",
+    version=get_version(),
     license='Apache-2.0',
     url='https://github.com/OpenVoiceOS/ovos-gui',
     description='ovos-core gui service daemon',
