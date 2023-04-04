@@ -1,9 +1,9 @@
 import threading
 
 from mycroft_bus_client import Message
+from ovos_backend_client.pairing import is_paired
 from ovos_config.config import Configuration
 from ovos_utils.log import LOG
-from ovos_utils.system import ssh_enable, ssh_disable
 
 from ovos_gui.homescreen import HomescreenManager
 from ovos_gui.interfaces.mobile import MobileExtensionGuiInterface
@@ -29,7 +29,7 @@ class ExtensionsManager:
         self.active_extension = enclosure_config.get("extension", "generic")
 
         # ToDo: Add Exclusive Support For "Desktop", "Mobile" Extensions
-        self.supported_extensions = ["smartspeaker", "bigscreen", "generic", "mobile"]
+        self.supported_extensions = ["smartspeaker", "bigscreen", "generic", "mobile", "plasmoid"]
 
         if self.active_extension.lower() not in self.supported_extensions:
             self.active_extension = "generic"
@@ -48,6 +48,8 @@ class ExtensionsManager:
             self.extension = BigscreenExtension(self.bus, self.gui)
         elif extension_id == "mobile":
             self.extension = MobileExtension(self.bus, self.gui)
+        elif extension_id == "plasmoid":
+            self.extension = PlasmoidExtension(self.bus, self.gui)
         else:
             self.extension = GenericExtension(self.bus, self.gui)
 
@@ -55,28 +57,42 @@ class ExtensionsManager:
         self.bus.emit(
             Message("extension.manager.activated", {"id": extension_id}))
 
+        def signal_available(message=None):
+            message = message or Message("")
+            self.bus.emit(message.forward("mycroft.gui.available",
+                                          {"permanent": self.extension.permanent}))
+
+        if self.extension.preload_gui:
+            signal_available()
+        else:
+            self.bus.on("mycroft.gui.connected", signal_available)
+
 
 class SmartSpeakerExtension:
     """ Smart Speaker Extension: This extension is responsible for managing the Smart Speaker
     specific GUI behaviours. This extension adds support for Homescreens and Homescreen Mangement.
 
     Args:
-        name: Name of the extension manager
         bus: MessageBus instance
         gui: GUI instance
+        preload_gui (bool): load GUI skills even if gui client not connected
+        permanent (bool): disable unloading of GUI skills on gui client disconnections
     """
 
-    def __init__(self, bus, gui):
+    def __init__(self, bus, gui, preload_gui=False, permanent=True):
         LOG.info("SmartSpeaker: Initializing")
 
         self.bus = bus
         self.gui = gui
+        self.preload_gui = preload_gui
+        self.permanent = permanent
         self.homescreen_manager = HomescreenManager(self.bus, self.gui)
 
         self.homescreen_thread = threading.Thread(
             target=self.homescreen_manager.run)
         self.homescreen_thread.start()
 
+        self.device_paired = is_paired()
         self.backend = "unknown"
         self.gui_interface = SmartSpeakerExtensionGuiInterface(
             self.bus, self.homescreen_manager)
@@ -102,6 +118,7 @@ class SmartSpeakerExtension:
             self.backend = backend
 
     def start_homescreen_process(self, message):
+        self.device_paired = is_paired()
         if not self.backend == "local":
             self.homescreen_manager.show_homescreen()
             self.bus.emit(Message("ovos.shell.status.ok"))
@@ -134,16 +151,19 @@ class BigscreenExtension:
     support for Window managment and Window behaviour.
 
     Args:
-        name: Name of the extension manager
         bus: MessageBus instance
         gui: GUI instance
+        preload_gui (bool): load GUI skills even if gui client not connected
+        permanent (bool): disable unloading of GUI skills on gui client disconnections
     """
 
-    def __init__(self, bus, gui):
+    def __init__(self, bus, gui, preload_gui=False, permanent=True):
         LOG.info("Bigscreen: Initializing")
 
         self.bus = bus
         self.gui = gui
+        self.permanent = permanent
+        self.preload_gui = preload_gui
         self.interaction_without_idle = True
         self.interaction_skill_id = None
 
@@ -204,16 +224,19 @@ class GenericExtension:
     Management but it needs to be exclusively enabled in the configuration file.
 
     Args:
-        name: Name of the extension manager
         bus: MessageBus instance
         gui: GUI instance
+        preload_gui (bool): load GUI skills even if gui client not connected
+        permanent (bool): disable unloading of GUI skills on gui client disconnections
     """
 
-    def __init__(self, bus, gui):
+    def __init__(self, bus, gui, preload_gui=False, permanent=False):
         LOG.info("Generic: Initializing")
 
         self.bus = bus
         self.gui = gui
+        self.preload_gui = preload_gui
+        self.permanent = permanent
         core_config = Configuration()
         gui_config = core_config.get("gui") or {}
         generic_config = gui_config.get("generic", {})
@@ -245,16 +268,19 @@ class MobileExtension:
         This extension adds support for Homescreens and Homescreen Management and global page back navigation.
 
     Args:
-        name: Name of the extension manager
         bus: MessageBus instance
         gui: GUI instance
+        preload_gui (bool): load GUI skills even if gui client not connected
+        permanent (bool): disable unloading of GUI skills on gui client disconnections
     """
 
-    def __init__(self, bus, gui):
+    def __init__(self, bus, gui, preload_gui=True, permanent=True):
         LOG.info("Mobile: Initializing")
 
         self.bus = bus
         self.gui = gui
+        self.preload_gui = preload_gui
+        self.permanent = permanent
         self.homescreen_manager = HomescreenManager(self.bus, self.gui)
 
         self.homescreen_thread = threading.Thread(
@@ -279,3 +305,48 @@ class MobileExtension:
 
     def handle_page_back(self, message):
         self.gui.handle_namespace_global_back({})
+
+
+class PlasmoidExtension:
+    """ Plasmoid Platform Extension: This extension is responsible for managing the generic GUI behaviours
+    for non specific platforms. The generic extension does optionally support Homescreen and Homescreen
+    Management but it needs to be exclusively enabled in the configuration file.
+
+    Args:
+        bus: MessageBus instance
+        gui: GUI instance
+        preload_gui (bool): load GUI skills even if gui client not connected
+        permanent (bool): disable unloading of GUI skills on gui client disconnections
+    """
+
+    def __init__(self, bus, gui, preload_gui=False, permanent=True):
+        LOG.info("Plasmoid: Initializing")
+
+        self.bus = bus
+        self.gui = gui
+        self.preload_gui = preload_gui
+        self.permanent = permanent
+        core_config = Configuration()
+        gui_config = core_config.get("gui") or {}
+        generic_config = gui_config.get("plasmoid", {})
+        self.homescreen_supported = generic_config.get("homescreen_supported", False)
+
+        if self.homescreen_supported:
+            self.homescreen_manager = HomescreenManager(self.bus, self.gui)
+            self.homescreen_thread = threading.Thread(
+                target=self.homescreen_manager.run)
+            self.homescreen_thread.start()
+
+        try:
+            self.bus.on("mycroft.gui.screen.close",
+                        self.handle_remove_namespace)
+
+        except Exception as e:
+            LOG.error(f"Plasmoid: Init Bus Exception: {e}")
+
+    def handle_remove_namespace(self, message):
+        LOG.info("Got Clear Namespace Event In Skill")
+        get_skill_namespace = message.data.get("skill_id", "")
+        if get_skill_namespace:
+            self.bus.emit(Message("gui.clear.namespace",
+                                  {"__from": get_skill_namespace}))
