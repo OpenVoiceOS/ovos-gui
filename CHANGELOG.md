@@ -1,5 +1,9 @@
 # Changelog
 
+## [V0.0.2a2](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a2) (2023-04-04)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a1...V0.0.2a2)
+
 ## [V0.0.2a1](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a1) (2023-04-04)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/df12af7ee5204fdf331a0694fc1dafa2a54e2a5a...V0.0.2a1)
