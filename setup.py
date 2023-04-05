@@ -54,6 +54,14 @@ def get_version():
     return version
 
 
+def package_files(directory):
+    paths = []
+    for (path, _, filenames) in os.walk(directory):
+        for filename in filenames:
+            paths.append(os.path.join('..', path, filename))
+    return paths
+
+
 setup(
     name='ovos-gui',
     version=get_version(),
@@ -61,6 +69,7 @@ setup(
     url='https://github.com/OpenVoiceOS/ovos-gui',
     description='ovos-core gui service daemon',
     include_package_data=True,
+    package_data={"": package_files('ovos_gui/res')},
     install_requires=required('requirements.txt'),
     entry_points={
         'console_scripts': [
