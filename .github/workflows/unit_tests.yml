@@ -36,6 +36,7 @@ jobs:
       matrix:
         python-version: [ 3.7, 3.8, 3.9]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v2
       - name: Set up python ${{ matrix.python-version }}
@@ -45,14 +46,14 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt install python3-dev swig libssl-dev
+          sudo apt install python3-dev swig
           python -m pip install build wheel
-      - name: Install core repo
+      - name: Install repo
         run: |
           pip install .
       - name: Install test dependencies
         run: |
-          pip install -r requirements/tests.txt
+          pip install -r test/requirements.txt
       - name: Run unittests
         run: |
           pytest --cov=ovos_gui --cov-report xml test/unittests
