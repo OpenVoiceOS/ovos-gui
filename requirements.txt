@@ -1,4 +1,4 @@
 ovos-bus-client~=0.0, >=0.0.3a4
 ovos-utils~=0.0, >=0.0.31a3
-ovos-config~=0.0,>=0.0.7a2
+ovos-config~=0.0,>=0.0.8a2
 tornado~=6.0, >=6.0.3
