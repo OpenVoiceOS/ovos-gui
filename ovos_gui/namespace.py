@@ -46,7 +46,7 @@ from typing import List, Union
 
 from ovos_config.config import Configuration
 from ovos_utils.log import LOG
-from ovos_utils.messagebus import Message, MessageBusClient
+from ovos_bus_client import Message, MessageBusClient
 
 from ovos_gui.bus import (
     create_gui_service,
