@@ -1,5 +1,5 @@
 
-from mycroft_bus_client import Message
+from ovos_bus_client import Message
 
 from unittest import mock
 from unittest.mock import patch

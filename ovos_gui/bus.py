@@ -27,7 +27,7 @@ import asyncio
 import json
 from threading import Lock
 
-from mycroft_bus_client import Message
+from ovos_bus_client import Message
 from ovos_config.config import Configuration
 from ovos_utils import create_daemon
 from ovos_utils.log import LOG

@@ -17,7 +17,7 @@
 from unittest import TestCase
 from unittest import mock
 
-from mycroft_bus_client import Message
+from ovos_bus_client import Message
 
 from ovos_gui.namespace import Namespace, NamespaceManager
 from ovos_gui.page import GuiPage
