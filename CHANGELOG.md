@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui/tree/HEAD)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a9...HEAD)
+
+**Merged pull requests:**
+
+- mycroft-bus-client -\> ovos-bus-client [\#5](https://github.com/OpenVoiceOS/ovos-gui/pull/5) ([JarbasAl](https://github.com/JarbasAl))
+
+## [V0.0.2a9](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a9) (2023-04-05)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a8...V0.0.2a9)
+
 ## [V0.0.2a8](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a8) (2023-04-05)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a7...V0.0.2a8)
