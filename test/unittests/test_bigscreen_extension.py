@@ -3,7 +3,7 @@ from unittest.mock import patch
 from ovos_gui.extensions import BigscreenExtension
 from .mocks import MessageBusMock, base_config
 from ovos_config import Configuration
-from mycroft_bus_client import Message
+from ovos_bus_client import Message
 
 PATCH_MODULE = "ovos_gui.extensions"
 

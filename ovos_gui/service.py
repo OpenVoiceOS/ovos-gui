@@ -1,4 +1,4 @@
-from mycroft_bus_client import MessageBusClient
+from ovos_bus_client import MessageBusClient
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 from ovos_config.config import Configuration

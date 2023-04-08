@@ -1,6 +1,6 @@
 import threading
 
-from mycroft_bus_client import Message
+from ovos_bus_client import Message
 from ovos_backend_client.pairing import is_paired
 from ovos_config.config import Configuration
 from ovos_utils.log import LOG
