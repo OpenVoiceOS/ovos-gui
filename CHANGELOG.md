@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a10...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a11...HEAD)
+
+**Implemented enhancements:**
+
+- feat/ovos-gui-debugger [\#7](https://github.com/OpenVoiceOS/ovos-gui/pull/7) ([JarbasAl](https://github.com/JarbasAl))
+
+## [V0.0.2a11](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a11) (2023-04-27)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a10...V0.0.2a11)
 
 **Merged pull requests:**
 
