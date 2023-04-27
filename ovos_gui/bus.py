@@ -156,7 +156,7 @@ class GUIWebsocketHandler(WebSocketHandler):
             LOG.error(f"unknown GUI protocol message type, ignoring: {msg}")
             return
 
-        message = Message(msg_type, msg_data, msg.get("context", {"source": "gui"}))
+        message = Message(msg_type, msg_data, parsed_message.context)
         LOG.info('Forwarding to core bus...')
         self.application.enclosure.core_bus.emit(message)
         LOG.info('Done!')
