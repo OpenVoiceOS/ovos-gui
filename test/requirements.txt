@@ -5,4 +5,4 @@ pytest-cov==2.8.1
 cov-core==1.15.0
 sphinx==2.2.1
 sphinx-rtd-theme==0.4.3
-ovos_plugin_manager
+ovos_plugin_manager>=0.0.23a9
