@@ -19,6 +19,17 @@ This protocol defines how ovos-gui communicates with connected clients
   * [Remove items from the list](#remove-items-from-the-list-1)
 
 
+# CONNECTION
+
+on connection gui clients announce themselves
+
+```javascript
+{
+    "type": "mycroft.gui.connected",
+    "gui_id": "unique_identifier_provided_by_client"
+}
+```
+
 # ACTIVE SKILLS LIST
 
 The active skill data, described in the section MODELS is mandatory for the rest of the protocol to work. I.e. if some data or an event arrives with namespace "mycroft.weather", the skill id "mycroft.weather" must have been advertised as recently used in the recent skills model beforehand, otherwise all requests on that namespace will be ignored on both client and serverside and considered a protocol error.
