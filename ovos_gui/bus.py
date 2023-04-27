@@ -27,7 +27,7 @@ import asyncio
 import json
 from threading import Lock
 
-from ovos_bus_client import Message
+from ovos_bus_client import Message, GUIMessage
 from ovos_config.config import Configuration
 from ovos_utils import create_daemon
 from ovos_utils.log import LOG
@@ -121,34 +121,35 @@ class GUIWebsocketHandler(WebSocketHandler):
             namespace_pos += 1
 
     def on_message(self, message):
-        LOG.info("Received: {message}")
+        LOG.info(f"Received: {message}")
+        parsed_message = GUIMessage.deserialize(message)
         msg = json.loads(message)
-        if (msg.get('type') == "mycroft.events.triggered" and
-                (msg.get('event_name') == 'page_gained_focus' or
-                 msg.get('event_name') == 'system.gui.user.interaction')):
+        if parsed_message.msg_type == "mycroft.events.triggered" and \
+                (parsed_message.data.get('event_name') == 'page_gained_focus' or
+                 parsed_message.data.get('event_name') == 'system.gui.user.interaction'):
             # System event, a page was changed
-            event_name = msg.get('event_name')
+            event_name = parsed_message.data.get('event_name')
             if event_name == 'page_gained_focus':
                 msg_type = 'gui.page_gained_focus'
             else:
                 msg_type = 'gui.page_interaction'
 
-            msg_data = {'namespace': msg['namespace'],
-                        'page_number': msg['parameters'].get('number'),
-                        'skill_id': msg['parameters'].get('skillId')}
-        elif msg.get('type') == "mycroft.events.triggered":
+            msg_data = {'namespace': parsed_message.data['namespace'],
+                        'page_number': parsed_message.data['parameters'].get('number'),
+                        'skill_id': parsed_message.data['parameters'].get('skillId')}
+        elif parsed_message.msg_type == "mycroft.events.triggered":
             # A normal event was triggered
-            msg_type = '{}.{}'.format(msg['namespace'], msg['event_name'])
-            msg_data = msg['parameters']
+            msg_type = f"{parsed_message.data['namespace']}.{parsed_message.data['event_name']}"
+            msg_data = parsed_message.data['parameters']
 
-        elif msg.get('type') == 'mycroft.session.set':
+        elif parsed_message.msg_type == 'mycroft.session.set':
             # A value was changed send it back to the skill
-            msg_type = '{}.{}'.format(msg['namespace'], 'set')
-            msg_data = msg['data']
-        elif msg.get('type') == 'mycroft.gui.connected':
+            msg_type = f"{parsed_message.data['namespace']}.set"
+            msg_data = parsed_message.data['data']
+        elif parsed_message.msg_type == 'mycroft.gui.connected':
             # new client connected to GUI
-            msg_type = msg['type']
-            msg_data = msg['data']
+            msg_type = parsed_message.msg_type
+            msg_data = {"gui_id": parsed_message.data['gui_id']}
         else:
             # message not in SPEC
             # https://github.com/MycroftAI/mycroft-gui/blob/master/transportProtocol.md
