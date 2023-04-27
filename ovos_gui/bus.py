@@ -145,13 +145,17 @@ class GUIWebsocketHandler(WebSocketHandler):
             # A value was changed send it back to the skill
             msg_type = '{}.{}'.format(msg['namespace'], 'set')
             msg_data = msg['data']
+        elif msg.get('type') == 'mycroft.gui.connected':
+            # new client connected to GUI
+            msg_type = msg['type']
+            msg_data = msg['data']
         else:
             # message not in SPEC
             # https://github.com/MycroftAI/mycroft-gui/blob/master/transportProtocol.md
             LOG.error(f"unknown GUI protocol message type, ignoring: {msg}")
             return
 
-        message = Message(msg_type, msg_data)
+        message = Message(msg_type, msg_data, msg.get("context", {"source": "gui"}))
         LOG.info('Forwarding to core bus...')
         self.application.enclosure.core_bus.emit(message)
         LOG.info('Done!')
