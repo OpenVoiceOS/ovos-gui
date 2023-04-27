@@ -73,7 +73,8 @@ setup(
     install_requires=required('requirements.txt'),
     entry_points={
         'console_scripts': [
-            'ovos-gui-service=ovos_gui.__main__:main'
+            'ovos-gui-service=ovos_gui.__main__:main',
+            'ovos-gui-debug-tui=ovos_gui.tui:main'
         ]
     }
 )
