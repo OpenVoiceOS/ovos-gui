@@ -149,7 +149,7 @@ class GUIWebsocketHandler(WebSocketHandler):
         elif parsed_message.msg_type == 'mycroft.gui.connected':
             # new client connected to GUI
             msg_type = parsed_message.msg_type
-            msg_data = {"gui_id": parsed_message.data['gui_id']}
+            msg_data = parsed_message.data
         else:
             # message not in SPEC
             # https://github.com/MycroftAI/mycroft-gui/blob/master/transportProtocol.md
