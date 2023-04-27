@@ -1,3 +1,4 @@
+ovos-backend-client
 ovos-bus-client~=0.0, >=0.0.3a10
 ovos-utils~=0.0, >=0.0.31a5
 ovos-config~=0.0,>=0.0.8a3
