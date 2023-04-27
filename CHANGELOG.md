@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a9...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a10...HEAD)
+
+**Merged pull requests:**
+
+- Fix missing ovos-backend-client library [\#6](https://github.com/OpenVoiceOS/ovos-gui/pull/6) ([goldyfruit](https://github.com/goldyfruit))
+
+## [V0.0.2a10](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a10) (2023-04-08)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a9...V0.0.2a10)
 
 **Merged pull requests:**
 
