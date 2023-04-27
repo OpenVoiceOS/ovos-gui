@@ -23,6 +23,9 @@ This protocol defines how ovos-gui communicates with connected clients
 
 on connection gui clients announce themselves
 
+This is an extension by OVOS to the original mycroft protocol
+
+
 ```javascript
 {
     "type": "mycroft.gui.connected",
