@@ -54,10 +54,6 @@ class GUIDebugger:
                 self.draw()
                 last_buffer = self.buffer
 
-    @property
-    def gui_id(self):
-        return self.name + "_" + str(getpid())
-
     def connect(self):
         LOG.debug("Announcing GUI")
         # Create the websocket for GUI communications
@@ -68,11 +64,6 @@ class GUIDebugger:
                                         port=port, route="/gui")
             self.gui_ws.on("open", self.on_open)
             self.gui_ws.on("message", self.on_gui_message)
-
-            if not self.gui_ws.connected_event.is_set():
-                self.gui_ws.connected_event.wait()
-
-            self.gui_ws.emit(GUIMessage("mycroft.gui.connected", gui_id=self.gui_id))
 
     def on_open(self, message=None):
         LOG.debug("Gui connection open")
