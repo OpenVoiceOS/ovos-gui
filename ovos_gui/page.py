@@ -1,7 +1,11 @@
+import os
+
 from ovos_utils.log import LOG
 
 
 class GuiPage:
+    qml_server = None
+
     def __init__(self, url: str, name: str, persistent: bool, duration: int):
         """
         A GuiPage represents a single GUI Display within a given namespace.
@@ -16,3 +20,9 @@ class GuiPage:
         self.persistent = persistent
         self.duration = duration
         self.active = False
+        if self.qml_server is not None and not url.startswith("http"):
+            src = url
+            dst = self.qml_server.qml_path + "/" + url.split("/")[-1]
+            LOG.debug(f"serving qml file {src} from {dst} via {self.qml_server.server_address}")
+            os.symlink(src, dst)
+            self.url = dst

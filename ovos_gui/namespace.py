@@ -44,9 +44,9 @@ from threading import Lock, Timer
 from time import sleep
 from typing import List, Union, Optional
 
+from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration
 from ovos_utils.log import LOG
-from ovos_bus_client import Message, MessageBusClient
 
 from ovos_gui.bus import (
     create_gui_service,
@@ -55,6 +55,7 @@ from ovos_gui.bus import (
     send_message_to_gui
 )
 from ovos_gui.page import GuiPage
+from ovos_gui.qml_server import start_qml_http_server
 
 namespace_lock = Lock()
 
@@ -126,6 +127,7 @@ class Namespace:
             displayed at the same time
         data: a key/value pair representing the data used to populate the GUI
     """
+    qml_server = None
 
     def __init__(self, name: str):
         self.name = name
@@ -460,6 +462,15 @@ class NamespaceManager:
         self.idle_display_skill = _get_idle_display_config()
         self.active_extension = _get_active_gui_extension()
         self._define_message_handlers()
+        self.qml_server = None
+        self._init_qml_server()
+
+    def _init_qml_server(self):
+        config = Configuration().get("gui_websocket", {})
+        if config.get("qml_server", False):
+            self.qml_server = start_qml_http_server()
+        GuiPage.qml_server = self.qml_server
+        Namespace.qml_server = self.qml_server
 
     def _define_message_handlers(self):
         """
