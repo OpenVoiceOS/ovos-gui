@@ -21,8 +21,8 @@ class GuiPage:
         self.duration = duration
         self.active = False
         if self.qml_server is not None and not url.startswith("http"):
-            src = url
-            dst = self.qml_server.qml_path + "/" + url.split("/")[-1]
-            LOG.debug(f"serving qml file {src} from {dst} via {self.qml_server.server_address}")
-            os.symlink(src, dst)
-            self.url = dst
+            fname = url.split("/")[-1]
+            dst = self.qml_server.qml_path + "/" + fname
+            os.symlink(url, dst)
+            self.url = f"{self.qml_server.url}/{fname}"
+            LOG.debug(f"serving qml file {fname} from {dst} via {self.url}")

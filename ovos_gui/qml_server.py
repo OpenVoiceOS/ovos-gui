@@ -47,5 +47,6 @@ def _initialize_http_server(started: Event, directory: str, port: int):
     http_server = socketserver.TCPServer(("", port), handler)
     _HTTP_SERVER = http_server
     _HTTP_SERVER.qml_path = directory
+    _HTTP_SERVER.url = f"{_HTTP_SERVER.server_address[0]}:{_HTTP_SERVER.server_address[1]}"
     started.set()
     http_server.serve_forever()
