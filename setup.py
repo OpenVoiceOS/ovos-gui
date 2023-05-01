@@ -69,7 +69,7 @@ setup(
     url='https://github.com/OpenVoiceOS/ovos-gui',
     description='ovos-core gui service daemon',
     include_package_data=True,
-    packages=["ovos_gui"],
+    packages=["ovos_gui", "ovos_gui.interfaces"],
     package_data={"": package_files('ovos_gui/res')},
     install_requires=required('requirements.txt'),
     entry_points={
