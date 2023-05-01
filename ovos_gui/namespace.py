@@ -40,13 +40,18 @@ code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
 
+from os import makedirs
+from os.path import join, dirname
+from threading import Lock, Timer, Event
+from time import sleep
+from typing import List, Union
 from threading import Lock, Timer
 from time import sleep
 from typing import List, Union, Optional
 
+from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration
 from ovos_utils.log import LOG
-from ovos_bus_client import Message, MessageBusClient
 
 from ovos_gui.bus import (
     create_gui_service,
@@ -55,6 +60,7 @@ from ovos_gui.bus import (
     send_message_to_gui
 )
 from ovos_gui.page import GuiPage
+from ovos_gui.qml_server import start_qml_http_server
 
 namespace_lock = Lock()
 
@@ -117,7 +123,7 @@ class Namespace:
     are communicated to the GUI message bus.
 
     Attributes:
-        name: the name of the Namespace, generally the skill ID
+        skill_id: the name of the Namespace, generally the skill ID
         persistent: indicates whether or not the namespace persists for a
             period of time or until the namespace is removed.
         duration: if the namespace persists for a period of time, this is the
@@ -126,9 +132,8 @@ class Namespace:
             displayed at the same time
         data: a key/value pair representing the data used to populate the GUI
     """
-
-    def __init__(self, name: str):
-        self.name = name
+    def __init__(self, skill_id: str):
+        self.skill_id = skill_id
         self.persistent = False
         self.duration = 30
         self.pages: List[GuiPage] = list()
@@ -140,12 +145,12 @@ class Namespace:
         """
         Adds this namespace to the list of active namespaces.
         """
-        LOG.info(f"Adding \"{self.name}\" to active GUI namespaces")
+        LOG.info(f"Adding \"{self.skill_id}\" to active GUI namespaces")
         message = dict(
             type="mycroft.session.list.insert",
             namespace="mycroft.system.active_skills",
             position=0,
-            data=[dict(skill_id=self.name)]
+            data=[dict(skill_id=self.skill_id)]
         )
         send_message_to_gui(message)
 
@@ -154,7 +159,7 @@ class Namespace:
         Activate this namespace if its already in the list of active namespaces.
         @param position: position to move this namespace FROM
         """
-        LOG.info(f"Activating GUI namespace \"{self.name}\"")
+        LOG.info(f"Activating GUI namespace \"{self.skill_id}\"")
         message = {
             "type": "mycroft.session.list.move",
             "namespace": "mycroft.system.active_skills",
@@ -170,7 +175,7 @@ class Namespace:
         any session data.
         @param position: position to remove this namespace FROM
         """
-        LOG.info(f"Removing {self.name} from active GUI namespaces")
+        LOG.info(f"Removing {self.skill_id} from active GUI namespaces")
 
         # unload the data first before removing the namespace
         # use the keys of the data to unload the data
@@ -198,11 +203,11 @@ class Namespace:
         """
         message = dict(
             type="mycroft.session.set",
-            namespace=self.name,
+            namespace=self.skill_id,
             data={name: value}
         )
 
-        # LOG.info(f"Setting data {message} in GUI namespace {self.name}")
+        # LOG.info(f"Setting data {message} in GUI namespace {self.skill_id}")
         send_message_to_gui(message)
 
     def unload_data(self, name: str):
@@ -213,9 +218,9 @@ class Namespace:
         message = dict(
             type="mycroft.session.delete",
             property=name,
-            namespace=self.name
+            namespace=self.skill_id
         )
-        # LOG.info(f"Deleting data {message} from GUI namespace {self.name}")
+        # LOG.info(f"Deleting data {message} from GUI namespace {self.skill_id}")
         send_message_to_gui(message)
 
     def get_position_of_last_item_in_data(self) -> int:
@@ -291,7 +296,7 @@ class Namespace:
 
         @param new_pages: pages to add to the active page list
         """
-        LOG.info(f"Adding pages to GUI namespace {self.name}: {new_pages}")
+        LOG.info(f"Adding pages to GUI namespace {self.skill_id}: {new_pages}")
         LOG.info(f"Current pages: {self.pages}")
         # print the attributes of the new pages
         for page in new_pages:
@@ -303,7 +308,7 @@ class Namespace:
 
         message = dict(
             type="mycroft.gui.list.insert",
-            namespace=self.name,
+            namespace=self.skill_id,
             position=position,
             data=[dict(url=page.url) for page in new_pages]
         )
@@ -315,7 +320,7 @@ class Namespace:
 
         @param page: the page that will gain focus
         """
-        LOG.info(f"Activating page {page.name} in GUI namespace {self.name}")
+        LOG.info(f"Activating page {page.name} in GUI namespace {self.skill_id}")
         LOG.info(f"Current pages from _activate_page: {self.pages}")
         # TODO: Simplify two loops into one (with unit test)
         # get the index of the page in the self.pages list
@@ -341,7 +346,7 @@ class Namespace:
 
         message = dict(
             type="mycroft.events.triggered",
-            namespace=self.name,
+            namespace=self.skill_id,
             event_name="page_gained_focus",
             data=dict(number=page_index)
         )
@@ -353,14 +358,14 @@ class Namespace:
 
         @param positions: list of int page positions to remove
         """
-        LOG.info(f"Removing pages from GUI namespace {self.name}: {positions}")
+        LOG.info(f"Removing pages from GUI namespace {self.skill_id}: {positions}")
         positions.sort(reverse=True)
         for position in positions:
             page = self.pages.pop(position)
-            LOG.info(f"Deleting {page} from GUI namespace {self.name}")
+            LOG.info(f"Deleting {page} from GUI namespace {self.skill_id}")
             message = dict(
                 type="mycroft.gui.list.remove",
-                namespace=self.name,
+                namespace=self.skill_id,
                 position=position,
                 items_number=1
             )
@@ -372,7 +377,7 @@ class Namespace:
         @param page_number: the index of the page that will gain focus
         """
         LOG.info(
-            f"Page {page_number} gained focus in GUI namespace {self.name}")
+            f"Page {page_number} gained focus in GUI namespace {self.skill_id}")
         self._activate_page(self.pages[page_number])
 
     def page_update_interaction(self, page_number: int):
@@ -382,7 +387,7 @@ class Namespace:
         """
 
         LOG.info(f"Page {page_number} update interaction in GUI namespace "
-                 f"{self.name}")
+                 f"{self.skill_id}")
 
         page = self.pages[page_number]
         if not page.persistent and page.duration > 0:
@@ -459,7 +464,20 @@ class NamespaceManager:
         self.remove_namespace_timers = dict()
         self.idle_display_skill = _get_idle_display_config()
         self.active_extension = _get_active_gui_extension()
+        self._ready_event = Event()
+        self.gui_files = {}
+        self.qml_server = None
+        self.gui_file_path = None
+        self._init_qml_server()
         self._define_message_handlers()
+
+    def _init_qml_server(self):
+        config = Configuration().get("gui_websocket", {})
+        if config.get("qml_server", False):
+            from ovos_utils.file_utils import get_temp_path
+            self.gui_file_path = config.get("server_path") or \
+                                 get_temp_path("ovos_qml_server")
+            self.qml_server = start_qml_http_server(self.gui_file_path)
 
     def _define_message_handlers(self):
         """
@@ -469,12 +487,43 @@ class NamespaceManager:
         self.core_bus.on("gui.event.send", self.handle_send_event)
         self.core_bus.on("gui.page.delete", self.handle_delete_page)
         self.core_bus.on("gui.page.show", self.handle_show_page)
+        self.core_bus.on("gui.page.upload", self.handle_receive_gui_pages)
         self.core_bus.on("gui.status.request", self.handle_status_request)
         self.core_bus.on("gui.value.set", self.handle_set_value)
         self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
-        self.core_bus.on("gui.page_gained_focus",
-                         self.handle_page_gained_focus)
+        self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
+        self.core_bus.on("mycroft.ready", self.handle_ready)
+
+    def handle_ready(self, message):
+        self._ready_event.set()
+
+    def _get_res_id_from_message(self, message, page):
+        """
+        Resolve a resource ID for a given page name
+        @param message: Message including resource request
+        @param res_name: Name of GUI resource (full or partial file path)
+        @return: Normalized resource ID used by GUI File Server
+        """
+        skill_id = message.data['__from']
+        framework = message.data.get("framework", "qt5")
+        return join(skill_id, framework, page)
+
+    def handle_receive_gui_pages(self, message: Message):
+        """
+        Handle GUI resources from a skill or plugin. Pages are written to
+        `self.server_path` which is accessible via a lightweight HTTP server and
+        may additionally be mounted to a host path/volume in container setups.
+        @param message: Message containing UI resource file contents and meta
+        """
+        for page, contents in message.data["pages"]:
+            res_id = self._get_res_id_from_message(message, page)
+            self.gui_files[res_id] = contents
+            file_path = join(self.gui_file_path, res_id)
+            LOG.debug(f"writing UI file: {file_path}")
+            makedirs(dirname(file_path), exist_ok=True)
+            with open(file_path, 'w+') as f:
+                f.write(contents)
 
     def handle_clear_namespace(self, message: Message):
         """
@@ -638,9 +687,9 @@ class NamespaceManager:
         for position, namespace in enumerate(self.active_namespaces):
             if position:
                 if not namespace.persistent:
-                    self._remove_namespace(namespace.name)
+                    self._remove_namespace(namespace.skill_id)
             else:
-                if namespace.name == self.idle_display_skill:
+                if namespace.skill_id == self.idle_display_skill:
                     namespace.set_persistence(skill_type="idleDisplaySkill")
                 else:
                     namespace.set_persistence(skill_type="genericSkill")
@@ -662,18 +711,18 @@ class NamespaceManager:
         @param namespace: the namespace to be removed
         """
         # Before removing check if there isn't already a timer for this namespace
-        if namespace.name in self.remove_namespace_timers:
+        if namespace.skill_id in self.remove_namespace_timers:
             return
 
         remove_namespace_timer = Timer(
             namespace.duration,
             self._remove_namespace_via_timer,
-            args=(namespace.name,)
+            args=(namespace.skill_id,)
         )
         LOG.debug(f"Scheduled removal of namespace {namespace.name} in "
                   f"duration {namespace.duration}")
         remove_namespace_timer.start()
-        self.remove_namespace_timers[namespace.name] = remove_namespace_timer
+        self.remove_namespace_timers[namespace.skill_id] = remove_namespace_timer
 
     def _remove_namespace_via_timer(self, namespace_name: str):
         """
@@ -715,7 +764,7 @@ class NamespaceManager:
         """
         if self.active_namespaces:
             displaying_namespace = self.active_namespaces[0]
-            message_data = dict(skill_id=displaying_namespace.name)
+            message_data = dict(skill_id=displaying_namespace.skill_id)
             self.core_bus.emit(
                 Message("gui.namespace.displayed", data=message_data)
             )
@@ -757,7 +806,7 @@ class NamespaceManager:
         for key, value in data.items():
             if key not in RESERVED_KEYS and namespace.data.get(key) != value:
                 LOG.debug(
-                    f"Setting {key} to {value} in namespace {namespace.name}")
+                    f"Setting {key} to {value} in namespace {namespace.skill_id}")
                 namespace.data[key] = value
                 if namespace in self.active_namespaces:
                     namespace.load_data(key, value)
@@ -767,15 +816,31 @@ class NamespaceManager:
         Handles an event from the GUI indicating it is connected to the bus.
         @param message: the event sent by the GUI
         """
-        # GUI has announced presence
-        # Announce connection, the GUI should connect on it soon
+        # old style GUI has announced presence in core bus
+        # send websocket port, the GUI should connect on it soon
         gui_id = message.data.get("gui_id")
+
+        framework = message.data.get("framework")  # new api
+        if framework is None:
+            qt = message.data.get("qt_version", 5)  # mycroft-gui api
+            if int(qt) == 6:
+                framework = "qt6"
+            else:
+                framework = "qt5"
+
         LOG.info(f"GUI with ID {gui_id} connected to core message bus")
         websocket_config = get_gui_websocket_config()
         port = websocket_config["base_port"]
         message = message.forward("mycroft.gui.port",
                                   dict(port=port, gui_id=gui_id))
         self.core_bus.emit(message)
+        if self.gui_file_path:
+            if not self._ready_event.wait(90):
+                LOG.warning("Not reported ready after 90s")
+            self.core_bus.emit(Message("gui.request_page_upload",
+                                       {'framework': framework},
+                                       {"source": "gui",
+                                        "destination": ["skills", "PHAL"]}))
 
     def handle_page_interaction(self, message: Message):
         """
@@ -818,7 +883,7 @@ class NamespaceManager:
         Handles global back events from the GUI.
         @param message: the event sent by the GUI
         """
-        namespace_name = self.active_namespaces[0].name
+        namespace_name = self.active_namespaces[0].skill_id
         namespace = self.loaded_namespaces.get(namespace_name)
         if namespace in self.active_namespaces:
             namespace.global_back()

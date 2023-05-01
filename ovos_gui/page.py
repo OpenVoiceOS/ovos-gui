@@ -1,5 +1,3 @@
-from ovos_utils.log import LOG
-
 
 class GuiPage:
     def __init__(self, url: str, name: str, persistent: bool, duration: int):
