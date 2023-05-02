@@ -1,4 +1,5 @@
-import os
+import shutil
+from hashlib import md5
 
 from ovos_utils.log import LOG
 
@@ -21,8 +22,8 @@ class GuiPage:
         self.duration = duration
         self.active = False
         if self.qml_server is not None and not url.startswith("http"):
-            fname = url.split("/")[-1]
+            fname = md5(url.encode("utf-8")).hexdigest() + ".qml"
             dst = self.qml_server.qml_path + "/" + fname
-            os.symlink(url, dst)
+            shutil.copy(url.replace("file://", ""), dst)
             self.url = f"http://{self.qml_server.url}/{fname}"
-            LOG.info(f"serving qml file {fname} from {dst} via {self.url}")
+            LOG.info(f"serving qml file {url} from {dst} via {self.url}")
