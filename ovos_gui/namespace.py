@@ -489,9 +489,8 @@ class NamespaceManager:
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
 
     def handle_receive_qml(self, message: Message):
-        page = message.data["page"]
-        contents = message.data["qml_contents"]
-        self.qml_files[page] = contents
+        for page, contents in message.data["qml_contents"]:
+            self.qml_files[page] = contents
 
     def handle_clear_namespace(self, message: Message):
         """
