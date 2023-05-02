@@ -462,6 +462,7 @@ class NamespaceManager:
         self.idle_display_skill = _get_idle_display_config()
         self.active_extension = _get_active_gui_extension()
         self._define_message_handlers()
+        self.qml_files = {}
         self.qml_server = None
         self._init_qml_server()
 
@@ -480,12 +481,17 @@ class NamespaceManager:
         self.core_bus.on("gui.event.send", self.handle_send_event)
         self.core_bus.on("gui.page.delete", self.handle_delete_page)
         self.core_bus.on("gui.page.show", self.handle_show_page)
+        self.core_bus.on("gui.page.upload", self.handle_receive_qml)
         self.core_bus.on("gui.status.request", self.handle_status_request)
         self.core_bus.on("gui.value.set", self.handle_set_value)
         self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
-        self.core_bus.on("gui.page_gained_focus",
-                         self.handle_page_gained_focus)
+        self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
+
+    def handle_receive_qml(self, message: Message):
+        page = message.data["page"]
+        contents = message.data["qml_contents"]
+        self.qml_files[page] = contents
 
     def handle_clear_namespace(self, message: Message):
         """
@@ -581,7 +587,11 @@ class NamespaceManager:
                     persist = False
                     duration = 30
 
-                pages_to_load.append(GuiPage(page, name, persist, duration))
+                if page in self.qml_files:
+                    contents = self.qml_files[page]
+                else:
+                    contents = None
+                pages_to_load.append(GuiPage(page, name, persist, duration, contents))
 
             with namespace_lock:
                 self._activate_namespace(namespace_name)
