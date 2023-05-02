@@ -24,5 +24,5 @@ class GuiPage:
             fname = url.split("/")[-1]
             dst = self.qml_server.qml_path + "/" + fname
             os.symlink(url, dst)
-            self.url = f"{self.qml_server.url}/{fname}"
-            LOG.debug(f"serving qml file {fname} from {dst} via {self.url}")
+            self.url = f"http://{self.qml_server.url}/{fname}"
+            LOG.info(f"serving qml file {fname} from {dst} via {self.url}")

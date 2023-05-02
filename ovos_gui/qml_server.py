@@ -1,14 +1,12 @@
+import http.server
 import os
 import shutil
 import socketserver
-import http.server
-
-from tempfile import gettempdir
-from os.path import isdir, join, dirname
 from threading import Thread, Event
+
 from ovos_config import Configuration
 from ovos_utils.file_utils import get_temp_path
-
+from ovos_utils.log import LOG
 
 _HTTP_SERVER = None
 
@@ -18,7 +16,7 @@ class QmlFileHandler(http.server.SimpleHTTPRequestHandler):
         mimetype = self.guess_type(self.path)
         is_file = not self.path.endswith('/')
         if is_file and any([mimetype.startswith(prefix) for
-                           prefix in ("text/", "application/octet-stream")]):
+                            prefix in ("text/", "application/octet-stream")]):
             self.send_header('Content-Type', "text/plain")
             self.send_header('Content-Disposition', 'inline')
         super().end_headers()
@@ -48,5 +46,6 @@ def _initialize_http_server(started: Event, directory: str, port: int):
     _HTTP_SERVER = http_server
     _HTTP_SERVER.qml_path = directory
     _HTTP_SERVER.url = f"{_HTTP_SERVER.server_address[0]}:{_HTTP_SERVER.server_address[1]}"
+    LOG.info(f"QML file server started: {_HTTP_SERVER.url}")
     started.set()
     http_server.serve_forever()
