@@ -34,8 +34,6 @@ class SmartSpeakerExtensionGuiInterface(GUIInterface):
         super().set_bus(self.bus)
 
         self.bus.on("mycroft.device.settings", self.handle_device_settings)
-        self.bus.on("ovos.PHAL.dashboard.status.response",
-                    self.update_device_dashboard_status)
 
         self.bus.on("ovos.phal.configuration.provider.get.response",
                     self.display_advanced_config_for_group)
@@ -52,10 +50,6 @@ class SmartSpeakerExtensionGuiInterface(GUIInterface):
                               self.handle_device_ssh_settings)
         self.register_handler(
             "mycroft.device.settings.developer", self.handle_device_developer_settings)
-        self.register_handler("mycroft.device.enable.dash",
-                              self.handle_device_developer_enable_dash)
-        self.register_handler("mycroft.device.disable.dash",
-                              self.handle_device_developer_disable_dash)
         self.register_handler("mycroft.device.show.idle",
                               self.handle_show_homescreen)
         self.register_handler("mycroft.device.settings.customize",
@@ -114,29 +108,6 @@ class SmartSpeakerExtensionGuiInterface(GUIInterface):
 
     def handle_device_developer_settings(self, message):
         self['state'] = 'settings/developer_settings'
-        self.handle_get_dash_status()
-
-    def handle_device_developer_enable_dash(self, message):
-        self.bus.emit(Message("ovos.PHAL.dashboard.enable"))
-
-    def handle_device_developer_disable_dash(self, message):
-        self.bus.emit(Message("ovos.PHAL.dashboard.disable"))
-
-    def update_device_dashboard_status(self, message):
-        call_check = message.data.get("status", False)
-        dash_security_pass = message.data.get("password", "")
-        dash_security_user = message.data.get("username", "")
-        dash_url = message.data.get("url", "")
-        if call_check:
-            self["dashboard_enabled"] = call_check
-            self["dashboard_url"] = dash_url
-            self["dashboard_user"] = dash_security_user
-            self["dashboard_password"] = dash_security_pass
-        else:
-            self["dashboard_enabled"] = call_check
-            self["dashboard_url"] = ""
-            self["dashboard_user"] = ""
-            self["dashboard_password"] = ""
 
     def handle_device_customize_settings(self, message):
         self['state'] = 'settings/customize_settings'
@@ -209,9 +180,6 @@ class SmartSpeakerExtensionGuiInterface(GUIInterface):
         self["groupList"] = groups_list
         self['state'] = 'settings/configuration_groups_display'
         self.show_page("SYSTEM_AdditionalSettings.qml", override_idle=True)
-
-    def handle_get_dash_status(self):
-        self.bus.emit(Message("ovos.PHAL.dashboard.get.status"))
 
     def build_initial_about_page_data(self):
         uname_info = platform.uname()

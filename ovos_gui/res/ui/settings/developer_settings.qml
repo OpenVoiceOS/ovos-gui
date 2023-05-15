@@ -25,12 +25,7 @@ import QtGraphicalEffects 1.12
 Item {
     id: developerSettingsView
     anchors.fill: parent
-    property bool dashActive: sessionData.dashboard_enabled ? Boolean(sessionData.dashboard_enabled) : false
     property bool busyVisible: false
-
-    onDashActiveChanged: {
-        developerSettingsView.busyVisible = false
-    }
 
     Item {
         id: topArea
@@ -66,101 +61,6 @@ Item {
             anchors.centerIn: parent
             running: viewBusyOverlay.visible
             enabled: viewBusyOverlay.visible
-        }
-    }
-
-    Flickable {
-        anchors.top: topArea.bottom
-        anchors.topMargin: Kirigami.Units.largeSpacing
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: midBottomArea.top
-        contentWidth: width
-        contentHeight: colMiddleContents.implicitHeight
-        clip: true
-
-        ColumnLayout {
-            id: colMiddleContents
-            anchors.left: parent.left
-            anchors.right: parent.right
-            spacing: Kirigami.Units.smallSpacing
-
-            Kirigami.Heading {
-                id: warnText
-                level: 3
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                color: Kirigami.Theme.textColor
-                text: "Enabling OVOS Dashboard will provide you access to control various services on this device, the OVOS Dashboard can be accessed on any device located in your LAN network"
-            }
-
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Kirigami.Units.largeSpacing
-            }
-
-            Button {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Kirigami.Units.gridUnit * 3
-                text: "Enable Dashboard"
-                visible: !dashActive
-                enabled: visible
-                onClicked: {
-                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
-                    triggerGuiEvent("mycroft.device.enable.dash", {})
-                    developerSettingsView.busyVisible = true
-                }
-            }
-
-            Button {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Kirigami.Units.gridUnit * 3
-                text: "Disable Dashboard"
-                visible: dashActive
-                enabled: visible
-                onClicked: {
-                    Mycroft.SoundEffects.playClickedSound(Qt.resolvedUrl("../../snd/clicked.wav"))
-                    triggerGuiEvent("mycroft.device.disable.dash", {})
-                    developerSettingsView.busyVisible = true
-                }
-            }
-
-            Kirigami.Separator {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-                visible: dashActive
-                enabled: visible
-            }
-
-            Kirigami.Heading {
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                level: 3
-                color: Kirigami.Theme.textColor
-                text: "Dashboard Address: " +  sessionData.dashboard_url
-                visible: dashActive
-                enabled: visible
-            }
-
-            Kirigami.Heading {
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                level: 3
-                color: Kirigami.Theme.textColor
-                text: "Dashboard Username: " + sessionData.dashboard_user
-                visible: dashActive
-                enabled: visible
-            }
-
-            Kirigami.Heading {
-                Layout.fillWidth: true
-                wrapMode: Text.WordWrap
-                level: 3
-                color: Kirigami.Theme.textColor
-                text: "Dashboard Password: " + sessionData.dashboard_password
-                visible: dashActive
-                enabled: visible
-            }
         }
     }
 

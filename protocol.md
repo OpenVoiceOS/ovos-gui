@@ -19,7 +19,9 @@ This protocol defines how ovos-gui communicates with connected clients
   * [Remove items from the list](#remove-items-from-the-list-1)
 
 
-# CONNECTION
+# OVOS Protocol Extensions
+
+## CONNECTION
 
 on connection gui clients announce themselves
 
@@ -32,8 +34,31 @@ This is an extension by OVOS to the original mycroft protocol
     "gui_id": "unique_identifier_provided_by_client"
 }
 ```
+## SPECIAL EVENT: page_gained_focus
+```javascript
+{
+    "type": "mycroft.events.triggered",
+    "namespace": "mycroft.weather",
+    "event_name": "page_gained_focus",
+    "data": {"number": 0}
+}
+```
+## UPLOAD PAGE
 
-# ACTIVE SKILLS LIST
+skills can upload qml contents directly via messagebus
+
+
+```javascript
+{
+    "type": "mycroft.gui.connected",
+    "gui_id": "unique_identifier_provided_by_client"
+}
+```
+
+
+# Original Protocol
+
+## ACTIVE SKILLS LIST
 
 The active skill data, described in the section MODELS is mandatory for the rest of the protocol to work. I.e. if some data or an event arrives with namespace "mycroft.weather", the skill id "mycroft.weather" must have been advertised as recently used in the recent skills model beforehand, otherwise all requests on that namespace will be ignored on both client and serverside and considered a protocol error.
 Recent skills are ordered from the last used to the oldest, so the first item of the model will always be the the one showing any QML GUI, if available.
