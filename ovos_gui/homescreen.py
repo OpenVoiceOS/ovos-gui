@@ -4,11 +4,13 @@ from ovos_config.locations import USER_CONFIG
 from ovos_utils.log import LOG
 
 from ovos_gui.namespace import NamespaceManager
+from threading import Thread
 
 
-class HomescreenManager:
+class HomescreenManager(Thread):
 
     def __init__(self, bus, gui):
+        super().__init__()
         self.bus = bus
         self.gui = gui
         self.homescreens = []
@@ -16,14 +18,10 @@ class HomescreenManager:
         self.bus.on('homescreen.manager.add', self.add_homescreen)
         self.bus.on('homescreen.manager.remove', self.remove_homescreen)
         self.bus.on('homescreen.manager.list', self.get_homescreens)
-        self.bus.on("homescreen.manager.get_active",
-                    self.get_active_homescreen)
-        self.bus.on("homescreen.manager.set_active",
-                    self.set_active_homescreen)
-        self.bus.on("homescreen.manager.disable_active",
-                    self.disable_active_homescreen)
-        self.bus.on("mycroft.mark2.register_idle",
-                    self.register_old_style_homescreen)
+        self.bus.on("homescreen.manager.get_active", self.get_active_homescreen)
+        self.bus.on("homescreen.manager.set_active", self.set_active_homescreen)
+        self.bus.on("homescreen.manager.disable_active", self.disable_active_homescreen)
+        self.bus.on("mycroft.mark2.register_idle", self.register_old_style_homescreen)
         self.bus.on("homescreen.manager.show_active", self.show_homescreen)
         self.bus.on("mycroft.ready", self.set_mycroft_ready)
 
