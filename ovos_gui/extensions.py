@@ -22,7 +22,6 @@ class ExtensionsManager:
         core_config = Configuration()
         enclosure_config = core_config.get("gui") or {}
         self.active_extension = enclosure_config.get("extension", "generic")
-
         LOG.debug(f"Extensions Manager: Initializing {self.name} with active extension {self.active_extension}")
         self.activate_extension(self.active_extension.lower())
 
@@ -37,6 +36,7 @@ class ExtensionsManager:
         LOG.info(f"Extensions Manager: Activating Extension {extension_id}")
 
         self.extension = OVOSGuiFactory.create(cfg, bus=self.bus, gui=self.gui)
+        self.extension.bind_homescreen()
 
         LOG.info(f"Extensions Manager: Activated Extension {extension_id}")
         self.bus.emit(

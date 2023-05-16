@@ -55,8 +55,7 @@ class GUIService:
         # if they may cause the Service to fail.
         self.status.set_alive()
         self._init_bus_client()
-        self.extension_manager = ExtensionsManager(
-            "EXTENSION_SERVICE", self.bus, self.gui)
+        self.extension_manager = ExtensionsManager("EXTENSION_SERVICE", self.bus, self.gui)
         self.status.set_ready()
 
     def is_alive(self):
