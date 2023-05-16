@@ -41,6 +41,8 @@ class ExtensionsManager:
         try:
             self.extension = OVOSGuiFactory.create(cfg, bus=self.bus, gui=self.gui)
         except:
+            if extension_id == "generic":
+                raise
             LOG.exception(f"failed to load {extension_id}, falling back to 'generic'")
             cfg["extension"] = "generic"
             self.extension = OVOSGuiFactory.create(cfg, bus=self.bus, gui=self.gui)
