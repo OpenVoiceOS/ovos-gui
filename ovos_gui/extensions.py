@@ -26,16 +26,24 @@ class ExtensionsManager:
         self.activate_extension(self.active_extension.lower())
 
     def activate_extension(self, extension_id):
-        supported_extensions = ["smartspeaker", "bigscreen", "generic", "mobile", "plasmoid"]
-
-        if extension_id.lower() not in supported_extensions:
-            extension_id = "generic"
+        mappings = {
+            "smartspeaker": "ovos-gui-plugin-shell-companion",
+            "bigscreen": "ovos-gui-plugin-bigscreen",
+            "mobile": "ovos-gui-plugin-mobile",
+            "plasmoid": "ovos-gui-plugin-plasmoid"
+        }
+        if extension_id.lower() in mappings:
+            extension_id = mappings[extension_id.lower()]
 
         cfg = Configuration().get("gui", {})
         cfg["extension"] = extension_id
         LOG.info(f"Extensions Manager: Activating Extension {extension_id}")
-
-        self.extension = OVOSGuiFactory.create(cfg, bus=self.bus, gui=self.gui)
+        try:
+            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus, gui=self.gui)
+        except:
+            LOG.exception(f"failed to load {extension_id}, falling back to 'generic'")
+            cfg["extension"] = "generic"
+            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus, gui=self.gui)
         self.extension.bind_homescreen()
 
         LOG.info(f"Extensions Manager: Activated Extension {extension_id}")
