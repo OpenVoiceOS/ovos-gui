@@ -1,4 +1,4 @@
-from ovos_bus_client import Message
+from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration, LocalConf
 from ovos_config.locations import USER_CONFIG
 from ovos_utils.log import LOG
@@ -9,7 +9,7 @@ from threading import Thread
 
 class HomescreenManager(Thread):
 
-    def __init__(self, bus, gui):
+    def __init__(self, bus: MessageBusClient, gui: NamespaceManager):
         super().__init__()
         self.bus = bus
         self.gui = gui
@@ -20,8 +20,10 @@ class HomescreenManager(Thread):
         self.bus.on('homescreen.manager.list', self.get_homescreens)
         self.bus.on("homescreen.manager.get_active", self.get_active_homescreen)
         self.bus.on("homescreen.manager.set_active", self.set_active_homescreen)
-        self.bus.on("homescreen.manager.disable_active", self.disable_active_homescreen)
-        self.bus.on("mycroft.mark2.register_idle", self.register_old_style_homescreen)
+        self.bus.on("homescreen.manager.disable_active",
+                    self.disable_active_homescreen)
+        self.bus.on("mycroft.mark2.register_idle",
+                    self.register_old_style_homescreen)
         self.bus.on("homescreen.manager.show_active", self.show_homescreen)
         self.bus.on("mycroft.ready", self.set_mycroft_ready)
 

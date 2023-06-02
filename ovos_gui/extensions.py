@@ -1,12 +1,13 @@
-from ovos_bus_client import Message
+from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration
+from ovos_gui.namespace import NamespaceManager
 from ovos_utils.log import LOG
 from ovos_plugin_manager.gui import OVOSGuiFactory
 from ovos_gui.homescreen import HomescreenManager
 
 
 class ExtensionsManager:
-    def __init__(self, name, bus, gui):
+    def __init__(self, name: str, bus: MessageBusClient, gui: NamespaceManager):
         """ Constructor for the Extension Manager. The Extension Manager is responsible for
         managing the extensions that define additional GUI behaviours for specific platforms.
 
@@ -38,22 +39,21 @@ class ExtensionsManager:
 
         cfg = dict(Configuration().get("gui", {}))
         cfg["extension"] = extension_id
-        LOG.info(f"Extensions Manager: Activating Extension {extension_id}")
+        # LOG.info(f"Extensions Manager: Activating Extension {extension_id}")
         try:
             LOG.info(f"Creating GUI with config={cfg}")
-            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus,
-                                                   gui=self.gui)
+            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus)
         except:
             if extension_id == "generic":
                 raise
             LOG.exception(f"failed to load {extension_id}, "
                           f"falling back to 'generic'")
             cfg["extension"] = "generic"
-            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus,
-                                                   gui=self.gui)
+            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus)
         self.extension.bind_homescreen()
 
-        LOG.info(f"Extensions Manager: Activated Extension {extension_id}")
+        LOG.info(f"Extensions Manager: Activated Extension {extension_id} "
+                 f"({self.extension.__class__})")
         self.bus.emit(
             Message("extension.manager.activated", {"id": extension_id}))
 
