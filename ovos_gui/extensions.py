@@ -26,7 +26,7 @@ class ExtensionsManager:
                   f"with active extension {self.active_extension}")
         self.activate_extension(self.active_extension.lower())
 
-    def activate_extension(self, extension_id):
+    def activate_extension(self, extension_id: str):
         mappings = {
             "smartspeaker": "ovos-gui-plugin-shell-companion",
             "bigscreen": "ovos-gui-plugin-bigscreen",
@@ -36,10 +36,11 @@ class ExtensionsManager:
         if extension_id.lower() in mappings:
             extension_id = mappings[extension_id.lower()]
 
-        cfg = Configuration().get("gui", {})
+        cfg = dict(Configuration().get("gui", {}))
         cfg["extension"] = extension_id
         LOG.info(f"Extensions Manager: Activating Extension {extension_id}")
         try:
+            LOG.info(f"Creating GUI with config={cfg}")
             self.extension = OVOSGuiFactory.create(cfg, bus=self.bus,
                                                    gui=self.gui)
         except:
