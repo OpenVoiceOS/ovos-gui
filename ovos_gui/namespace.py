@@ -39,9 +39,9 @@ The state of the active namespace stack is maintained locally and in the GUI
 code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
-import sys
+
 from threading import Lock, Timer
-from time import time, sleep
+from time import sleep
 from typing import List, Union
 
 from ovos_config.config import Configuration
@@ -84,7 +84,7 @@ class Namespace:
         self.name = name
         self.persistent = False
         self.duration = 30
-        self.pages = list()
+        self.pages: List[GuiPage] = list()
         self.data = dict()
         self.page_number = 0
         self.session_set = False
@@ -196,8 +196,9 @@ class Namespace:
                 self.persistent = False
                 self.duration = 30
 
-    def load_pages(self, pages: List[str], show_index: None):
-        """Maintains a list of active pages within the active namespace.
+    def load_pages(self, pages: List[GuiPage], show_index: int = 0):
+        """
+        Maintains a list of active pages within the active namespace.
 
         Skills with multiple pages of data can either show all the screens
         at once, allowing the user to swipe back and forth among them, or
@@ -206,6 +207,7 @@ class Namespace:
 
         Args:
             pages: one or more pages to be displayed
+            show_index: index of page to display (default 0)
         """
         new_pages = list()
 
@@ -216,16 +218,12 @@ class Namespace:
         self.pages.extend(new_pages)
         if new_pages:
             self._add_pages(new_pages)
-        else:
-            page = pages[0]
 
-        if show_index:
-            self._activate_page(pages[show_index])
-        else:
-            self._activate_page(pages[0])
+        self._activate_page(pages[show_index])
 
-    def _add_pages(self, new_pages: List[str]):
-        """Adds once or more pages to the active page list.
+    def _add_pages(self, new_pages: List[GuiPage]):
+        """
+        Adds one or more pages to the active page list.
 
         Args:
             new_pages: pages to add to the active page list
@@ -248,8 +246,9 @@ class Namespace:
         )
         send_message_to_gui(message)
 
-    def _activate_page(self, page: str):
-        """Returns focus to a page already in the active page list.
+    def _activate_page(self, page: GuiPage):
+        """
+        Returns focus to a page already in the active page list.
 
         Args:
             page: the page that will gain focus
@@ -313,12 +312,13 @@ class Namespace:
             f"Page {page_number} gained focus in GUI namespace {self.name}")
         self._activate_page(self.pages[page_number])
 
-    def page_update_interaction(self, page_number):
+    def page_update_interaction(self, page_number: int):
         """Update the interaction of the page_number"""
 
         LOG.info(
             f"Page {page_number} update interaction in GUI namespace {self.name}")
-        page = self.pages.index(page_number)
+
+        page = self.pages[page_number]
         if not page.persistent and page.duration > 0:
             page.duration = page.duration / 2
 
@@ -331,7 +331,10 @@ class Namespace:
         return self.pages.index(position)
 
     def get_active_page(self):
-        """Returns the currently active page from self.pages where the page attribute active is true"""
+        """
+        Returns the currently active page from `self.pages` where the page
+        attribute active is true
+        """
         for page in self.pages:
             if page.active:
                 return page
@@ -354,7 +357,8 @@ class Namespace:
 
 
 def _validate_page_message(message: Message):
-    """Validates the contents of the message data for page add/remove messages.
+    """
+    Validates the contents of the message data for page add/remove messages.
 
     Args:
         message: A core message bus message to add/remove one or more pages
@@ -379,27 +383,30 @@ def _validate_page_message(message: Message):
 
 
 def _get_idle_display_config():
-    """Retrieves the current value of the idle display skill configuration."""
-    LOG.info("Getting Idle Skill From Config")
+    """
+    Retrieves the current value of the idle display skill configuration.
+    """
     config = Configuration()
     enclosure_config = config.get("gui") or {}
     idle_display_skill = enclosure_config.get("idle_display_skill")
-
+    LOG.info(f"Got idle_display_skill from config: {idle_display_skill}")
     return idle_display_skill
 
 
 def _get_active_gui_extension():
-    """Retrieves the current value of the gui extension configuration. """
-    LOG.info("Getting GUI Extension From Config")
+    """
+    Retrieves the current value of the gui extension configuration.
+    """
     config = Configuration()
     enclosure_config = config.get("gui") or {}
     gui_extension = enclosure_config.get("extension", "generic")
-
+    LOG.info(f"Got extension from config: {gui_extension}")
     return gui_extension.lower()
 
 
 class NamespaceManager:
-    """Manages the active namespace stack and the content of namespaces.
+    """
+    Manages the active namespace stack and the content of namespaces.
 
     Attributes:
         core_bus: client for communicating with the core message bus
@@ -580,7 +587,7 @@ class NamespaceManager:
 
         return namespace
 
-    def _load_pages(self, pages_to_show: str, show_index: None):
+    def _load_pages(self, pages_to_show: List[GuiPage], show_index: None):
         """Loads the requested pages in the namespace.
 
         Args:
