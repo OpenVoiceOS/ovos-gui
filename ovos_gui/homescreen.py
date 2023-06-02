@@ -83,6 +83,7 @@ class HomescreenManager(Thread):
     def show_homescreen_on_add(self, homescreen_id, homescreen_class):
         if self.mycroft_ready == True:
             active_homescreen = self.get_active_homescreen()
+            LOG.debug(f"Requesting activation of {active_homescreen}")
             if active_homescreen == homescreen_id:
                 if homescreen_class == "IdleDisplaySkill":
                     LOG.debug(
@@ -104,8 +105,7 @@ class HomescreenManager(Thread):
 
     def show_homescreen(self, message=None):
         active_homescreen = self.get_active_homescreen()
-        LOG.debug(f"Requesting activation of {active_homescreen} in "
-                  f"{self.homescreens}")
+        LOG.debug(f"Requesting activation of {active_homescreen}")
         for h in self.homescreens:
             if h["id"] == active_homescreen:
                 if h["class"] == "IdleDisplaySkill":
