@@ -658,12 +658,13 @@ class NamespaceManager:
         self._del_namespace_in_remove_timers(namespace_name)
 
     def _remove_namespace(self, namespace_name: str):
-        """Removes a namespace from the active namespace stack.
+        """
+        Removes a namespace from the active namespace stack.
 
         Args:
             namespace_name: namespace to remove
         """
-        LOG.debug("Removing namespace {namespace_name}")
+        LOG.debug(f"Removing namespace {namespace_name}")
 
         # Remove all timers associated with the namespace
         if namespace_name in self.remove_namespace_timers:
