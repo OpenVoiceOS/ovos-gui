@@ -137,7 +137,7 @@ class HomescreenManager(Thread):
             skill_id = message.data["id"]
             _homescreen_entry = {"class": super_class_name,
                                  "name": super_class_object, "id": skill_id}
-            LOG.debug("Homescreen Manager: Adding OLD Homescreen {skill_id}")
+            LOG.debug(f"Homescreen Manager: Adding OLD Homescreen {skill_id}")
             self.add_homescreen(
                 Message("homescreen.manager.add", _homescreen_entry))
         else:
