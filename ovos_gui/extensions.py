@@ -22,7 +22,8 @@ class ExtensionsManager:
         core_config = Configuration()
         enclosure_config = core_config.get("gui") or {}
         self.active_extension = enclosure_config.get("extension", "generic")
-        LOG.debug(f"Extensions Manager: Initializing {self.name} with active extension {self.active_extension}")
+        LOG.debug(f"Extensions Manager: Initializing {self.name} "
+                  f"with active extension {self.active_extension}")
         self.activate_extension(self.active_extension.lower())
 
     def activate_extension(self, extension_id):
@@ -39,13 +40,16 @@ class ExtensionsManager:
         cfg["extension"] = extension_id
         LOG.info(f"Extensions Manager: Activating Extension {extension_id}")
         try:
-            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus, gui=self.gui)
+            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus,
+                                                   gui=self.gui)
         except:
             if extension_id == "generic":
                 raise
-            LOG.exception(f"failed to load {extension_id}, falling back to 'generic'")
+            LOG.exception(f"failed to load {extension_id}, "
+                          f"falling back to 'generic'")
             cfg["extension"] = "generic"
-            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus, gui=self.gui)
+            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus,
+                                                   gui=self.gui)
         self.extension.bind_homescreen()
 
         LOG.info(f"Extensions Manager: Activated Extension {extension_id}")
@@ -54,8 +58,9 @@ class ExtensionsManager:
 
         def signal_available(message=None):
             message = message or Message("")
-            self.bus.emit(message.forward("mycroft.gui.available",
-                                          {"permanent": self.extension.permanent}))
+            self.bus.emit(
+                message.forward("mycroft.gui.available",
+                                {"permanent": self.extension.permanent}))
 
         if self.extension.preload_gui:
             signal_available()
