@@ -38,7 +38,7 @@ class ExtensionsManager:
             extension_id = mappings[extension_id.lower()]
 
         cfg = dict(Configuration().get("gui", {}))
-        cfg["extension"] = extension_id
+        cfg["module"] = extension_id
         # LOG.info(f"Extensions Manager: Activating Extension {extension_id}")
         try:
             LOG.info(f"Creating GUI with config={cfg}")
@@ -48,7 +48,7 @@ class ExtensionsManager:
                 raise
             LOG.exception(f"failed to load {extension_id}, "
                           f"falling back to 'generic'")
-            cfg["extension"] = "generic"
+            cfg["module"] = "generic"
             self.extension = OVOSGuiFactory.create(cfg, bus=self.bus)
         self.extension.bind_homescreen()
 
