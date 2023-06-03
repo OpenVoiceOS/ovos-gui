@@ -1,12 +1,13 @@
-from ovos_bus_client import Message
+from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration
+from ovos_gui.namespace import NamespaceManager
 from ovos_utils.log import LOG
 from ovos_plugin_manager.gui import OVOSGuiFactory
 from ovos_gui.homescreen import HomescreenManager
 
 
 class ExtensionsManager:
-    def __init__(self, name, bus, gui):
+    def __init__(self, name: str, bus: MessageBusClient, gui: NamespaceManager):
         """ Constructor for the Extension Manager. The Extension Manager is responsible for
         managing the extensions that define additional GUI behaviours for specific platforms.
 
@@ -22,10 +23,11 @@ class ExtensionsManager:
         core_config = Configuration()
         enclosure_config = core_config.get("gui") or {}
         self.active_extension = enclosure_config.get("extension", "generic")
-        LOG.debug(f"Extensions Manager: Initializing {self.name} with active extension {self.active_extension}")
+        LOG.debug(f"Extensions Manager: Initializing {self.name} "
+                  f"with active extension {self.active_extension}")
         self.activate_extension(self.active_extension.lower())
 
-    def activate_extension(self, extension_id):
+    def activate_extension(self, extension_id: str):
         mappings = {
             "smartspeaker": "ovos-gui-plugin-shell-companion",
             "bigscreen": "ovos-gui-plugin-bigscreen",
@@ -35,27 +37,31 @@ class ExtensionsManager:
         if extension_id.lower() in mappings:
             extension_id = mappings[extension_id.lower()]
 
-        cfg = Configuration().get("gui", {})
-        cfg["extension"] = extension_id
-        LOG.info(f"Extensions Manager: Activating Extension {extension_id}")
+        cfg = dict(Configuration().get("gui", {}))
+        cfg["module"] = extension_id
+        # LOG.info(f"Extensions Manager: Activating Extension {extension_id}")
         try:
-            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus, gui=self.gui)
+            LOG.info(f"Creating GUI with config={cfg}")
+            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus)
         except:
             if extension_id == "generic":
                 raise
-            LOG.exception(f"failed to load {extension_id}, falling back to 'generic'")
-            cfg["extension"] = "generic"
-            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus, gui=self.gui)
+            LOG.exception(f"failed to load {extension_id}, "
+                          f"falling back to 'generic'")
+            cfg["module"] = "generic"
+            self.extension = OVOSGuiFactory.create(cfg, bus=self.bus)
         self.extension.bind_homescreen()
 
-        LOG.info(f"Extensions Manager: Activated Extension {extension_id}")
+        LOG.info(f"Extensions Manager: Activated Extension {extension_id} "
+                 f"({self.extension.__class__})")
         self.bus.emit(
             Message("extension.manager.activated", {"id": extension_id}))
 
         def signal_available(message=None):
             message = message or Message("")
-            self.bus.emit(message.forward("mycroft.gui.available",
-                                          {"permanent": self.extension.permanent}))
+            self.bus.emit(
+                message.forward("mycroft.gui.available",
+                                {"permanent": self.extension.permanent}))
 
         if self.extension.preload_gui:
             signal_available()

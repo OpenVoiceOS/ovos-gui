@@ -1,4 +1,4 @@
-from ovos_bus_client import Message
+from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration, LocalConf
 from ovos_config.locations import USER_CONFIG
 from ovos_utils.log import LOG
@@ -9,7 +9,7 @@ from threading import Thread
 
 class HomescreenManager(Thread):
 
-    def __init__(self, bus, gui):
+    def __init__(self, bus: MessageBusClient, gui: NamespaceManager):
         super().__init__()
         self.bus = bus
         self.gui = gui
@@ -20,8 +20,10 @@ class HomescreenManager(Thread):
         self.bus.on('homescreen.manager.list', self.get_homescreens)
         self.bus.on("homescreen.manager.get_active", self.get_active_homescreen)
         self.bus.on("homescreen.manager.set_active", self.set_active_homescreen)
-        self.bus.on("homescreen.manager.disable_active", self.disable_active_homescreen)
-        self.bus.on("mycroft.mark2.register_idle", self.register_old_style_homescreen)
+        self.bus.on("homescreen.manager.disable_active",
+                    self.disable_active_homescreen)
+        self.bus.on("mycroft.mark2.register_idle",
+                    self.register_old_style_homescreen)
         self.bus.on("homescreen.manager.show_active", self.show_homescreen)
         self.bus.on("mycroft.ready", self.set_mycroft_ready)
 
@@ -81,6 +83,7 @@ class HomescreenManager(Thread):
     def show_homescreen_on_add(self, homescreen_id, homescreen_class):
         if self.mycroft_ready == True:
             active_homescreen = self.get_active_homescreen()
+            LOG.debug(f"Requesting activation of {active_homescreen}")
             if active_homescreen == homescreen_id:
                 if homescreen_class == "IdleDisplaySkill":
                     LOG.debug(
@@ -102,16 +105,19 @@ class HomescreenManager(Thread):
 
     def show_homescreen(self, message=None):
         active_homescreen = self.get_active_homescreen()
+        LOG.debug(f"Requesting activation of {active_homescreen}")
         for h in self.homescreens:
             if h["id"] == active_homescreen:
                 if h["class"] == "IdleDisplaySkill":
                     LOG.debug(
-                        f"Homescreen Manager: Displaying Homescreen {active_homescreen}")
+                        f"Homescreen Manager: Displaying Homescreen "
+                        f"{active_homescreen}")
                     self.bus.emit(Message("homescreen.manager.activate.display", {
                         "homescreen_id": active_homescreen}))
                 elif h["class"] == "MycroftSkill":
                     LOG.debug(
-                        f"Homescreen Manager: Displaying Homescreen {active_homescreen}")
+                        f"Homescreen Manager: Displaying Homescreen "
+                        f"{active_homescreen}")
                     self.bus.emit(Message("{}.idle".format(active_homescreen)))
 
     def set_mycroft_ready(self, message):
@@ -131,7 +137,7 @@ class HomescreenManager(Thread):
             skill_id = message.data["id"]
             _homescreen_entry = {"class": super_class_name,
                                  "name": super_class_object, "id": skill_id}
-            LOG.debug("Homescreen Manager: Adding OLD Homescreen {skill_id}")
+            LOG.debug(f"Homescreen Manager: Adding OLD Homescreen {skill_id}")
             self.add_homescreen(
                 Message("homescreen.manager.add", _homescreen_entry))
         else:
