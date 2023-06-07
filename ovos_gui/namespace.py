@@ -209,6 +209,9 @@ class Namespace:
             pages: one or more pages to be displayed
             show_index: index of page to display (default 0)
         """
+        if show_index is None:
+            LOG.warning(f"Expected int show_index but got `None`. Default to 0")
+            show_index = 0
         new_pages = list()
 
         for page in pages:
