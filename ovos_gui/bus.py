@@ -29,7 +29,7 @@ from threading import Lock
 
 from ovos_bus_client import Message, GUIMessage
 from ovos_config.config import Configuration
-from ovos_gui.namespace import NamespaceManager
+# from ovos_gui.namespace import NamespaceManager
 from ovos_utils import create_daemon
 from ovos_utils.log import LOG
 from tornado import ioloop
@@ -50,9 +50,10 @@ def get_gui_websocket_config() -> dict:
     return websocket_config
 
 
-def create_gui_service(enclosure: NamespaceManager) -> Application:
+def create_gui_service(enclosure) -> Application:
     """
     Initiate a websocket for communicating with the GUI service.
+    @param enclosure: NamespaceManager instance
     """
     LOG.info('Starting message bus for GUI...')
     websocket_config = get_gui_websocket_config()
