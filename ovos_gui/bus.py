@@ -29,6 +29,7 @@ from threading import Lock
 
 from ovos_bus_client import Message, GUIMessage
 from ovos_config.config import Configuration
+from ovos_gui.namespace import NamespaceManager
 from ovos_utils import create_daemon
 from ovos_utils.log import LOG
 from tornado import ioloop
@@ -36,19 +37,23 @@ from tornado.options import parse_command_line
 from tornado.web import Application
 from tornado.websocket import WebSocketHandler
 
-write_lock = Lock()
+_write_lock = Lock()
 
 
-def get_gui_websocket_config():
-    """Retrieves the configuration values for establishing a GUI message bus"""
+def get_gui_websocket_config() -> dict:
+    """
+    Retrieves the configuration values for establishing a GUI message bus
+    """
     config = Configuration()
     websocket_config = config["gui_websocket"]
 
     return websocket_config
 
 
-def create_gui_service(enclosure) -> Application:
-    """Initiate a websocket for communicating with the GUI service."""
+def create_gui_service(enclosure: NamespaceManager) -> Application:
+    """
+    Initiate a websocket for communicating with the GUI service.
+    """
     LOG.info('Starting message bus for GUI...')
     websocket_config = get_gui_websocket_config()
     # Disable all tornado logging so mycroft loglevel isn't overridden
@@ -56,6 +61,8 @@ def create_gui_service(enclosure) -> Application:
 
     routes = [(websocket_config['route'], GUIWebsocketHandler)]
     application = Application(routes)
+    # TODO: Is the NamespaceManager used by `application`, or can it be a
+    #   GUIWebsocketHandler class variable
     application.enclosure = enclosure
     application.listen(
         websocket_config['base_port'], websocket_config['host']
@@ -66,8 +73,10 @@ def create_gui_service(enclosure) -> Application:
     return application
 
 
-def send_message_to_gui(message):
-    """Sends the supplied message to all connected GUI clients."""
+def send_message_to_gui(message: dict):
+    """
+    Sends the supplied message to all connected GUI clients.
+    """
     for connection in GUIWebsocketHandler.clients:
         try:
             connection.send(message)
@@ -120,10 +129,10 @@ class GUIWebsocketHandler(WebSocketHandler):
                            })
             namespace_pos += 1
 
-    def on_message(self, message):
-        LOG.info(f"Received: {message}")
+    def on_message(self, message: str):
+        LOG.debug(f"Received: {message}")
         parsed_message = GUIMessage.deserialize(message)
-        msg = json.loads(message)
+        # msg = json.loads(message)
         if parsed_message.msg_type == "mycroft.events.triggered" and \
                 (parsed_message.data.get('event_name') == 'page_gained_focus' or
                  parsed_message.data.get('event_name') == 'system.gui.user.interaction'):
@@ -151,15 +160,15 @@ class GUIWebsocketHandler(WebSocketHandler):
             msg_type = parsed_message.msg_type
             msg_data = parsed_message.data
         else:
-            # message not in SPEC
+            # message not in spec
             # https://github.com/MycroftAI/mycroft-gui/blob/master/transportProtocol.md
-            LOG.error(f"unknown GUI protocol message type, ignoring: {msg}")
+            LOG.error(f"unknown GUI protocol message type, ignoring: "
+                      f"{parsed_message}")
             return
 
         message = Message(msg_type, msg_data, parsed_message.context)
-        LOG.info('Forwarding to core bus...')
         self.application.enclosure.core_bus.emit(message)
-        LOG.info('Done!')
+        LOG.debug('Forwarded to core bus')
 
     def write_message(self, *arg, **kwarg):
         """Wraps WebSocketHandler.write_message() with a lock. """
@@ -168,7 +177,7 @@ class GUIWebsocketHandler(WebSocketHandler):
         except RuntimeError:
             asyncio.set_event_loop(asyncio.new_event_loop())
 
-        with write_lock:
+        with _write_lock:
             super().write_message(*arg, **kwarg)
 
     def send(self, data):
