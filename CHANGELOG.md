@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui/tree/HEAD)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a2...HEAD)
+
+**Implemented enhancements:**
+
+- :tada: - GUI plugin [\#11](https://github.com/OpenVoiceOS/ovos-gui/pull/11) ([JarbasAl](https://github.com/JarbasAl))
+
+## [V0.0.3a2](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a2) (2023-05-01)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a1...V0.0.3a2)
+
+**Fixed bugs:**
+
+- interfaces/ folder not getting packaged [\#8](https://github.com/OpenVoiceOS/ovos-gui/issues/8)
+
 ## [V0.0.3a1](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a1) (2023-04-30)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2...V0.0.3a1)
