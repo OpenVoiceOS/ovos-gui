@@ -518,13 +518,14 @@ class NamespaceManager:
         Args:
             message: the message containing the page show request
         """
-        LOG.info("Handling page show request")
         message_is_valid = _validate_page_message(message)
         if message_is_valid:
             namespace_name = message.data["__from"]
             pages_to_show = message.data["page"]
             persistence = message.data["__idle"]
             show_index = message.data.get("index", None)
+
+            LOG.info(f"Handling page show request. pages={pages_to_show}")
 
             pages_to_load = list()
             for page in pages_to_show:
