@@ -39,8 +39,7 @@ The state of the active namespace stack is maintained locally and in the GUI
 code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
-
-from threading import Lock, Timer
+from threading import Lock, Timer, Event
 from time import sleep
 from typing import List, Union, Optional
 
@@ -461,10 +460,11 @@ class NamespaceManager:
         self.remove_namespace_timers = dict()
         self.idle_display_skill = _get_idle_display_config()
         self.active_extension = _get_active_gui_extension()
-        self._define_message_handlers()
+        self._ready_event = Event()
         self.qml_files = {}
         self.qml_server = None
         self._init_qml_server()
+        self._define_message_handlers()
 
     def _init_qml_server(self):
         config = Configuration().get("gui_websocket", {})
@@ -487,6 +487,10 @@ class NamespaceManager:
         self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
+        self.core_bus.on("mycroft.ready", self.handle_ready)
+
+    def handle_ready(self, message):
+        self._ready_event.set()
 
     def handle_receive_qml(self, message: Message):
         for page, contents in message.data["qml_contents"]:
@@ -796,6 +800,13 @@ class NamespaceManager:
         message = message.forward("mycroft.gui.port",
                                   dict(port=port, gui_id=gui_id))
         self.core_bus.emit(message)
+        if self.qml_server:
+            if not self._ready_event.wait(90):
+                LOG.warning("Not reported ready after 90s")
+            self.core_bus.emit(Message("gui.request_page_upload",
+                                       context={"source": "gui",
+                                                "destination": ["skills",
+                                                                "PHAL"]}))
 
     def handle_page_interaction(self, message: Message):
         """
