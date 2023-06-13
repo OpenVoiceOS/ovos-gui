@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a3...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a4...HEAD)
+
+**Merged pull requests:**
+
+- Remove unused ovos-backend-client dependency [\#14](https://github.com/OpenVoiceOS/ovos-gui/pull/14) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.3a4](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a4) (2023-06-09)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a3...V0.0.3a4)
 
 **Merged pull requests:**
 
