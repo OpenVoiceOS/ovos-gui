@@ -22,8 +22,8 @@ class QmlFileHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
-def start_qml_http_server(port: int = Configuration().get("gui", {}).get("qml_server_port", 8089)):
-    qml_path = get_temp_path("ovos_qml_server")
+def start_qml_http_server(qml_path: str, port: int = None):
+    port = port or Configuration().get("gui", {}).get("qml_server_port", 8089)
 
     if os.path.exists(qml_path):
         shutil.rmtree(qml_path, ignore_errors=True)

@@ -39,6 +39,9 @@ The state of the active namespace stack is maintained locally and in the GUI
 code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
+
+from os import makedirs
+from os.path import join, dirname
 from threading import Lock, Timer, Event
 from time import sleep
 from typing import List, Union, Optional
@@ -461,15 +464,19 @@ class NamespaceManager:
         self.idle_display_skill = _get_idle_display_config()
         self.active_extension = _get_active_gui_extension()
         self._ready_event = Event()
-        self.qml_files = {}
+        self.gui_files = {}
         self.qml_server = None
+        self.gui_file_path = None
         self._init_qml_server()
         self._define_message_handlers()
 
     def _init_qml_server(self):
         config = Configuration().get("gui_websocket", {})
         if config.get("qml_server", False):
-            self.qml_server = start_qml_http_server()
+            from ovos_utils.file_utils import get_temp_path
+            self.gui_file_path = config.get("server_path") or \
+                                 get_temp_path("ovos_qml_server")
+            self.qml_server = start_qml_http_server(self.gui_file_path)
         GuiPage.qml_server = self.qml_server
         Namespace.qml_server = self.qml_server
 
@@ -481,7 +488,7 @@ class NamespaceManager:
         self.core_bus.on("gui.event.send", self.handle_send_event)
         self.core_bus.on("gui.page.delete", self.handle_delete_page)
         self.core_bus.on("gui.page.show", self.handle_show_page)
-        self.core_bus.on("gui.page.upload", self.handle_receive_qml)
+        self.core_bus.on("gui.page.upload", self.handle_receive_gui_pages)
         self.core_bus.on("gui.status.request", self.handle_status_request)
         self.core_bus.on("gui.value.set", self.handle_set_value)
         self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
@@ -492,9 +499,33 @@ class NamespaceManager:
     def handle_ready(self, message):
         self._ready_event.set()
 
-    def handle_receive_qml(self, message: Message):
-        for page, contents in message.data["qml_contents"]:
-            self.qml_files[page] = contents
+    def _get_res_id_from_message(self, message, res_name):
+        """
+        Resolve a resource ID for a given page name
+        @param message: Message including resource request
+        @param res_name: Name of GUI resource (full or partial file path)
+        @return: Normalized resource ID used by GUI File Server
+        """
+        skill_id = message.data['__from']
+        res_dir = message.data.get('res_dir', 'ui')
+        res_name = res_name.split(f"/{res_dir}/")[-1]
+        return join(skill_id, res_dir, res_name)
+
+    def handle_receive_gui_pages(self, message: Message):
+        """
+        Handle GUI resources from a skill or plugin. Pages are written to
+        `self.server_path` which is accessible via a lightweight HTTP server and
+        may additionally be mounted to a host path/volume in container setups.
+        @param message: Message containing UI resource file contents and meta
+        """
+        for page, contents in message.data["pages"]:
+            res_id = self._get_res_id_from_message(message, page)
+            self.gui_files[res_id] = contents
+            file_path = join(self.gui_file_path, res_id)
+            LOG.debug(f"writing UI file: {file_path}")
+            makedirs(dirname(file_path), exist_ok=True)
+            with open(file_path, 'w+') as f:
+                f.write(contents)
 
     def handle_clear_namespace(self, message: Message):
         """
@@ -590,11 +621,13 @@ class NamespaceManager:
                     persist = False
                     duration = 30
 
-                if page in self.qml_files:
-                    contents = self.qml_files[page]
-                else:
-                    contents = None
-                pages_to_load.append(GuiPage(page, name, persist, duration, contents))
+                resource_id = self._get_res_id_from_message(message, page)
+                LOG.debug(f"Resolved {resource_id} for page: {page}")
+                if resource_id not in self.gui_files:
+                    resource_id = None
+
+                pages_to_load.append(GuiPage(page, name, persist, duration,
+                                             resource_id))
 
             with namespace_lock:
                 self._activate_namespace(namespace_name)
@@ -800,13 +833,14 @@ class NamespaceManager:
         message = message.forward("mycroft.gui.port",
                                   dict(port=port, gui_id=gui_id))
         self.core_bus.emit(message)
-        if self.qml_server:
+        if self.gui_file_path:
             if not self._ready_event.wait(90):
                 LOG.warning("Not reported ready after 90s")
+            # TODO: Refactor to handle other frameworks
             self.core_bus.emit(Message("gui.request_page_upload",
-                                       context={"source": "gui",
-                                                "destination": ["skills",
-                                                                "PHAL"]}))
+                                       {'framework': 'qt5'},
+                                       {"source": "gui",
+                                        "destination": ["skills", "PHAL"]}))
 
     def handle_page_interaction(self, message: Message):
         """
