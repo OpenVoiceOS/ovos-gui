@@ -114,9 +114,12 @@ class HomescreenManager(Thread):
         @param homescreen_id: new `idle_display_skill`
         """
         # TODO: Validate requested homescreen_id
-        LOG.info(f"Updating configured idle_display_skill to {homescreen_id}")
-        new_config = {"gui": {"idle_display_skill": homescreen_id}}
-        update_mycroft_config(new_config, bus=self.bus)
+        if Configuration().get("gui",
+                               {}).get("idle_display_skill") != homescreen_id:
+            LOG.info(f"Updating configured idle_display_skill to "
+                     f"{homescreen_id}")
+            new_config = {"gui": {"idle_display_skill": homescreen_id}}
+            update_mycroft_config(new_config, bus=self.bus)
 
     def reload_homescreens_list(self):
         """
@@ -156,9 +159,10 @@ class HomescreenManager(Thread):
         @param message: Message requesting homescreen disable
         """
         # TODO: Is this valid behavior?
-        LOG.info(f"Disabling idle_display_skill!")
-        new_config = {"gui": {"idle_display_skill": None}}
-        update_mycroft_config(new_config, bus=self.bus)
+        if Configuration().get("gui", {}).get("idle_display_skill"):
+            LOG.info(f"Disabling idle_display_skill!")
+            new_config = {"gui": {"idle_display_skill": None}}
+            update_mycroft_config(new_config, bus=self.bus)
 
     def show_homescreen(self, message: Optional[Message] = None):
         """
@@ -168,7 +172,7 @@ class HomescreenManager(Thread):
         active_homescreen = self.get_active_homescreen()
         LOG.debug(f"Requesting activation of {active_homescreen}")
         for h in self.homescreens:
-            if h["id"] == active_homescreen:
+            if h.get("id") == active_homescreen:
                 LOG.debug(f"matched homescreen skill: {h}")
                 message = message or dig_for_message() or Message("")
                 if h["class"] == "IdleDisplaySkill":
