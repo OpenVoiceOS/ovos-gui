@@ -17,6 +17,8 @@ class HomescreenManager(Thread):
         self.gui = gui
         self.homescreens: List[dict] = []
         self.mycroft_ready = False
+        # TODO: If service starts after `mycroft_ready`,
+        #       homescreen is never shown
         self.bus.on('homescreen.manager.add', self.add_homescreen)
         self.bus.on('homescreen.manager.remove', self.remove_homescreen)
         self.bus.on('homescreen.manager.list', self.get_homescreens)
@@ -164,22 +166,23 @@ class HomescreenManager(Thread):
         @param message: Optional `homescreen.manager.show_active` Message
         """
         active_homescreen = self.get_active_homescreen()
-        LOG.debug(f"Requesting activation of {active_homescreen} in "
-                  f"{self.homescreens}")
+        LOG.debug(f"Requesting activation of {active_homescreen}")
         message = message or dig_for_message() or Message("")
         for h in self.homescreens:
             if h["id"] == active_homescreen:
                 if h["class"] == "IdleDisplaySkill":
-                    LOG.debug(f"Homescreen Manager: Displaying Homescreen "
-                              f"{active_homescreen}")
+                    LOG.debug(f"Displaying Homescreen {active_homescreen}")
                     self.bus.emit(message.forward(
                         "homescreen.manager.activate.display",
                         {"homescreen_id": active_homescreen}))
                 elif h["class"] == "MycroftSkill":
-                    LOG.debug(f"Homescreen Manager: Displaying Homescreen "
-                              f"{active_homescreen}")
+                    LOG.debug(f"Displaying Homescreen {active_homescreen}")
                     self.bus.emit(message.forward(f"{active_homescreen}.idle"))
+                else:
+                    LOG.error(f"Requested homescreen has an invalid class: {h}")
             return
+        LOG.warning(f"Requested {active_homescreen} not found in: "
+                    f"{self.homescreens}")
 
     def set_mycroft_ready(self, message: Message):
         """
