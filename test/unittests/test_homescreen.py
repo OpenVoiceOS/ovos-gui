@@ -61,8 +61,10 @@ class TestHomescreenManager(unittest.TestCase):
         # TODO
         pass
 
+    @patch("ovos_gui.homescreen.Configuration")
     @patch("ovos_gui.homescreen.update_mycroft_config")
-    def test_disable_active_homescreen(self, update_config):
+    def test_disable_active_homescreen(self, update_config, config):
+        config.return_value = {"gui": {"idle_display_skill": "test"}}
         self.homescreen_manager.disable_active_homescreen(Message(""))
         update_config.assert_called_once_with(
             {"gui": {"idle_display_skill": None}},
