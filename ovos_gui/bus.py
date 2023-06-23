@@ -77,6 +77,7 @@ def create_gui_service(enclosure) -> Application:
 def send_message_to_gui(message: dict):
     """
     Sends the supplied message to all connected GUI clients.
+    @param message: dict data to send to GUI clients
     """
     for connection in GUIWebsocketHandler.clients:
         try:
@@ -85,8 +86,10 @@ def send_message_to_gui(message: dict):
             LOG.exception(repr(e))
 
 
-def determine_if_gui_connected():
-    """Returns True if any clients are connected to the GUI bus."""
+def determine_if_gui_connected() -> bool:
+    """
+    Returns True if any clients are connected to the GUI bus.
+    """
     return len(GUIWebsocketHandler.clients) > 0
 
 
@@ -95,16 +98,24 @@ class GUIWebsocketHandler(WebSocketHandler):
     clients = []
 
     def open(self):
+        """
+        Add a new connection to `clients` and synchronize
+        """
         GUIWebsocketHandler.clients.append(self)
         LOG.info('New Connection opened!')
         self.synchronize()
 
     def on_close(self):
+        """
+        Remove a closed connection from `clients`
+        """
         LOG.info('Closing {}'.format(id(self)))
         GUIWebsocketHandler.clients.remove(self)
 
     def synchronize(self):
-        """ Upload namespaces, pages and data to the last connected. """
+        """
+        Upload namespaces, pages and data to the last connected client.
+        """
         namespace_pos = 0
         enclosure = self.application.enclosure
 
@@ -131,12 +142,19 @@ class GUIWebsocketHandler(WebSocketHandler):
             namespace_pos += 1
 
     def on_message(self, message: str):
+        """
+        Handle a message on the GUI websocket. Deserialize the message, map
+        message types to valid equivalents for the core messagebus and emit
+        on the core messagebus.
+        @param message: Serialized Message
+        """
         LOG.debug(f"Received: {message}")
         parsed_message = GUIMessage.deserialize(message)
         # msg = json.loads(message)
         if parsed_message.msg_type == "mycroft.events.triggered" and \
                 (parsed_message.data.get('event_name') == 'page_gained_focus' or
-                 parsed_message.data.get('event_name') == 'system.gui.user.interaction'):
+                 parsed_message.data.get('event_name') ==
+                 'system.gui.user.interaction'):
             # System event, a page was changed
             event_name = parsed_message.data.get('event_name')
             if event_name == 'page_gained_focus':
@@ -144,12 +162,14 @@ class GUIWebsocketHandler(WebSocketHandler):
             else:
                 msg_type = 'gui.page_interaction'
 
-            msg_data = {'namespace': parsed_message.data['namespace'],
-                        'page_number': parsed_message.data['parameters'].get('number'),
-                        'skill_id': parsed_message.data['parameters'].get('skillId')}
+            msg_data = \
+                {'namespace': parsed_message.data['namespace'],
+                 'page_number': parsed_message.data['parameters'].get('number'),
+                 'skill_id': parsed_message.data['parameters'].get('skillId')}
         elif parsed_message.msg_type == "mycroft.events.triggered":
             # A normal event was triggered
-            msg_type = f"{parsed_message.data['namespace']}.{parsed_message.data['event_name']}"
+            msg_type = f"{parsed_message.data['namespace']}." \
+                       f"{parsed_message.data['event_name']}"
             msg_data = parsed_message.data['parameters']
 
         elif parsed_message.msg_type == 'mycroft.session.set':
@@ -172,7 +192,9 @@ class GUIWebsocketHandler(WebSocketHandler):
         LOG.debug('Forwarded to core bus')
 
     def write_message(self, *arg, **kwarg):
-        """Wraps WebSocketHandler.write_message() with a lock. """
+        """
+        Wraps WebSocketHandler.write_message() with a lock.
+        """
         try:
             asyncio.get_event_loop()
         except RuntimeError:
@@ -181,16 +203,18 @@ class GUIWebsocketHandler(WebSocketHandler):
         with _write_lock:
             super().write_message(*arg, **kwarg)
 
-    def send(self, data):
-        """Send the given data across the socket as JSON
-
-        Args:
-            data (dict): Data to transmit
+    def send(self, data: dict):
+        """
+        Send the given data across the socket as JSON
+        @param data: Data to send to the GUI
         """
         s = json.dumps(data)
         # LOG.info('Sending {}'.format(s))
         self.write_message(s)
 
     def check_origin(self, origin):
-        """Disable origin check to make js connections work."""
+        """
+        Disable origin check to make js connections work.
+        """
+        # TODO: Should this be implemented or deprecated
         return True

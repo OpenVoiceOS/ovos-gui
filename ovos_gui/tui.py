@@ -1,11 +1,10 @@
-from os import getpid
-from os.path import basename
 import json
+
+from os.path import basename
 from time import sleep
 from pprint import pformat
-
 from ovos_utils.log import LOG
-from ovos_bus_client import GUIMessage, GUIWebsocketClient
+from ovos_bus_client import GUIWebsocketClient
 
 
 def get_websocket(host="0.0.0.0", port=18181, route='/', ssl=False, threaded=True):
