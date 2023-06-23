@@ -16,6 +16,7 @@ class GuiPage:
         @param name: Name of the page as shown in its namespace
         @param persistent: If True, page is displayed indefinitely
         @param duration: Number of seconds to display the page for
+        @param server_uri: Valid resource URI from the qml_server (if available)
         """
         self.url = url
         self.name = name
