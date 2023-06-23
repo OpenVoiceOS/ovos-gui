@@ -3,7 +3,7 @@ from unittest.mock import patch, Mock
 
 
 class TestBus(unittest.TestCase):
-    @patch("ovos_config.config.Configuration")
+    @patch("ovos_gui.bus.Configuration")
     def test_get_gui_websocket_config(self, configuration):
         from ovos_gui.bus import get_gui_websocket_config
 

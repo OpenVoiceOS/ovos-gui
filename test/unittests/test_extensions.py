@@ -2,10 +2,8 @@ import unittest
 from unittest.mock import patch, Mock
 
 import ovos_gui.extensions
-from ovos_config import Configuration
 from ovos_utils.messagebus import FakeBus
-from ovos_gui.extensions import ExtensionsManager
-from .mocks import MessageBusMock, base_config
+from .mocks import base_config
 
 PATCH_MODULE = "ovos_gui.extensions"
 
