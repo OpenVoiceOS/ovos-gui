@@ -42,7 +42,7 @@ over the GUI message bus.
 
 from threading import Lock, Timer
 from time import sleep
-from typing import List, Union
+from typing import List, Union, Optional
 
 from ovos_config.config import Configuration
 from ovos_utils.log import LOG
@@ -59,6 +59,53 @@ from ovos_gui.page import GuiPage
 namespace_lock = Lock()
 
 RESERVED_KEYS = ['__from', '__idle']
+
+
+def _validate_page_message(message: Message) -> bool:
+    """
+    Validates the contents of the message data for page add/remove messages.
+
+    @param message: Message with request to add/remove one or more pages
+        from a namespace.
+    @returns: True if request is valid, else False
+    """
+    valid = (
+            "page" in message.data
+            and "__from" in message.data
+            and isinstance(message.data["page"], list)
+    )
+    if not valid:
+        if message.msg_type == "gui.page.show":
+            action = "shown"
+        else:
+            action = "removed"
+        LOG.error(f"Page will not be {action} due to malformed data in the"
+                  f"{message.msg_type} message")
+    return valid
+
+
+def _get_idle_display_config() -> str:
+    """
+    Retrieves the current value of the idle display skill configuration.
+    @returns: Configured idle_display_skill (skill_id)
+    """
+    config = Configuration()
+    enclosure_config = config.get("gui") or {}
+    idle_display_skill = enclosure_config.get("idle_display_skill")
+    LOG.info(f"Got idle_display_skill from config: {idle_display_skill}")
+    return idle_display_skill
+
+
+def _get_active_gui_extension() -> str:
+    """
+    Retrieves the current value of the gui extension configuration.
+    @returns: Configured gui extension
+    """
+    config = Configuration()
+    enclosure_config = config.get("gui") or {}
+    gui_extension = enclosure_config.get("extension", "generic")
+    LOG.info(f"Got extension from config: {gui_extension}")
+    return gui_extension.lower()
 
 
 class Namespace:
@@ -90,7 +137,9 @@ class Namespace:
         self.session_set = False
 
     def add(self):
-        """Adds a namespace to the list of active namespaces."""
+        """
+        Adds this namespace to the list of active namespaces.
+        """
         LOG.info(f"Adding \"{self.name}\" to active GUI namespaces")
         message = dict(
             type="mycroft.session.list.insert",
@@ -101,7 +150,10 @@ class Namespace:
         send_message_to_gui(message)
 
     def activate(self, position: int):
-        """Activates an namespace already in the list of active namespaces."""
+        """
+        Activate this namespace if its already in the list of active namespaces.
+        @param position: position to move this namespace FROM
+        """
         LOG.info(f"Activating GUI namespace \"{self.name}\"")
         message = {
             "type": "mycroft.session.list.move",
@@ -113,7 +165,11 @@ class Namespace:
         send_message_to_gui(message)
 
     def remove(self, position: int):
-        """Removes a namespace from the list of active namespaces."""
+        """
+        Removes this namespace from the list of active namespaces. Also clears
+        any session data.
+        @param position: position to remove this namespace FROM
+        """
         LOG.info(f"Removing {self.name} from active GUI namespaces")
 
         # unload the data first before removing the namespace
@@ -133,7 +189,8 @@ class Namespace:
         self.data = dict()
 
     def load_data(self, name: str, value: str):
-        """Adds or changes the value of a namespace data attribute.
+        """
+        Adds or changes the value of a namespace data attribute.
 
         Args:
             name: The name of the attribute
@@ -149,7 +206,10 @@ class Namespace:
         send_message_to_gui(message)
 
     def unload_data(self, name: str):
-        """ Delete data from the namespace """
+        """
+        Delete data from the namespace
+        @param name: name of property to delete
+        """
         message = dict(
             type="mycroft.session.delete",
             property=name,
@@ -158,15 +218,17 @@ class Namespace:
         # LOG.info(f"Deleting data {message} from GUI namespace {self.name}")
         send_message_to_gui(message)
 
-    def get_position_of_last_item_in_data(self):
-        """ Get the position of the last item """
+    def get_position_of_last_item_in_data(self) -> int:
+        """
+        Get the position of the last item
+        """
         return len(self.data) - 1
 
     def set_persistence(self, skill_type: str):
-        """Sets the duration of the namespace's time in the active list.
+        """
+        Sets the duration of the namespace's time in the active list.
 
-        Args:
-            skill_type: if skill type is idleDisplaySkill, the namespace will
+        @param skill_type: if skill type is idleDisplaySkill, the namespace will
             always persist.  Otherwise, the namespace will persist based on the
             active page's persistence.
         """
@@ -205,9 +267,8 @@ class Namespace:
         the pages can be loaded one at a time.  The latter is represented by
         a single list item, the former by multiple list items
 
-        Args:
-            pages: one or more pages to be displayed
-            show_index: index of page to display (default 0)
+        @param pages: list of pages to be displayed
+        @param show_index: index of page to display (default 0)
         """
         if show_index is None:
             LOG.warning(f"Expected int show_index but got `None`. Default to 0")
@@ -228,15 +289,14 @@ class Namespace:
         """
         Adds one or more pages to the active page list.
 
-        Args:
-            new_pages: pages to add to the active page list
+        @param new_pages: pages to add to the active page list
         """
         LOG.info(f"Adding pages to GUI namespace {self.name}: {new_pages}")
         LOG.info(f"Current pages: {self.pages}")
         # print the attributes of the new pages
         for page in new_pages:
-            LOG.info(
-                f"Page: {page.url}, {page.name}, {page.persistent}, {page.duration}")
+            LOG.info(f"Page: {page.url}, {page.name}, {page.persistent}, "
+                     f"{page.duration}")
 
         # Find position of new page in self.pages
         position = self.pages.index(new_pages[0])
@@ -253,11 +313,11 @@ class Namespace:
         """
         Returns focus to a page already in the active page list.
 
-        Args:
-            page: the page that will gain focus
+        @param page: the page that will gain focus
         """
         LOG.info(f"Activating page {page.name} in GUI namespace {self.name}")
         LOG.info(f"Current pages from _activate_page: {self.pages}")
+        # TODO: Simplify two loops into one (with unit test)
         # get the index of the page in the self.pages list
         page_index = 0
         for i, p in enumerate(self.pages):
@@ -267,8 +327,8 @@ class Namespace:
 
         self.page_number = page_index
 
-        # set the page active attribute to True and update the self.pages list, mark all other pages as inactive
-
+        # set the page active attribute to True and update the self.pages list,
+        # mark all other pages as inactive
         page.active = True
 
         for p in self.pages:
@@ -288,12 +348,13 @@ class Namespace:
         send_message_to_gui(message)
 
     def remove_pages(self, positions: List[int]):
-        """Deletes one or more pages from the active page list.
+        """
+        Deletes one or more pages by index from the active page list.
 
-        Args:
-            positions: page position to remove
+        @param positions: list of int page positions to remove
         """
         LOG.info(f"Removing pages from GUI namespace {self.name}: {positions}")
+        positions.sort(reverse=True)
         for position in positions:
             page = self.pages.pop(position)
             LOG.info(f"Deleting {page} from GUI namespace {self.name}")
@@ -305,21 +366,23 @@ class Namespace:
             )
             send_message_to_gui(message)
 
-    def page_gained_focus(self, page_number):
-        """Updates the active page in self.pages
-
-        Args:
-            page_number: the page number of the page that will gain focus
+    def page_gained_focus(self, page_number: int):
+        """
+        Updates the active page in `self.pages`.
+        @param page_number: the index of the page that will gain focus
         """
         LOG.info(
             f"Page {page_number} gained focus in GUI namespace {self.name}")
         self._activate_page(self.pages[page_number])
 
     def page_update_interaction(self, page_number: int):
-        """Update the interaction of the page_number"""
+        """
+        Update the interaction of the page_number.
+        @param page_number: the index of the page to update
+        """
 
-        LOG.info(
-            f"Page {page_number} update interaction in GUI namespace {self.name}")
+        LOG.info(f"Page {page_number} update interaction in GUI namespace "
+                 f"{self.name}")
 
         page = self.pages[page_number]
         if not page.persistent and page.duration > 0:
@@ -329,82 +392,49 @@ class Namespace:
         self.pages[page_number] = page
         self.set_persistence(skill_type="genericSkill")
 
-    def get_page_at_position(self, position: int):
-        """Returns the position of the page in the active page list."""
-        return self.pages.index(position)
+    def get_page_at_position(self, position: int) -> GuiPage:
+        """
+        Returns the page at the requested position in the active page list.
+        Requesting a position out of range will raise an IndexError.
+        @param position: index of the page to get
+        """
+        return self.pages[position]
 
-    def get_active_page(self):
+    def get_active_page(self) -> Optional[GuiPage]:
         """
         Returns the currently active page from `self.pages` where the page
-        attribute active is true
+        attribute `active` is true.
+        @returns: Active GuiPage if any, else None
         """
         for page in self.pages:
             if page.active:
                 return page
         return None
 
-    def get_active_page_index(self):
-        # get the active page index in the self.pages list
+    def get_active_page_index(self) -> Optional[int]:
+        """
+        Get the active page index in `self.pages`.
+        @return: index of the active page if any, else None
+        """
         active_page = self.get_active_page()
         if active_page is not None:
             return self.pages.index(active_page)
 
-    def index_in_pages_list(self, index):
-        return (index < len(self.pages))
+    def index_in_pages_list(self, index: int) -> bool:
+        """
+        Check if the active index is in the pages list
+        @param index: index to check
+        @return: True if index is valid in `self.pages
+        """
+        return 0 < index < len(self.pages)
 
     def global_back(self):
-        """Returns to the previous page in the active page list."""
+        """
+        Returns to the previous page in the active page list.
+        """
         if self.page_number > 0:
             self.remove_pages([self.page_number])
             self.page_gained_focus(self.page_number - 1)
-
-
-def _validate_page_message(message: Message):
-    """
-    Validates the contents of the message data for page add/remove messages.
-
-    Args:
-        message: A core message bus message to add/remove one or more pages
-            from a namespace.
-    """
-    valid = (
-            "page" in message.data
-            and "__from" in message.data
-            and isinstance(message.data["page"], list)
-    )
-    if not valid:
-        if message.msg_type == "gui.page.show":
-            action = "shown"
-        else:
-            action = "removed"
-        LOG.error(
-            f"Page will not be {action} due to malformed data in the"
-            f"{message.msg_type} message"
-        )
-
-    return valid
-
-
-def _get_idle_display_config():
-    """
-    Retrieves the current value of the idle display skill configuration.
-    """
-    config = Configuration()
-    enclosure_config = config.get("gui") or {}
-    idle_display_skill = enclosure_config.get("idle_display_skill")
-    LOG.info(f"Got idle_display_skill from config: {idle_display_skill}")
-    return idle_display_skill
-
-
-def _get_active_gui_extension():
-    """
-    Retrieves the current value of the gui extension configuration.
-    """
-    config = Configuration()
-    enclosure_config = config.get("gui") or {}
-    gui_extension = enclosure_config.get("extension", "generic")
-    LOG.info(f"Got extension from config: {gui_extension}")
-    return gui_extension.lower()
 
 
 class NamespaceManager:
@@ -432,7 +462,9 @@ class NamespaceManager:
         self._define_message_handlers()
 
     def _define_message_handlers(self):
-        """Assigns methods as handlers for specified message types."""
+        """
+        Defines event handlers for core messagebus.
+        """
         self.core_bus.on("gui.clear.namespace", self.handle_clear_namespace)
         self.core_bus.on("gui.event.send", self.handle_send_event)
         self.core_bus.on("gui.page.delete", self.handle_delete_page)
@@ -445,10 +477,9 @@ class NamespaceManager:
                          self.handle_page_gained_focus)
 
     def handle_clear_namespace(self, message: Message):
-        """Handles a request to remove a namespace.
-
-        Args:
-            message: the message requesting namespace removal
+        """
+        Handles a request to remove a namespace.
+        @param message: the message requesting namespace removal
         """
         try:
             namespace_name = message.data['__from']
@@ -462,10 +493,9 @@ class NamespaceManager:
 
     @staticmethod
     def handle_send_event(message: Message):
-        """Handles a request to send a message to the GUI message bus.
-
-        Args:
-            message: the message requesting a message to be sent to the GUI
+        """
+        Handles a request to send a message to the GUI message bus.
+        @param message: the message requesting a message to be sent to the GUI
                 message bus.
         """
         try:
@@ -480,10 +510,9 @@ class NamespaceManager:
             LOG.exception('Could not send event trigger')
 
     def handle_delete_page(self, message: Message):
-        """Handles request to remove one or more pages from a namespace.
-
-        Args:
-            message: the message requesting page removal
+        """
+        Handles request to remove one or more pages from a namespace.
+        @param message: the message requesting page removal
         """
         message_is_valid = _validate_page_message(message)
         if message_is_valid:
@@ -493,13 +522,11 @@ class NamespaceManager:
                 self._remove_pages(namespace_name, pages_to_remove)
 
     def _remove_pages(self, namespace_name: str, pages_to_remove: List[str]):
-        """Removes one or more pages from a namespace.
-
-        Pages are removed from the bottom of the stack.
-
-        Args:
-            namespace_name: the affected namespace
-            pages_to_remove: names of pages to delete
+        """
+        Removes one or more pages from a namespace. Pages are removed from the
+        bottom of the stack.
+        @param namespace_name: the affected namespace
+        @param pages_to_remove: names of pages to delete
         """
         namespace = self.loaded_namespaces.get(namespace_name)
         if namespace is not None and namespace in self.active_namespaces:
@@ -513,10 +540,9 @@ class NamespaceManager:
             namespace.remove_pages(page_positions)
 
     def handle_show_page(self, message: Message):
-        """Handles a request to show one or more pages on the screen.
-
-        Args:
-            message: the message containing the page show request
+        """
+        Handles a request to show one or more pages on the screen.
+        @param message: the message containing the page show request
         """
         message_is_valid = _validate_page_message(message)
         if message_is_valid:
@@ -552,10 +578,10 @@ class NamespaceManager:
                 self._update_namespace_persistence(persistence)
 
     def _activate_namespace(self, namespace_name: str):
-        """Instructs the GUI to load a namespace and its associated data.
+        """
+        Instructs the GUI to load a namespace and its associated data.
 
-        Args:
-            namespace_name: the name of the namespace to load
+        @param namespace_name: the name of the namespace to load
         """
         namespace = self._ensure_namespace_exists(namespace_name)
         LOG.info(f"Activating namespace: {namespace_name}")
@@ -575,13 +601,10 @@ class NamespaceManager:
         self._emit_namespace_displayed_event()
 
     def _ensure_namespace_exists(self, namespace_name: str) -> Namespace:
-        """Retrieves the requested namespace, creating one if it doesn't exist.
-
-        Args:
-            namespace_name: the name of the namespace being retrieved
-
-        Returns:
-            the requested namespace
+        """
+        Retrieves the requested namespace, creating one if it doesn't exist.
+        @param namespace_name: the name of the namespace being retrieved
+        @returns: requested namespace
         """
         # TODO: - Update sync to match.
         namespace = self.loaded_namespaces.get(namespace_name)
@@ -591,27 +614,25 @@ class NamespaceManager:
 
         return namespace
 
-    def _load_pages(self, pages_to_show: List[GuiPage], show_index: None):
-        """Loads the requested pages in the namespace.
-
-        Args:
-            pages_to_show: the pages requested to be loaded
+    def _load_pages(self, pages_to_show: List[GuiPage], show_index: int):
+        """
+        Loads the requested pages in the namespace.
+        @param pages_to_show: list of pages to be loaded
+        @param show_index: index to load pages at
         """
         active_namespace = self.active_namespaces[0]
         active_namespace.load_pages(pages_to_show, show_index)
 
     def _update_namespace_persistence(self, persistence: Union[bool, int]):
-        """Sets the persistence of the namespace being activated.
-
+        """
+        Sets the persistence of the namespace being activated.
         A namespace's persistence is the same as the persistence of the
         most recent pages added to a namespace.  For example, a multi-page
         namespace could show the first set of pages with a persistence of
         True (show until removed) and the last page with a persistence of
         15 seconds.  This would ensure that the namespace isn't removed while
         the skill is showing the pages.
-
-        Args:active_extension
-            persistence: length of time the namespace should be displayed
+        @param persistence: length of time the namespace should be displayed
         """
         LOG.debug(f"Setting namespace persistence to {persistence}")
         for position, namespace in enumerate(self.active_namespaces):
@@ -624,23 +645,21 @@ class NamespaceManager:
                 else:
                     namespace.set_persistence(skill_type="genericSkill")
 
-                    # check if there is a scheduled remove_namespace_timer and cancel it
-                    if namespace.persistent:
-                        if namespace.name in self.remove_namespace_timers:
-                            self.remove_namespace_timers[namespace.name].cancel(
-                            )
-                            self._del_namespace_in_remove_timers(
-                                namespace.name)
+                    # check if there is a scheduled remove_namespace_timer
+                    # and cancel it
+                    if namespace.persistent and namespace.name in \
+                            self.remove_namespace_timers:
+                        self.remove_namespace_timers[namespace.name].cancel()
+                        self._del_namespace_in_remove_timers(namespace.name)
 
                 if not namespace.persistent:
                     LOG.info("It is being scheduled here")
                     self._schedule_namespace_removal(namespace)
 
     def _schedule_namespace_removal(self, namespace: Namespace):
-        """Uses a timer thread to remove the namespace.
-
-        Args:
-            namespace: the namespace to be removed
+        """
+        Uses a timer thread to remove the namespace.
+        @param namespace: the namespace to be removed
         """
         # Before removing check if there isn't already a timer for this namespace
         if namespace.name in self.remove_namespace_timers:
@@ -651,22 +670,23 @@ class NamespaceManager:
             self._remove_namespace_via_timer,
             args=(namespace.name,)
         )
-        LOG.debug(
-            f"Scheduled removal of namespace {namespace.name} in duration {namespace.duration}")
+        LOG.debug(f"Scheduled removal of namespace {namespace.name} in "
+                  f"duration {namespace.duration}")
         remove_namespace_timer.start()
         self.remove_namespace_timers[namespace.name] = remove_namespace_timer
 
     def _remove_namespace_via_timer(self, namespace_name: str):
-        """Removes a namespace and the corresponding timer instance."""
+        """
+        Removes a namespace and the corresponding timer instance.
+        @param namespace_name: name of namespace to remove
+        """
         self._remove_namespace(namespace_name)
         self._del_namespace_in_remove_timers(namespace_name)
 
     def _remove_namespace(self, namespace_name: str):
         """
         Removes a namespace from the active namespace stack.
-
-        Args:
-            namespace_name: namespace to remove
+        @param namespace_name: name of namespace to remove
         """
         LOG.debug(f"Removing namespace {namespace_name}")
 
@@ -677,9 +697,10 @@ class NamespaceManager:
 
         namespace = self.loaded_namespaces.get(namespace_name)
         if namespace is not None and namespace in self.active_namespaces:
-            self.core_bus.emit(Message("gui.namespace.removed", data={
-                "skill_id": namespace.name}))
+            self.core_bus.emit(Message("gui.namespace.removed",
+                                       data={"skill_id": namespace.name}))
             if self.active_extension == "Bigscreen":
+                # TODO: Define callback or event instead of arbitrary sleep
                 # wait for window management in bigscreen extension to finish
                 sleep(1)
             namespace_position = self.active_namespaces.index(namespace)
@@ -689,6 +710,9 @@ class NamespaceManager:
         self._emit_namespace_displayed_event()
 
     def _emit_namespace_displayed_event(self):
+        """
+        Emit a `gui.namespace.displayed` Message to notify core of changes.
+        """
         if self.active_namespaces:
             displaying_namespace = self.active_namespaces[0]
             message_data = dict(skill_id=displaying_namespace.name)
@@ -697,10 +721,9 @@ class NamespaceManager:
             )
 
     def handle_status_request(self, message: Message):
-        """Handles a GUI status request by replying with the connection status.
-
-        Args:
-            message: the request for status of the GUI
+        """
+        Handles a GUI status request by replying with the connection status.
+        @param message: the request for status of the GUI
         """
         gui_connected = determine_if_gui_connected()
         reply = message.reply(
@@ -709,10 +732,9 @@ class NamespaceManager:
         self.core_bus.emit(reply)
 
     def handle_set_value(self, message: Message):
-        """Handles a request to set the value of namespace data attributes.
-
-        Args:
-            message: the request to set attribute values
+        """
+        Handles a request to set the value of namespace data attributes.
+        @param message: the request to set attribute values
         """
         try:
             namespace_name = message.data['__from']
@@ -726,11 +748,10 @@ class NamespaceManager:
                 self._update_namespace_data(namespace_name, message.data)
 
     def _update_namespace_data(self, namespace_name: str, data: dict):
-        """Updates the values of namespace data attributes, unless unchanged.
-
-        Args:
-            namespace_name: the name of the namespace to update
-            data: the name and new value of one or more data attributes
+        """
+        Updates the values of namespace data attributes, unless unchanged.
+        @param namespace_name: the name of the namespace to update
+        @param data: the name and new value of one or more data attributes
         """
         namespace = self._ensure_namespace_exists(namespace_name)
         for key, value in data.items():
@@ -742,10 +763,9 @@ class NamespaceManager:
                     namespace.load_data(key, value)
 
     def handle_client_connected(self, message: Message):
-        """Handles an event from the GUI indicating it is connected to the bus.
-
-        Args:
-            message: the event sent by the GUI
+        """
+        Handles an event from the GUI indicating it is connected to the bus.
+        @param message: the event sent by the GUI
         """
         # GUI has announced presence
         # Announce connection, the GUI should connect on it soon
@@ -753,14 +773,14 @@ class NamespaceManager:
         LOG.info(f"GUI with ID {gui_id} connected to core message bus")
         websocket_config = get_gui_websocket_config()
         port = websocket_config["base_port"]
-        message = Message("mycroft.gui.port", dict(port=port, gui_id=gui_id))
+        message = message.forward("mycroft.gui.port",
+                                  dict(port=port, gui_id=gui_id))
         self.core_bus.emit(message)
 
     def handle_page_interaction(self, message: Message):
-        """Handles an event from the GUI indicating the page has been interacted with.
-
-        Args:
-            message: the event sent by the GUI
+        """
+        Handles an event from the GUI indicating a page has been interacted with.
+        @param message: the event sent by the GUI
         """
         # GUI has interacted with a page
         # Update and increase the namespace duration and reset the remove timer
@@ -777,10 +797,9 @@ class NamespaceManager:
                     self._schedule_namespace_removal(namespace)
 
     def handle_page_gained_focus(self, message: Message):
-        """Handles focus events from the GUI indicating the page has gained focus.
-
-        Args:
-            message: the event sent by the GUI
+        """
+        Handles focus events from the GUI indicating the page has gained focus.
+        @param message: the event sent by the GUI
         """
         namespace_name = message.data.get("skill_id")
         namespace_page_number = message.data.get("page_number")
@@ -789,26 +808,25 @@ class NamespaceManager:
 
         # first check if the namespace is already active
         if namespace in self.active_namespaces:
-            # if the namespace is already active, check if the page number has changed
+            # if the namespace is already active,
+            # check if the page number has changed
             if namespace_page_number != namespace.page_number:
                 namespace.page_gained_focus(namespace_page_number)
 
-    def handle_namespace_global_back(self, message: None):
-        """Handles global back events from the GUI.
-
-        Args:
-            message: the event sent by the GUI
+    def handle_namespace_global_back(self, message: Optional[Message]):
+        """
+        Handles global back events from the GUI.
+        @param message: the event sent by the GUI
         """
         namespace_name = self.active_namespaces[0].name
         namespace = self.loaded_namespaces.get(namespace_name)
         if namespace in self.active_namespaces:
             namespace.global_back()
 
-    def _del_namespace_in_remove_timers(self, namespace_name):
-        """ Delete namespace from remove_namespace_timers dict.
-
-        Args:
-            namespace: namespace to be deleted
+    def _del_namespace_in_remove_timers(self, namespace_name: str):
+        """
+        Delete namespace from remove_namespace_timers dict.
+        @param namespace_name: name of namespace to be deleted
         """
         if namespace_name in self.remove_namespace_timers:
             del self.remove_namespace_timers[namespace_name]

@@ -3,18 +3,17 @@ from ovos_config.config import Configuration
 from ovos_gui.namespace import NamespaceManager
 from ovos_utils.log import LOG
 from ovos_plugin_manager.gui import OVOSGuiFactory
-from ovos_gui.homescreen import HomescreenManager
 
 
 class ExtensionsManager:
     def __init__(self, name: str, bus: MessageBusClient, gui: NamespaceManager):
-        """ Constructor for the Extension Manager. The Extension Manager is responsible for
-        managing the extensions that define additional GUI behaviours for specific platforms.
-
-        Args:
-            name: Name of the extension manager
-            bus: MessageBus instance
-            gui: GUI instance
+        """
+        Constructor for the Extension Manager. The Extension Manager is
+        responsible for managing the extensions that define additional GUI
+        behaviours for specific platforms.
+        @param name: Name of the extension manager
+        @param bus: MessageBus instance
+        @param gui: GUI instance
         """
 
         self.name = name
@@ -28,6 +27,10 @@ class ExtensionsManager:
         self.activate_extension(self.active_extension.lower())
 
     def activate_extension(self, extension_id: str):
+        """
+        Activate the requested extension
+        @param extension_id: GUI Plugin entrypoint to activate
+        """
         mappings = {
             "smartspeaker": "ovos-gui-plugin-shell-companion",
             "bigscreen": "ovos-gui-plugin-bigscreen",
