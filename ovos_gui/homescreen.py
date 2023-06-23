@@ -4,7 +4,7 @@ from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.message import dig_for_message
 from ovos_config.config import Configuration, update_mycroft_config
 
-from ovos_utils.log import LOG, deprecated
+from ovos_utils.log import LOG, deprecated, log_deprecation
 
 from ovos_gui.namespace import NamespaceManager
 from threading import Thread
@@ -149,6 +149,10 @@ class HomescreenManager(Thread):
             self.bus.emit(Message("homescreen.manager.activate.display",
                                   {"homescreen_id": homescreen_id}))
         elif homescreen_class == "MycroftSkill":
+            log_deprecation(f"Homescreen skills should register listeners for "
+                            f"`homescreen.manager.activate.display`. "
+                            f"`{homescreen_id}.idle` messages will be removed.",
+                            "0.0.1")
             LOG.debug(f"Displaying Homescreen {homescreen_id}")
             self.bus.emit(Message(f"{homescreen_id}.idle"))
 

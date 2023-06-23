@@ -392,9 +392,10 @@ class Namespace:
         self.pages[page_number] = page
         self.set_persistence(skill_type="genericSkill")
 
-    def get_page_at_position(self, position: int):
+    def get_page_at_position(self, position: int) -> GuiPage:
         """
-        Returns the position of the page in the active page list.
+        Returns the page at the requested position in the active page list.
+        Requesting a position out of range will raise an IndexError.
         @param position: index of the page to get
         """
         return self.pages[position]
