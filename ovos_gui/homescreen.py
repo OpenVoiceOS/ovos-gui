@@ -185,7 +185,7 @@ class HomescreenManager(Thread):
                     self.bus.emit(message.forward(f"{active_homescreen}.idle"))
                 else:
                     LOG.error(f"Requested homescreen has an invalid class: {h}")
-            return
+                return
         LOG.warning(f"Requested {active_homescreen} not found in: "
                     f"{self.homescreens}")
 
