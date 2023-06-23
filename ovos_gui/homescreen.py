@@ -164,7 +164,8 @@ class HomescreenManager(Thread):
         @param message: Optional `homescreen.manager.show_active` Message
         """
         active_homescreen = self.get_active_homescreen()
-        LOG.debug(f"Requesting activation of {active_homescreen}")
+        LOG.debug(f"Requesting activation of {active_homescreen} in "
+                  f"{self.homescreens}")
         message = message or dig_for_message() or Message("")
         for h in self.homescreens:
             if h["id"] == active_homescreen:

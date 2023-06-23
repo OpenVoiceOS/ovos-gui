@@ -148,8 +148,9 @@ class GUIWebsocketHandler(WebSocketHandler):
         on the core messagebus.
         @param message: Serialized Message
         """
-        LOG.debug(f"Received: {message}")
         parsed_message = GUIMessage.deserialize(message)
+        LOG.debug(f"Received: {parsed_message.msg_type}|{parsed_message.data}")
+
         # msg = json.loads(message)
         if parsed_message.msg_type == "mycroft.events.triggered" and \
                 (parsed_message.data.get('event_name') == 'page_gained_focus' or
