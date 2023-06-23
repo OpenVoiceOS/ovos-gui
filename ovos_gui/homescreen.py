@@ -152,7 +152,7 @@ class HomescreenManager(Thread):
             log_deprecation(f"Homescreen skills should register listeners for "
                             f"`homescreen.manager.activate.display`. "
                             f"`{homescreen_id}.idle` messages will be removed.",
-                            "0.0.1")
+                            "0.1.0")
             LOG.debug(f"Displaying Homescreen {homescreen_id}")
             self.bus.emit(Message(f"{homescreen_id}.idle"))
 
