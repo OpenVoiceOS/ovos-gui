@@ -24,7 +24,8 @@ class TestExtensionManager(unittest.TestCase):
     name = "TestManager"
 
     @classmethod
-    def setUpClass(cls) -> None:
+    @patch("ovos_gui.namespace.create_gui_service")
+    def setUpClass(cls, create_gui) -> None:
         from ovos_gui.extensions import ExtensionsManager
         from ovos_gui.namespace import NamespaceManager
 
@@ -32,6 +33,7 @@ class TestExtensionManager(unittest.TestCase):
 
         cls.extension_manager = ExtensionsManager(cls.name, cls.bus,
                                                   NamespaceManager(cls.bus))
+        create_gui.assert_called_once_with(cls.extension_manager.gui)
 
     def test_00_extensions_manager_init(self):
         from ovos_gui.namespace import NamespaceManager
