@@ -471,11 +471,12 @@ class NamespaceManager:
         self._define_message_handlers()
 
     def _init_qml_server(self):
-        config = Configuration().get("gui_websocket", {})
+        config = Configuration().get("gui", {})
         if config.get("qml_server", False):
+            LOG.debug("GUI file server enabled")
             from ovos_utils.file_utils import get_temp_path
             self.gui_file_path = config.get("server_path") or \
-                                 get_temp_path("ovos_qml_server")
+                get_temp_path("ovos_qml_server")
             self.qml_server = start_qml_http_server(self.gui_file_path)
         GuiPage.qml_server = self.qml_server
         Namespace.qml_server = self.qml_server

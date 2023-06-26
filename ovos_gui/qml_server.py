@@ -24,7 +24,7 @@ class QmlFileHandler(http.server.SimpleHTTPRequestHandler):
 
 def start_qml_http_server(qml_path: str, port: int = None):
     port = port or Configuration().get("gui", {}).get("qml_server_port", 8089)
-
+    LOG.info(f"Initializing server on port: {port} with files at {qml_path}")
     if os.path.exists(qml_path):
         shutil.rmtree(qml_path, ignore_errors=True)
     os.makedirs(qml_path, exist_ok=True)
