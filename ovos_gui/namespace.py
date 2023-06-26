@@ -519,6 +519,7 @@ class NamespaceManager:
         may additionally be mounted to a host path/volume in container setups.
         @param message: Message containing UI resource file contents and meta
         """
+        LOG.debug(f"Received GUI pages from: {message.data['__from']}")
         for page, contents in message.data["pages"]:
             res_id = self._get_res_id_from_message(message, page)
             self.gui_files[res_id] = contents
@@ -838,6 +839,7 @@ class NamespaceManager:
             if not self._ready_event.wait(90):
                 LOG.warning("Not reported ready after 90s")
             # TODO: Refactor to handle other frameworks
+            LOG.info("Requesting GUI pages for qt5")
             self.core_bus.emit(Message("gui.request_page_upload",
                                        {'framework': 'qt5'},
                                        {"source": "gui",
