@@ -208,6 +208,11 @@ class GUIWebsocketHandler(WebSocketHandler):
             msg_data = parsed_message.data['data']
         elif parsed_message.msg_type == 'mycroft.gui.connected':
             # new client connected to GUI
+
+            # NOTE: mycroft-gui clients do this directly in core bus, dont send it to gui bus
+            # in those cases framework is always QT5 (backwards compat)
+            # new GUIs MUST send this message via gui websocket
+            # this means QT6 version of mycroft-gui WILL NOT WORK for now
             msg_type = parsed_message.msg_type
             msg_data = parsed_message.data
 
