@@ -20,9 +20,16 @@ class ExtensionsManager:
         self.bus = bus
         self.gui = gui
         core_config = Configuration()
-        enclosure_config = core_config.get("gui") or {}
-        self.active_extension = enclosure_config.get("extension", "generic")
-        LOG.debug(f"Extensions Manager: Initializing {self.name} "
+        gui_config = core_config.get("gui") or {}
+        self.active_extension = gui_config.get("extension", "generic")
+
+        # ToDo: Add Exclusive Support For "Desktop", "Mobile" Extensions
+        self.supported_extensions = ["smartspeaker", "bigscreen", "generic", "mobile", "plasmoid"]
+
+        if self.active_extension.lower() not in self.supported_extensions:
+            self.active_extension = "generic"
+
+        LOG.info( f"Extensions Manager: Initializing {self.name} "
                   f"with active extension {self.active_extension}")
         self.activate_extension(self.active_extension.lower())
 

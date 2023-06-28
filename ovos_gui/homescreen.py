@@ -101,8 +101,9 @@ class HomescreenManager(Thread):
         Get the active homescreen according to configuration if it is loaded
         @return: Loaded homescreen with an ID matching configuration
         """
-        enclosure_config = Configuration().get("gui") or {}
-        active_homescreen = enclosure_config.get("idle_display_skill")
+        config = Configuration()
+        gui_config = config.get("gui") or {}
+        active_homescreen = gui_config.get("idle_display_skill")
         LOG.debug(f"Homescreen Manager: Active Homescreen {active_homescreen}")
         for h in self.homescreens:
             if h["id"] == active_homescreen:
