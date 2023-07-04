@@ -266,7 +266,7 @@ class TestNamespaceManager(TestCase):
             self.namespace_manager.handle_show_page(message)
 
         self.assertEqual(
-            "foo", self.namespace_manager.active_namespaces[0].name
+            "foo", self.namespace_manager.active_namespaces[0].skill_id
         )
         self.assertTrue("foo" in self.namespace_manager.loaded_namespaces)
         namespace = self.namespace_manager.loaded_namespaces["foo"]
