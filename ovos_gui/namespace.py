@@ -45,7 +45,7 @@ from os.path import join, dirname
 from threading import Event
 from threading import Lock, Timer
 from time import sleep
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Dict
 
 from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration
@@ -457,9 +457,9 @@ class NamespaceManager:
     def __init__(self, core_bus: MessageBusClient):
         self.core_bus = core_bus
         self.gui_bus = create_gui_service(self)
-        self.loaded_namespaces = dict()
-        self.active_namespaces = list()
-        self.remove_namespace_timers = dict()
+        self.loaded_namespaces: Dict[str, Namespace] = dict()
+        self.active_namespaces: List[Namespace] = list()
+        self.remove_namespace_timers: Dict[str, Timer] = dict()
         self.idle_display_skill = _get_idle_display_config()
         self.active_extension = _get_active_gui_extension()
         self._ready_event = Event()
@@ -500,7 +500,7 @@ class NamespaceManager:
         """
         Resolve a resource ID for a given page name
         @param message: Message including resource request
-        @param res_name: Name of GUI resource (full or partial file path)
+        @param page: Name of GUI resource (full or partial file path)
         @return: Normalized resource ID used by GUI File Server
         """
         skill_id = message.data['__from']
@@ -694,10 +694,10 @@ class NamespaceManager:
 
                     # check if there is a scheduled remove_namespace_timer
                     # and cancel it
-                    if namespace.persistent and namespace.name in \
+                    if namespace.persistent and namespace.skill_id in \
                             self.remove_namespace_timers:
-                        self.remove_namespace_timers[namespace.name].cancel()
-                        self._del_namespace_in_remove_timers(namespace.name)
+                        self.remove_namespace_timers[namespace.skill_id].cancel()
+                        self._del_namespace_in_remove_timers(namespace.skill_id)
 
                 if not namespace.persistent:
                     LOG.info("It is being scheduled here")
@@ -717,7 +717,7 @@ class NamespaceManager:
             self._remove_namespace_via_timer,
             args=(namespace.skill_id,)
         )
-        LOG.debug(f"Scheduled removal of namespace {namespace.name} in "
+        LOG.debug(f"Scheduled removal of namespace {namespace.skill_id} in "
                   f"duration {namespace.duration}")
         remove_namespace_timer.start()
         self.remove_namespace_timers[namespace.skill_id] = remove_namespace_timer
@@ -742,10 +742,10 @@ class NamespaceManager:
             self.remove_namespace_timers[namespace_name].cancel()
             self._del_namespace_in_remove_timers(namespace_name)
 
-        namespace = self.loaded_namespaces.get(namespace_name)
+        namespace: Namespace = self.loaded_namespaces.get(namespace_name)
         if namespace is not None and namespace in self.active_namespaces:
             self.core_bus.emit(Message("gui.namespace.removed",
-                                       data={"skill_id": namespace.name}))
+                                       data={"skill_id": namespace.skill_id}))
             if self.active_extension == "Bigscreen":
                 # TODO: Define callback or event instead of arbitrary sleep
                 # wait for window management in bigscreen extension to finish
@@ -854,9 +854,9 @@ class NamespaceManager:
         else:
             namespace = self.loaded_namespaces.get(namespace_name)
             if not namespace.persistent:
-                if self.remove_namespace_timers[namespace.name]:
-                    self.remove_namespace_timers[namespace.name].cancel()
-                    self._del_namespace_in_remove_timers(namespace.name)
+                if self.remove_namespace_timers[namespace.skill_id]:
+                    self.remove_namespace_timers[namespace.skill_id].cancel()
+                    self._del_namespace_in_remove_timers(namespace.skill_id)
                     self._schedule_namespace_removal(namespace)
 
     def handle_page_gained_focus(self, message: Message):
