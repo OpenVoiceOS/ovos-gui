@@ -95,7 +95,10 @@ def determine_if_gui_connected() -> bool:
 class GUIWebsocketHandler(WebSocketHandler):
     """Defines the websocket pipeline between the GUI and Mycroft."""
     clients = []
-    _framework = "qt5"
+
+    def __init__(self, *args, **kwargs):
+        WebSocketHandler.__init__(*args, **kwargs)
+        self._framework = "qt5"
 
     def open(self):
         """
