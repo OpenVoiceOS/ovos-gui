@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a5...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a6...HEAD)
+
+**Merged pull requests:**
+
+- Update dependencies to stable versions [\#16](https://github.com/OpenVoiceOS/ovos-gui/pull/16) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.3a6](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a6) (2023-06-23)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a5...V0.0.3a6)
 
 **Merged pull requests:**
 
