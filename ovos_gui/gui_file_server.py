@@ -11,7 +11,7 @@ from ovos_utils.log import LOG
 _HTTP_SERVER = None
 
 
-class QmlFileHandler(http.server.SimpleHTTPRequestHandler):
+class GuiFileHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self) -> None:
         mimetype = self.guess_type(self.path)
         is_file = not self.path.endswith('/')
@@ -22,7 +22,7 @@ class QmlFileHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
-def start_qml_http_server(qml_path: str, port: int = None):
+def start_gui_http_server(qml_path: str, port: int = None):
     port = port or Configuration().get("gui", {}).get("qml_server_port", 8089)
 
     if os.path.exists(qml_path):
@@ -41,7 +41,7 @@ def start_qml_http_server(qml_path: str, port: int = None):
 def _initialize_http_server(started: Event, directory: str, port: int):
     global _HTTP_SERVER
     os.chdir(directory)
-    handler = QmlFileHandler
+    handler = GuiFileHandler
     http_server = socketserver.TCPServer(("", port), handler)
     _HTTP_SERVER = http_server
     _HTTP_SERVER.qml_path = directory

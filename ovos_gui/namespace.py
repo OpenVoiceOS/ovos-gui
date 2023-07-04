@@ -42,9 +42,7 @@ over the GUI message bus.
 
 from os import makedirs
 from os.path import join, dirname
-from threading import Lock, Timer, Event
-from time import sleep
-from typing import List, Union
+from threading import Event
 from threading import Lock, Timer
 from time import sleep
 from typing import List, Union, Optional
@@ -60,7 +58,7 @@ from ovos_gui.bus import (
     send_message_to_gui
 )
 from ovos_gui.page import GuiPage
-from ovos_gui.qml_server import start_qml_http_server
+from ovos_gui.gui_file_server import start_gui_http_server
 
 namespace_lock = Lock()
 
@@ -472,12 +470,12 @@ class NamespaceManager:
         self._define_message_handlers()
 
     def _init_qml_server(self):
-        config = Configuration().get("gui_websocket", {})
+        config = Configuration().get("gui", {})
         if config.get("qml_server", False):
             from ovos_utils.file_utils import get_temp_path
             self.gui_file_path = config.get("server_path") or \
-                                 get_temp_path("ovos_qml_server")
-            self.qml_server = start_qml_http_server(self.gui_file_path)
+                get_temp_path("ovos_qml_server")
+            self.qml_server = start_gui_http_server(self.gui_file_path)
 
     def _define_message_handlers(self):
         """

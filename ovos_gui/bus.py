@@ -36,7 +36,7 @@ from tornado import ioloop
 from tornado.options import parse_command_line
 from tornado.web import Application
 from tornado.websocket import WebSocketHandler
-from ovos_gui.namespace import NamespaceManager
+# from ovos_gui.namespace import NamespaceManager
 
 _write_lock = Lock()
 
@@ -51,7 +51,7 @@ def get_gui_websocket_config() -> dict:
     return websocket_config
 
 
-def create_gui_service(nsmanager: NamespaceManager) -> Application:
+def create_gui_service(nsmanager) -> Application:
     """
     Initiate a websocket for communicating with the GUI service.
     @param nsmanager: NamespaceManager instance
@@ -95,6 +95,7 @@ def determine_if_gui_connected() -> bool:
 class GUIWebsocketHandler(WebSocketHandler):
     """Defines the websocket pipeline between the GUI and Mycroft."""
     clients = []
+    _framework = "qt5"
 
     def open(self):
         """
@@ -166,9 +167,7 @@ class GUIWebsocketHandler(WebSocketHandler):
 
     @property
     def framework(self):
-        if self._framework:
-            return self._framework
-        return "qt5"
+        return self._framework or "qt5"
 
     def on_message(self, message: str):
         """
@@ -214,6 +213,7 @@ class GUIWebsocketHandler(WebSocketHandler):
             # in those cases framework is always QT5 (backwards compat)
             # new GUIs MUST send this message via gui websocket
             # this means QT6 version of mycroft-gui WILL NOT WORK for now
+            # TODO: Move default framework to configuration
             msg_type = parsed_message.msg_type
             msg_data = parsed_message.data
 
