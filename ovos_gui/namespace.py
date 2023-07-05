@@ -515,13 +515,16 @@ class NamespaceManager:
         @param message: Message containing UI resource file contents and meta
         """
         for page, contents in message.data["pages"].items():
-            res_id = self._get_res_id_from_message(message, page)
-            self.gui_files[res_id] = bytes.fromhex(contents)
-            file_path = join(self.gui_file_path, res_id)
-            LOG.debug(f"writing UI file: {file_path}")
-            makedirs(dirname(file_path), exist_ok=True)
-            with open(file_path, 'wb+') as f:
-                f.write(contents)
+            try:
+                res_id = self._get_res_id_from_message(message, page)
+                byte_contents = bytes.fromhex(contents)
+                file_path = join(self.gui_file_path, res_id)
+                LOG.debug(f"writing UI file: {file_path}")
+                makedirs(dirname(file_path), exist_ok=True)
+                with open(file_path, 'wb+') as f:
+                    f.write(byte_contents)
+            except Exception as e:
+                LOG.exception(f"Failed to write {page}: {e}")
 
     def handle_clear_namespace(self, message: Message):
         """
