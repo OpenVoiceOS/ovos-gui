@@ -514,13 +514,13 @@ class NamespaceManager:
         may additionally be mounted to a host path/volume in container setups.
         @param message: Message containing UI resource file contents and meta
         """
-        for page, contents in message.data["pages"]:
+        for page, contents in message.data["pages"].items():
             res_id = self._get_res_id_from_message(message, page)
-            self.gui_files[res_id] = contents
+            self.gui_files[res_id] = bytes.fromhex(contents.from_hex)
             file_path = join(self.gui_file_path, res_id)
             LOG.debug(f"writing UI file: {file_path}")
             makedirs(dirname(file_path), exist_ok=True)
-            with open(file_path, 'w+') as f:
+            with open(file_path, 'wb+') as f:
                 f.write(contents)
 
     def handle_clear_namespace(self, message: Message):
