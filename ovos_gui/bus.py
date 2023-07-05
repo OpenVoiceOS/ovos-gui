@@ -97,7 +97,7 @@ class GUIWebsocketHandler(WebSocketHandler):
     clients = []
 
     def __init__(self, *args, **kwargs):
-        WebSocketHandler.__init__(*args, **kwargs)
+        WebSocketHandler.__init__(self, *args, **kwargs)
         self._framework = "qt5"
 
     def open(self):
