@@ -533,9 +533,8 @@ class NamespaceManager:
                                               message.data['__from'],
                                               message.data.get('framework') or
                                               "qt5")
-                res_id = self._get_res_id_from_message(message, page)
                 byte_contents = bytes.fromhex(contents)
-                file_path = join(resource_base_path, res_id)
+                file_path = join(resource_base_path, page)
                 LOG.debug(f"writing UI file: {file_path}")
                 makedirs(dirname(file_path), exist_ok=True)
                 with open(file_path, 'wb+') as f:
