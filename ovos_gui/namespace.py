@@ -516,7 +516,7 @@ class NamespaceManager:
         """
         for page, contents in message.data["pages"].items():
             res_id = self._get_res_id_from_message(message, page)
-            self.gui_files[res_id] = bytes.fromhex(contents.from_hex)
+            self.gui_files[res_id] = bytes.fromhex(contents)
             file_path = join(self.gui_file_path, res_id)
             LOG.debug(f"writing UI file: {file_path}")
             makedirs(dirname(file_path), exist_ok=True)
