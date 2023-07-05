@@ -463,7 +463,6 @@ class NamespaceManager:
         self.idle_display_skill = _get_idle_display_config()
         self.active_extension = _get_active_gui_extension()
         self._ready_event = Event()
-        self.gui_files = {}
         self.qml_server = None
         self.gui_file_path = None
         self._init_qml_server()
@@ -496,7 +495,7 @@ class NamespaceManager:
     def handle_ready(self, message):
         self._ready_event.set()
 
-    def _get_res_id_from_message(self, message, page):
+    def _get_res_id_from_message(self, message: Message, page: str) -> str:
         """
         Resolve a resource ID for a given page name
         @param message: Message including resource request
@@ -513,12 +512,30 @@ class NamespaceManager:
         `self.server_path` which is accessible via a lightweight HTTP server and
         may additionally be mounted to a host path/volume in container setups.
         @param message: Message containing UI resource file contents and meta
+            message.data:
+                pages: dict page_filename to encoded bytes content;
+                    paths are relative to the `framework` directory, so a page
+                    for framework `all` could be `qt5/subdir/file.qml` and the
+                    equivalent page for framework `qt5` would be
+                    `subdir/file.qml`
+                framework: `all` if all GUI resources are included, else the
+                    specific GUI framework (i.e. `qt5`, `qt6`)
+                __from: skill_id of module uploading GUI resources
         """
         for page, contents in message.data["pages"].items():
             try:
+                if message.data.get("framework") == "all":
+                    # All GUI resources are uploaded
+                    resource_base_path = join(self.gui_file_path,
+                                              message.data['__from'])
+                else:
+                    resource_base_path = join(self.gui_file_path,
+                                              message.data['__from'],
+                                              message.data.get('framework') or
+                                              "qt5")
                 res_id = self._get_res_id_from_message(message, page)
                 byte_contents = bytes.fromhex(contents)
-                file_path = join(self.gui_file_path, res_id)
+                file_path = join(resource_base_path, res_id)
                 LOG.debug(f"writing UI file: {file_path}")
                 makedirs(dirname(file_path), exist_ok=True)
                 with open(file_path, 'wb+') as f:
