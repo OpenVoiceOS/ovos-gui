@@ -63,8 +63,7 @@ def create_gui_service(nsmanager=None) -> Application:
     parse_command_line(['--logging=None'])
 
     routes = [(websocket_config['route'], GUIWebsocketHandler)]
-    application = Application(routes)
-    application.nsmanager = nsmanager
+    application = Application(routes, namespace_manager=nsmanager)
     application.listen(
         websocket_config['base_port'], websocket_config['host']
     )
@@ -101,7 +100,14 @@ class GUIWebsocketHandler(WebSocketHandler):
     def __init__(self, *args, **kwargs):
         WebSocketHandler.__init__(self, *args, **kwargs)
         self._framework = "qt5"
-        self.ns_manager = self.application.nsmanager
+        self.ns_manager = self.application.settings.get("namespace_manager")
+
+    @property
+    def framework(self) -> str:
+        """
+        Get the GUI framework used by this client
+        """
+        return self._framework or "qt5"
 
     def open(self):
         """
@@ -161,10 +167,6 @@ class GUIWebsocketHandler(WebSocketHandler):
                            "data": {key: value}
                            })
             namespace_pos += 1
-
-    @property
-    def framework(self):
-        return self._framework or "qt5"
 
     def on_message(self, message: str):
         """
@@ -275,9 +277,10 @@ class GUIWebsocketHandler(WebSocketHandler):
         @param data: Data to send to the GUI
         """
         s = json.dumps(data)
-        # LOG.info('Sending {}'.format(s))
         self.write_message(s)
 
     def check_origin(self, origin):
-        """Disable origin check to make js connections work."""
+        """
+        Override origin check to make js connections work.
+        """
         return True
