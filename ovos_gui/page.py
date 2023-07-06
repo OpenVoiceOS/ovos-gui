@@ -15,7 +15,7 @@ class GuiPage:
     @param persistent: If True, page is displayed indefinitely
     @param duration: Number of seconds to display the page for
     @param namespace: Skill/component identifier
-    @param page_id: Page identifier
+    @param page_id: Page identifier (file basename with no extension)
     """
     url: Optional[str]  # This param is left for backwards-compat.
     name: str
@@ -45,17 +45,19 @@ class GuiPage:
             LOG.warning(f"Static URI: {self.url}")
             return self.url
 
+        # TODO: Resolve by framework
+        file_ext = ".qml"
+        res_filename = f"{self.page_id}.{file_ext}"
         if server_url:
             if "://" not in server_url:
                 LOG.debug(f"No schema in server_url, assuming 'http'")
                 server_url = f"http://{server_url}"
-            path = f"{server_url}/{self.namespace}/{framework}/{self.name}"
+            path = f"{server_url}/{self.namespace}/{framework}/{res_filename}"
             LOG.info(f"Resolved server URI: {path}")
             return path
         base_path = self.resource_dirs.get(framework)
         if not base_path and self.resource_dirs.get("all"):
-            file_ext = ".qml"
             file_path = join(self.resource_dirs.get('all'), framework,
-                             base_path, f"{self.page_id}.{file_ext}")
+                             base_path, res_filename)
             if isfile(file_path):
                 return file_path
