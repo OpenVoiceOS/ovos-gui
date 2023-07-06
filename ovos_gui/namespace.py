@@ -599,7 +599,8 @@ class NamespaceManager:
             namespace.remove_pages(page_positions)
 
     @staticmethod
-    def _parse_persistence(persistence: Optional[int, bool]) -> (bool, int):
+    def _parse_persistence(persistence: Optional[Union[int, bool]]) -> \
+            (bool, int):
         """
         Parse a persistence spec into persist and duration.
         @param persistence: message.data["__idle"] spec
