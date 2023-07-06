@@ -175,7 +175,7 @@ class GUIWebsocketHandler(WebSocketHandler):
         on the core messagebus.
         @param message: Serialized Message
         """
-        LOG.info(f"Received: {message}")
+        LOG.debug(f"Received: {message}")
         parsed_message = GUIMessage.deserialize(message)
         LOG.debug(f"Received: {parsed_message.msg_type}|{parsed_message.data}")
 
@@ -235,9 +235,9 @@ class GUIWebsocketHandler(WebSocketHandler):
 
         parsed_message.context["gui_framework"] = self.framework
         message = Message(msg_type, msg_data, parsed_message.context)
-        LOG.info('Forwarding to core bus...')
+        LOG.debug('Forwarding to core bus...')
         self.ns_manager.core_bus.emit(message)
-        LOG.info('Done!')
+        LOG.debug('Done!')
 
     def write_message(self, *arg, **kwarg):
         """

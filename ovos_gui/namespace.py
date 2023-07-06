@@ -291,15 +291,10 @@ class Namespace:
     def _add_pages(self, new_pages: List[GuiPage]):
         """
         Adds one or more pages to the active page list.
-
         @param new_pages: pages to add to the active page list
         """
-        LOG.info(f"Adding pages to GUI namespace {self.skill_id}: {new_pages}")
-        LOG.info(f"Current pages: {self.pages}")
-        # print the attributes of the new pages
-        for page in new_pages:
-            LOG.info(f"Page: {page.id}, {page.name}, {page.persistent}, "
-                     f"{page.duration}")
+        LOG.debug(f"namespace {self.skill_id} current pages: {self.pages}")
+        LOG.debug(f"new_pages={new_pages}")
 
         # Find position of new page in self.pages
         position = self.pages.index(new_pages[0])
@@ -313,7 +308,7 @@ class Namespace:
         @param page: the page that will gain focus
         """
         LOG.info(f"Activating page {page.name} in GUI namespace {self.skill_id}")
-        LOG.info(f"Current pages from _activate_page: {self.pages}")
+        LOG.debug(f"Current pages from _activate_page: {self.pages}")
         # TODO: Simplify two loops into one (with unit test)
         # get the index of the page in the self.pages list
         page_index = 0
@@ -683,7 +678,7 @@ class NamespaceManager:
         @param namespace_name: the name of the namespace to load
         """
         namespace = self._ensure_namespace_exists(namespace_name)
-        LOG.info(f"Activating namespace: {namespace_name}")
+        LOG.debug(f"Activating namespace: {namespace_name}")
 
         if namespace in self.active_namespaces:
             namespace_position = self.active_namespaces.index(namespace)
