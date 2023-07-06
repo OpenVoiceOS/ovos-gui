@@ -39,7 +39,7 @@ The state of the active namespace stack is maintained locally and in the GUI
 code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
-
+import shutil
 from os import makedirs
 from os.path import join, dirname, isfile
 from threading import Event
@@ -471,6 +471,7 @@ class NamespaceManager:
             self.gui_file_path = config.get("server_path") or \
                 get_temp_path("ovos_gui_file_server")
             self.gui_file_server = start_gui_http_server(self.gui_file_path)
+            self._upload_system_resources()
 
     def _define_message_handlers(self):
         """
@@ -940,3 +941,10 @@ class NamespaceManager:
         """
         if namespace_name in self.remove_namespace_timers:
             del self.remove_namespace_timers[namespace_name]
+
+    def _upload_system_resources(self):
+        """
+        Copy system GUI resources to the served file path
+        """
+        system_res_dir = join(dirname(__file__), "res", "gui")
+        shutil.copytree(system_res_dir, join(self.gui_file_path, "system"))

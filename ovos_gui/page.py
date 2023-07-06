@@ -1,4 +1,4 @@
-from os.path import join, isfile
+from os.path import join, isfile, dirname
 from typing import Union, Optional
 from dataclasses import dataclass
 from ovos_utils.log import LOG
@@ -58,11 +58,13 @@ class GuiPage:
             return self.url
 
         res_filename = f"{self.page_id}.{self.get_file_extension(framework)}"
+        res_namespace = "system" if self.page_id.startswith("SYSTEM") else \
+            self.namespace
         if server_url:
             if "://" not in server_url:
                 LOG.debug(f"No schema in server_url, assuming 'http'")
                 server_url = f"http://{server_url}"
-            path = f"{server_url}/{self.namespace}/{framework}/{res_filename}"
+            path = f"{server_url}/{res_namespace}/{framework}/{res_filename}"
             LOG.info(f"Resolved server URI: {path}")
             return path
         base_path = self.resource_dirs.get(framework)
@@ -73,6 +75,10 @@ class GuiPage:
             file_path = join(base_path, res_filename)
         if isfile(file_path):
             return file_path
+        # Check system resources
+        file_path = join(dirname(__file__), "res", "gui", framework)
+        if isfile(file_path):
+            return file_path
         raise FileNotFoundError(f"Unable to resolve resource file for "
-                                f"resource {res_filename} using framework "
+                                f"resource {res_filename} for framework "
                                 f"{framework}")

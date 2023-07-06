@@ -13,10 +13,11 @@
 # limitations under the License.
 #
 """Tests for the GUI namespace helper class."""
-
+from os import makedirs
+from shutil import rmtree
 from unittest import TestCase, mock
 from unittest.mock import Mock
-
+from os.path import join, dirname, isdir, isfile
 from ovos_bus_client.message import Message
 from ovos_utils.messagebus import FakeBus
 from ovos_gui.page import GuiPage
@@ -415,3 +416,13 @@ class TestNamespaceManager(TestCase):
     def test_del_namespace_in_remove_timers(self):
         # TODO
         pass
+
+    def test_upload_system_resources(self):
+        test_dir = join(dirname(__file__), "upload_test")
+        makedirs(test_dir, exist_ok=True)
+        self.namespace_manager.gui_file_path = test_dir
+        self.namespace_manager._upload_system_resources()
+        self.assertTrue(isdir(join(test_dir, "system", "qt5")))
+        self.assertTrue(isfile(join(test_dir, "system", "qt5",
+                                    "SYSTEM_TextFrame.qml")))
+        rmtree(test_dir)
