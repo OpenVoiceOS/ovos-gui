@@ -208,17 +208,18 @@ class GUIWebsocketHandler(WebSocketHandler):
         elif parsed_message.msg_type == 'mycroft.gui.connected':
             # new client connected to GUI
 
-            # NOTE: mycroft-gui clients do this directly in core bus, dont send it to gui bus
-            # in those cases framework is always QT5 (backwards compat)
-            # new GUIs MUST send this message via gui websocket
-            # this means QT6 version of mycroft-gui WILL NOT WORK for now
-            # TODO: Move default framework to configuration
+            # NOTE: mycroft-gui clients do this directly in core bus, don't
+            # send it to gui bus. In those cases, framework is read from config,
+            # defaulting to qt5 for backwards-compat.
+            default_qt_version = \
+                Configuration().get('gui', {}).get('default_qt_version') or 5
             msg_type = parsed_message.msg_type
             msg_data = parsed_message.data
 
             framework = msg_data.get("framework")  # new api
             if framework is None:
-                qt = msg_data.get("qt_version", 5)  # mycroft-gui api
+                # mycroft-gui api
+                qt = msg_data.get("qt_version") or default_qt_version
                 if int(qt) == 6:
                     framework = "qt6"
                 else:
