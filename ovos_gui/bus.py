@@ -25,11 +25,12 @@ If the connection is lost, it must be renegotiated and restarted.
 """
 import asyncio
 import json
-import os.path
 from threading import Lock
+from typing import List
 
 from ovos_bus_client import Message, GUIMessage
 from ovos_config.config import Configuration
+from ovos_gui.page import GuiPage
 from ovos_utils import create_daemon
 from ovos_utils.log import LOG
 from tornado import ioloop
@@ -51,7 +52,7 @@ def get_gui_websocket_config() -> dict:
     return websocket_config
 
 
-def create_gui_service(nsmanager) -> Application:
+def create_gui_service(nsmanager=None) -> Application:
     """
     Initiate a websocket for communicating with the GUI service.
     @param nsmanager: NamespaceManager instance
@@ -75,7 +76,8 @@ def create_gui_service(nsmanager) -> Application:
 
 def send_message_to_gui(message: dict):
     """
-    Sends the supplied message to all connected GUI clients.
+    Sends the supplied message to all connected GUI clients. This function does
+    NOT account for the GUI framework in use by each client
     @param message: dict data to send to GUI clients
     """
     for connection in GUIWebsocketHandler.clients:
@@ -99,6 +101,7 @@ class GUIWebsocketHandler(WebSocketHandler):
     def __init__(self, *args, **kwargs):
         WebSocketHandler.__init__(self, *args, **kwargs)
         self._framework = "qt5"
+        self.ns_manager = self.application.nsmanager
 
     def open(self):
         """
@@ -116,26 +119,17 @@ class GUIWebsocketHandler(WebSocketHandler):
         GUIWebsocketHandler.clients.remove(self)
 
     def get_client_pages(self, namespace):
-        nsmanager = self.application.nsmanager
-        skill_id = namespace.skill_id
-
+        """
+        Get a list of client page URLs for the given namespace
+        @param namespace: Namespace to get pages for
+        @return: list of page URIs for this GUI Client
+        """
         client_pages = []
-
+        server_url = self.ns_manager.qml_server.url if \
+            self.ns_manager.qml_server else None
         for page in namespace.pages:
-
-            if not page.url.startswith('http') and nsmanager.qml_server:
-                p = os.path.join(nsmanager.gui_file_path, skill_id, self.framework, page)
-                if os.path.isfile(p):
-                    LOG.info(f"serving qml file {page.url} via {p}")
-                    client_pages.append(p)
-                    continue
-                p = os.path.join(nsmanager.gui_file_path, skill_id, self.framework, page)
-                if os.path.isfile(p):
-                    LOG.info(f"serving qml file {page.url} via {p}")
-                    client_pages.append(p)
-                    continue
-
-            client_pages.append(page.url)
+            uri = page.get_uri(self.framework, server_url)
+            client_pages.append(uri)
 
         return client_pages
 
@@ -144,9 +138,8 @@ class GUIWebsocketHandler(WebSocketHandler):
         Upload namespaces, pages and data to the last connected client.
         """
         namespace_pos = 0
-        nsmanager = self.application.nsmanager
 
-        for namespace in nsmanager.active_namespaces:
+        for namespace in self.ns_manager.active_namespaces:
             LOG.info(f'Sync {namespace.skill_id}')
             # Insert namespace
             self.send({"type": "mycroft.session.list.insert",
@@ -158,7 +151,8 @@ class GUIWebsocketHandler(WebSocketHandler):
             self.send({"type": "mycroft.gui.list.insert",
                        "namespace": namespace.skill_id,
                        "position": 0,
-                       "data": [{"url": url} for url in self.get_client_pages(namespace)]
+                       "data": [{"url": url} for url in
+                                self.get_client_pages(namespace)]
                        })
             # Insert data
             for key, value in namespace.data.items():
@@ -239,7 +233,7 @@ class GUIWebsocketHandler(WebSocketHandler):
         parsed_message.context["gui_framework"] = self.framework
         message = Message(msg_type, msg_data, parsed_message.context)
         LOG.info('Forwarding to core bus...')
-        self.application.nsmanager.core_bus.emit(message)
+        self.ns_manager.core_bus.emit(message)
         LOG.info('Done!')
 
     def write_message(self, *arg, **kwarg):
@@ -253,6 +247,27 @@ class GUIWebsocketHandler(WebSocketHandler):
 
         with _write_lock:
             super().write_message(*arg, **kwarg)
+
+    def send_gui_pages(self, pages: List[GuiPage], namespace: str,
+                       position: int):
+        """
+        Send GUI pages to this client, accounting for the client-specific pages
+        @param pages: list of GuiPage objects to send
+        @param namespace: namespace to put GuiPages in
+        @param position: position to insert pages at
+        """
+        server_url = self.ns_manager.qml_server.url if \
+            self.ns_manager.qml_server else None
+        framework = self.framework
+
+        message = {
+            "type": "mycroft.gui.list.insert",
+            "namespace": namespace,
+            "position": position,
+            "data": [{"url": page.get_uri(framework, server_url)}
+                     for page in pages]
+        }
+        self.send(message)
 
     def send(self, data: dict):
         """

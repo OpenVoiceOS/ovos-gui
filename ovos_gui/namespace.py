@@ -41,7 +41,7 @@ over the GUI message bus.
 """
 
 from os import makedirs
-from os.path import join, dirname
+from os.path import join, dirname, isfile
 from threading import Event
 from threading import Lock, Timer
 from time import sleep
@@ -55,7 +55,7 @@ from ovos_gui.bus import (
     create_gui_service,
     determine_if_gui_connected,
     get_gui_websocket_config,
-    send_message_to_gui
+    send_message_to_gui, GUIWebsocketHandler
 )
 from ovos_gui.page import GuiPage
 from ovos_gui.gui_file_server import start_gui_http_server
@@ -279,7 +279,7 @@ class Namespace:
         new_pages = list()
 
         for page in pages:
-            if page.url not in [p.url for p in self.pages]:
+            if page.id not in [p.id for p in self.pages]:
                 new_pages.append(page)
 
         self.pages.extend(new_pages)
@@ -298,19 +298,13 @@ class Namespace:
         LOG.info(f"Current pages: {self.pages}")
         # print the attributes of the new pages
         for page in new_pages:
-            LOG.info(f"Page: {page.url}, {page.name}, {page.persistent}, "
+            LOG.info(f"Page: {page.id}, {page.name}, {page.persistent}, "
                      f"{page.duration}")
 
         # Find position of new page in self.pages
         position = self.pages.index(new_pages[0])
-
-        message = dict(
-            type="mycroft.gui.list.insert",
-            namespace=self.skill_id,
-            position=position,
-            data=[dict(url=page.url) for page in new_pages]
-        )
-        send_message_to_gui(message)
+        for client in GUIWebsocketHandler.clients:
+            client.send_gui_pages(new_pages, self.skill_id, position)
 
     def _activate_page(self, page: GuiPage):
         """
@@ -324,7 +318,7 @@ class Namespace:
         # get the index of the page in the self.pages list
         page_index = 0
         for i, p in enumerate(self.pages):
-            if p.url == page.url:
+            if p.id == page.id:
                 page_index = i
                 break
 
@@ -598,12 +592,44 @@ class NamespaceManager:
         if namespace is not None and namespace in self.active_namespaces:
             page_positions = []
             for index, page in enumerate(pages_to_remove):
-                # if page matches namespace.pages.url:
-                if page == namespace.pages[index].url:
+                if page == namespace.pages[index].id:
                     page_positions.append(index)
 
             page_positions.sort(reverse=True)
             namespace.remove_pages(page_positions)
+
+    @staticmethod
+    def _parse_persistence(persistence: Optional[int, bool]) -> (bool, int):
+        """
+        Parse a persistence spec into persist and duration.
+        @param persistence: message.data["__idle"] spec
+        @return: bool persistence, int duration
+        """
+        if isinstance(persistence, bool):
+            return persistence, 0
+        elif isinstance(persistence, int):
+            return False,  persistence
+        else:
+            # Defines default behavior as displaying for 30 seconds
+            return False, 30
+
+    def _legacy_show_page(self, message: Message) -> List[GuiPage]:
+        """
+        Backwards-compat method to handle messages without ui_directories and
+        page_names.
+        @param message: message requesting to display pages
+        @return: list of GuiPage objects
+        """
+        pages_to_show = message.data["page"]
+        LOG.info(f"Handling legacy page show request. pages={pages_to_show}")
+
+        pages_to_load = list()
+        persist, duration = self._parse_persistence(message.data["__idle"])
+        for page in pages_to_show:
+            name = page.split('/')[-1]
+            # check if persistence is type of int or bool
+            pages_to_load.append(GuiPage(page, name, persist, duration))
+        return pages_to_load
 
     def handle_show_page(self, message: Message):
         """
@@ -611,37 +637,39 @@ class NamespaceManager:
         @param message: the message containing the page show request
         """
         message_is_valid = _validate_page_message(message)
-        if message_is_valid:
-            namespace_name = message.data["__from"]
-            pages_to_show = message.data["page"]
-            persistence = message.data["__idle"]
-            show_index = message.data.get("index", None)
+        if not message_is_valid:
+            LOG.error(f"invalid request: {message.data}")
+            return
 
-            LOG.info(f"Handling page show request. pages={pages_to_show}")
+        namespace_name = message.data["__from"]
+        page_ids_to_show = message.data.get('page_names')
+        page_resource_dirs = message.data.get('ui_directories')
+        persistence = message.data["__idle"]
+        show_index = message.data.get("index", None)
 
-            pages_to_load = list()
-            for page in pages_to_show:
-                name = page.split('/')[-1]
-                # check if persistence is type of int or bool
-                if isinstance(persistence, bool):
-                    persist = persistence
-                    duration = 0
+        if not all((page_ids_to_show, page_resource_dirs)):
+            pages = self._legacy_show_page(message)
+        else:
+            pages = list()
+            persist, duration = self._parse_persistence(message.data["__idle"])
+            for page in page_ids_to_show:
+                url = None
+                name = page
+                if isfile(page):
+                    LOG.warning(f"Requested page is a file: {url}")
+                    name = page.split('/')[-1]
+                    url = f"file://{page}"
+                elif "://" in page:
+                    LOG.warning(f"page looks like a URI: {page}")
+                    name = page.split('/')[-1]
+                    url = page
+                pages.append(GuiPage(url, name, persist, duration,
+                                     page, namespace_name, page_resource_dirs))
 
-                # check if persistence is type of int
-                elif isinstance(persistence, int):
-                    persist = False
-                    duration = persistence
-
-                else:
-                    persist = False
-                    duration = 30
-
-                pages_to_load.append(GuiPage(page, name, persist, duration))
-
-            with namespace_lock:
-                self._activate_namespace(namespace_name)
-                self._load_pages(pages_to_load, show_index)
-                self._update_namespace_persistence(persistence)
+        with namespace_lock:
+            self._activate_namespace(namespace_name)
+            self._load_pages(pages, show_index)
+            self._update_namespace_persistence(persistence)
 
     def _activate_namespace(self, namespace_name: str):
         """
