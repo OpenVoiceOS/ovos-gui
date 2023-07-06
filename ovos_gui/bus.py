@@ -131,8 +131,8 @@ class GUIWebsocketHandler(WebSocketHandler):
         @return: list of page URIs for this GUI Client
         """
         client_pages = []
-        server_url = self.ns_manager.qml_server.url if \
-            self.ns_manager.qml_server else None
+        server_url = self.ns_manager.gui_file_server.url if \
+            self.ns_manager.gui_file_server else None
         for page in namespace.pages:
             uri = page.get_uri(self.framework, server_url)
             client_pages.append(uri)
@@ -259,8 +259,8 @@ class GUIWebsocketHandler(WebSocketHandler):
         @param namespace: namespace to put GuiPages in
         @param position: position to insert pages at
         """
-        server_url = self.ns_manager.qml_server.url if \
-            self.ns_manager.qml_server else None
+        server_url = self.ns_manager.gui_file_server.url if \
+            self.ns_manager.gui_file_server else None
         framework = self.framework
 
         message = {
