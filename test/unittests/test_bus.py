@@ -19,15 +19,17 @@ class TestBus(unittest.TestCase):
         with self.assertRaises(KeyError):
             get_gui_websocket_config()
 
+    @patch("ovos_gui.bus.Application.listen")
     @patch("ovos_gui.bus.create_daemon")
     @patch("ovos_gui.bus.ioloop")
-    def test_create_gui_service(self, ioloop, create_daemon):
+    def test_create_gui_service(self, ioloop, create_daemon, listen):
         from ovos_gui.bus import create_gui_service
         ioloop_instance = Mock()
         ioloop.IOLoop.instance.return_value = ioloop_instance
         mock_nsmanager = Mock()
         application = create_gui_service(mock_nsmanager)
         create_daemon.assert_called_once_with(ioloop_instance.start)
+        listen.assert_called_once()
         self.assertEqual(application.settings.get("namespace_manager"),
                          mock_nsmanager)
 
