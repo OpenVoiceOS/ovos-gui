@@ -23,7 +23,7 @@ class GuiFileHandler(http.server.SimpleHTTPRequestHandler):
 
 
 def start_gui_http_server(qml_path: str, port: int = None):
-    port = port or Configuration().get("gui", {}).get("qml_server_port", 8089)
+    port = port or Configuration().get("gui", {}).get("file_server_port", 8089)
 
     if os.path.exists(qml_path):
         shutil.rmtree(qml_path, ignore_errors=True)
@@ -45,7 +45,8 @@ def _initialize_http_server(started: Event, directory: str, port: int):
     http_server = socketserver.TCPServer(("", port), handler)
     _HTTP_SERVER = http_server
     _HTTP_SERVER.qml_path = directory
-    _HTTP_SERVER.url = f"{_HTTP_SERVER.server_address[0]}:{_HTTP_SERVER.server_address[1]}"
-    LOG.info(f"QML file server started: {_HTTP_SERVER.url}")
+    _HTTP_SERVER.url = \
+        f"{_HTTP_SERVER.server_address[0]}:{_HTTP_SERVER.server_address[1]}"
+    LOG.info(f"GUI file server started: {_HTTP_SERVER.url}")
     started.set()
     http_server.serve_forever()

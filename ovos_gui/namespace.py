@@ -457,18 +457,25 @@ class NamespaceManager:
         self.idle_display_skill = _get_idle_display_config()
         self.active_extension = _get_active_gui_extension()
         self._ready_event = Event()
-        self.qml_server = None
+        self.gui_file_server = None
         self.gui_file_path = None
-        self._init_qml_server()
+        self._init_gui_server()
         self._define_message_handlers()
 
-    def _init_qml_server(self):
+    @property
+    def _active_homescreen(self) -> str:
+        return Configuration().get('gui', {}).get('idle_display_skill')
+
+    def _init_gui_server(self):
+        """
+        Initialize a GUI HTTP file server if enabled in configuration
+        """
         config = Configuration().get("gui", {})
-        if config.get("qml_server", False):
+        if config.get("gui_file_server", False):
             from ovos_utils.file_utils import get_temp_path
             self.gui_file_path = config.get("server_path") or \
-                get_temp_path("ovos_qml_server")
-            self.qml_server = start_gui_http_server(self.gui_file_path)
+                get_temp_path("ovos_gui_file_server")
+            self.gui_file_server = start_gui_http_server(self.gui_file_path)
 
     def _define_message_handlers(self):
         """
@@ -488,17 +495,6 @@ class NamespaceManager:
 
     def handle_ready(self, message):
         self._ready_event.set()
-
-    def _get_res_id_from_message(self, message: Message, page: str) -> str:
-        """
-        Resolve a resource ID for a given page name
-        @param message: Message including resource request
-        @param page: Name of GUI resource (full or partial file path)
-        @return: Normalized resource ID used by GUI File Server
-        """
-        skill_id = message.data['__from']
-        framework = message.data.get("framework", "qt5")
-        return join(skill_id, framework, page)
 
     def handle_receive_gui_pages(self, message: Message):
         """
@@ -535,6 +531,10 @@ class NamespaceManager:
                     f.write(byte_contents)
             except Exception as e:
                 LOG.exception(f"Failed to write {page}: {e}")
+        if message.data["__from"] == self._active_homescreen:
+            # Configured home screen skill just uploaded pages, show it again
+            self.core_bus.emit(
+                message.forward("homescreen.manager.show_active"))
 
     def handle_clear_namespace(self, message: Message):
         """
@@ -606,9 +606,13 @@ class NamespaceManager:
         @param persistence: message.data["__idle"] spec
         @return: bool persistence, int duration
         """
+        if isinstance(persistence, float):
+            persistence = round(persistence)
         if isinstance(persistence, bool):
             return persistence, 0
         elif isinstance(persistence, int):
+            if persistence < 0:
+                raise ValueError("Requested negative persistence")
             return False,  persistence
         else:
             # Defines default behavior as displaying for 30 seconds
@@ -657,11 +661,11 @@ class NamespaceManager:
                 url = None
                 name = page
                 if isfile(page):
-                    LOG.warning(f"Requested page is a file: {url}")
+                    LOG.warning(f"Expected resource name but got file: {url}")
                     name = page.split('/')[-1]
                     url = f"file://{page}"
                 elif "://" in page:
-                    LOG.warning(f"page looks like a URI: {page}")
+                    LOG.warning(f"Expected resource name but got URI: {page}")
                     name = page.split('/')[-1]
                     url = page
                 pages.append(GuiPage(url, name, persist, duration,

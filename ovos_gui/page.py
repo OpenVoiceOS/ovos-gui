@@ -11,11 +11,12 @@ class GuiPage:
     A Page can either be `persistent` or be removed after some `duration`.
     Note that a page is generally framework-independent
     @param url: URI (local or network path) of the GUI Page
-    @param name: Name of the page as shown in its namespace
+    @param name: Name of the page as shown in its namespace (could
     @param persistent: If True, page is displayed indefinitely
     @param duration: Number of seconds to display the page for
     @param namespace: Skill/component identifier
-    @param page_id: Page identifier (file basename with no extension)
+    @param page_id: Page identifier
+        (file path relative to gui_framework directory with no extension)
     """
     url: Optional[str]  # This param is left for backwards-compat.
     name: str
@@ -34,6 +35,17 @@ class GuiPage:
         """
         return self.page_id or self.url
 
+    @staticmethod
+    def get_file_extension(framework: str) -> str:
+        """
+        Get a file extension for the specified GUI framework
+        @param framework: string framework to get file extension for
+        @return: string file extension (empty string if unknown)
+        """
+        if framework in ("qt5", "qt6"):
+            return "qml"
+        return ""
+
     def get_uri(self, framework: str = "qt5", server_url: str = None) -> str:
         """
         Get a valid URI for this Page.
@@ -45,9 +57,7 @@ class GuiPage:
             LOG.warning(f"Static URI: {self.url}")
             return self.url
 
-        # TODO: Resolve by framework
-        file_ext = "qml"
-        res_filename = f"{self.page_id}.{file_ext}"
+        res_filename = f"{self.page_id}.{self.get_file_extension(framework)}"
         if server_url:
             if "://" not in server_url:
                 LOG.debug(f"No schema in server_url, assuming 'http'")
@@ -58,6 +68,11 @@ class GuiPage:
         base_path = self.resource_dirs.get(framework)
         if not base_path and self.resource_dirs.get("all"):
             file_path = join(self.resource_dirs.get('all'), framework,
-                             base_path, res_filename)
-            if isfile(file_path):
-                return file_path
+                             res_filename)
+        else:
+            file_path = join(base_path, res_filename)
+        if isfile(file_path):
+            return file_path
+        raise FileNotFoundError(f"Unable to resolve resource file for "
+                                f"resource {res_filename} using framework "
+                                f"{framework}")
