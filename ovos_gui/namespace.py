@@ -41,7 +41,7 @@ over the GUI message bus.
 """
 import shutil
 from os import makedirs
-from os.path import join, dirname, isfile
+from os.path import join, dirname, isfile, exists
 from threading import Event
 from threading import Lock, Timer
 from time import sleep
@@ -946,5 +946,10 @@ class NamespaceManager:
         """
         Copy system GUI resources to the served file path
         """
+        output_path = join(self.gui_file_path, "system")
+        if exists(output_path):
+            LOG.info(f"Removing existing system resources before updating")
+            shutil.rmtree(output_path)
         system_res_dir = join(dirname(__file__), "res", "gui")
-        shutil.copytree(system_res_dir, join(self.gui_file_path, "system"))
+        shutil.copytree(system_res_dir, output_path)
+        LOG.debug(f"Copied system resources to {self.gui_file_path}")

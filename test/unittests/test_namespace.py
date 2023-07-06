@@ -425,4 +425,9 @@ class TestNamespaceManager(TestCase):
         self.assertTrue(isdir(join(test_dir, "system", "qt5")))
         self.assertTrue(isfile(join(test_dir, "system", "qt5",
                                     "SYSTEM_TextFrame.qml")))
+        # Test repeated copy doesn't raise any exception
+        self.namespace_manager._upload_system_resources()
+        self.assertTrue(isdir(join(test_dir, "system", "qt5")))
+        self.assertTrue(isfile(join(test_dir, "system", "qt5",
+                                    "SYSTEM_TextFrame.qml")))
         rmtree(test_dir)
