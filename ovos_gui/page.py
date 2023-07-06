@@ -46,6 +46,9 @@ class GuiPage:
             return self.url
 
         if server_url:
+            if "://" not in server_url:
+                LOG.debug(f"No schema in server_url, assuming 'http'")
+                server_url = f"http://{server_url}"
             path = f"{server_url}/{self.namespace}/{framework}/{self.name}"
             LOG.info(f"Resolved server URI: {path}")
             return path
