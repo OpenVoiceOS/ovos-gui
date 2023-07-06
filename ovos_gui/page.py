@@ -46,7 +46,7 @@ class GuiPage:
             return self.url
 
         # TODO: Resolve by framework
-        file_ext = ".qml"
+        file_ext = "qml"
         res_filename = f"{self.page_id}.{file_ext}"
         if server_url:
             if "://" not in server_url:
