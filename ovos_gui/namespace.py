@@ -455,6 +455,7 @@ class NamespaceManager:
         self._ready_event = Event()
         self.gui_file_server = None
         self.gui_file_path = None
+        self._connected_frameworks: List[str] = list()
         self._init_gui_server()
         self._define_message_handlers()
 
@@ -488,10 +489,30 @@ class NamespaceManager:
         self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
-        self.core_bus.on("mycroft.ready", self.handle_ready)
+        self.core_bus.on("mycroft.skills.trained", self.handle_ready)
 
     def handle_ready(self, message):
         self._ready_event.set()
+        self.core_bus.on("gui.volunteer_page_upload",
+                         self.handle_gui_pages_available)
+
+    def handle_gui_pages_available(self, message: Message):
+        """
+        Handle a skill or plugin advertising that it has GUI pages available to
+        upload. If there are connected clients, request pages for each connected
+        GUI framework.
+        @param message: `gui.volunteer_page_upload` message
+        """
+        if not self.gui_file_path:
+            LOG.debug("No GUI file server running")
+            return
+
+        for framework in self._connected_frameworks:
+            self.core_bus.emit(message.reply("gui.request_page_upload",
+                                             {'framework': framework},
+                                             {"source": "gui",
+                                              "destination": ["skills",
+                                                              "PHAL"]}))
 
     def handle_receive_gui_pages(self, message: Message):
         """
@@ -886,13 +907,18 @@ class NamespaceManager:
         message = message.forward("mycroft.gui.port",
                                   dict(port=port, gui_id=gui_id))
         self.core_bus.emit(message)
+
         if self.gui_file_path:
             if not self._ready_event.wait(90):
                 LOG.warning("Not reported ready after 90s")
-            self.core_bus.emit(Message("gui.request_page_upload",
-                                       {'framework': framework},
-                                       {"source": "gui",
-                                        "destination": ["skills", "PHAL"]}))
+            if framework not in self._connected_frameworks:
+                self.core_bus.emit(Message("gui.request_page_upload",
+                                           {'framework': framework},
+                                           {"source": "gui",
+                                            "destination": ["skills", "PHAL"]}))
+
+        if framework not in self._connected_frameworks:
+            self._connected_frameworks.append(framework)
 
     def handle_page_interaction(self, message: Message):
         """

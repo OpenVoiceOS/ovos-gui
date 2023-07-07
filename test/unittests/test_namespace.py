@@ -206,6 +206,19 @@ class TestNamespaceManager(TestCase):
         # TODO
         pass
 
+    def test_handle_ready(self):
+        self.assertEqual(len(self.namespace_manager.core_bus.ee.
+                             listeners("gui.volunteer_page_upload")), 0)
+        self.assertFalse(self.namespace_manager._ready_event.is_set())
+        self.namespace_manager.handle_ready(Message(""))
+        self.assertTrue(self.namespace_manager._ready_event.wait(0.01))
+        self.assertEqual(len(self.namespace_manager.core_bus.ee.
+                             listeners("gui.volunteer_page_upload")), 1)
+
+    def test_handle_gui_pages_available(self):
+        # TODO
+        pass
+
     def test_handle_receive_gui_pages(self):
         # TODO
         pass
