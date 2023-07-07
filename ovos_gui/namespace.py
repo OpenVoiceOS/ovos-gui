@@ -508,8 +508,10 @@ class NamespaceManager:
             return
 
         for framework in self._connected_frameworks:
+            skill_id = message.data.get("skill_id")
             self.core_bus.emit(message.reply("gui.request_page_upload",
-                                             {'framework': framework},
+                                             {'skill_id': skill_id,
+                                              'framework': framework},
                                              {"source": "gui",
                                               "destination": ["skills",
                                                               "PHAL"]}))
