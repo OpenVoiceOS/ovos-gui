@@ -333,6 +333,22 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager._update_namespace_persistence.\
             assert_called_with(False)
 
+        # System resources
+        message = Message("test", {"__from": "skill_no_res",
+                                   "__idle": True,
+                                   "index": 2,
+                                   "page": ["/gui/SYSTEM_TextFrame.qml"],
+                                   "page_names": ["SYSTEM_TextFrame"]})
+        self.namespace_manager.handle_show_page(message)
+        expected_page = GuiPage(None, "SYSTEM_TextFrame", True, 0,
+                                "SYSTEM_TextFrame", "system",
+                                {"all": self.namespace_manager._system_res_dir})
+        self.namespace_manager._legacy_show_page.assert_called_once()
+        self.namespace_manager._activate_namespace.assert_called_with("system")
+        self.namespace_manager._load_pages.assert_called_with([expected_page],
+                                                              2)
+        self.namespace_manager._update_namespace_persistence.\
+            assert_called_with(True)
         # TODO: Test page_names with files and URIs
 
         self.namespace_manager._legacy_show_page = real_legacy_show_page

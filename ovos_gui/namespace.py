@@ -451,6 +451,7 @@ class NamespaceManager:
         self.remove_namespace_timers: Dict[str, Timer] = dict()
         self.idle_display_skill = _get_idle_display_config()
         self.active_extension = _get_active_gui_extension()
+        self._system_res_dir = join(dirname(__file__), "res", "gui")
         self._ready_event = Event()
         self.gui_file_server = None
         self.gui_file_path = None
@@ -648,7 +649,13 @@ class NamespaceManager:
         persistence = message.data["__idle"]
         show_index = message.data.get("index", None)
 
+        if not page_resource_dirs and page_ids_to_show and \
+                all((x.startswith("SYSTEM") for x in page_ids_to_show)):
+            page_resource_dirs = {"all": self._system_res_dir}
+            namespace_name = "system"
+
         if not all((page_ids_to_show, page_resource_dirs)):
+            LOG.info(f"Handling legacy page request: data={message.data}")
             pages = self._legacy_show_page(message)
         else:
             pages = list()
@@ -950,6 +957,5 @@ class NamespaceManager:
         if exists(output_path):
             LOG.info(f"Removing existing system resources before updating")
             shutil.rmtree(output_path)
-        system_res_dir = join(dirname(__file__), "res", "gui")
-        shutil.copytree(system_res_dir, output_path)
+        shutil.copytree(self._system_res_dir, output_path)
         LOG.debug(f"Copied system resources to {self.gui_file_path}")
