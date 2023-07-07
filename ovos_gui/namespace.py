@@ -652,7 +652,6 @@ class NamespaceManager:
         if not page_resource_dirs and page_ids_to_show and \
                 all((x.startswith("SYSTEM") for x in page_ids_to_show)):
             page_resource_dirs = {"all": self._system_res_dir}
-            namespace_name = "system"
 
         if not all((page_ids_to_show, page_resource_dirs)):
             LOG.info(f"Handling legacy page request: data={message.data}")

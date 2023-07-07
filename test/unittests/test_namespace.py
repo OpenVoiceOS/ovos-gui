@@ -341,10 +341,11 @@ class TestNamespaceManager(TestCase):
                                    "page_names": ["SYSTEM_TextFrame"]})
         self.namespace_manager.handle_show_page(message)
         expected_page = GuiPage(None, "SYSTEM_TextFrame", True, 0,
-                                "SYSTEM_TextFrame", "system",
+                                "SYSTEM_TextFrame", "skill_no_res",
                                 {"all": self.namespace_manager._system_res_dir})
         self.namespace_manager._legacy_show_page.assert_called_once()
-        self.namespace_manager._activate_namespace.assert_called_with("system")
+        self.namespace_manager._activate_namespace.assert_called_with(
+            "skill_no_res")
         self.namespace_manager._load_pages.assert_called_with([expected_page],
                                                               2)
         self.namespace_manager._update_namespace_persistence.\
@@ -354,7 +355,8 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager._legacy_show_page = real_legacy_show_page
         self.namespace_manager._activate_namespace = real_activate_namespace
         self.namespace_manager._load_pages = real_load_pages
-        self.namespace_manager._update_namespace_persistence = real_update_persistence
+        self.namespace_manager._update_namespace_persistence = \
+            real_update_persistence
 
     def test_handle_show_page_invalid_message(self):
         namespace = Namespace("foo")
