@@ -455,14 +455,13 @@ class NamespaceManager:
         self._ready_event = Event()
         self.gui_file_server = None
         self.gui_file_path = None
-        self._init_gui_server()
         self._define_message_handlers()
 
     @property
     def _active_homescreen(self) -> str:
         return Configuration().get('gui', {}).get('idle_display_skill')
 
-    def _init_gui_server(self):
+    def init_gui_server(self):
         """
         Initialize a GUI HTTP file server if enabled in configuration
         """
@@ -473,6 +472,32 @@ class NamespaceManager:
                 get_temp_path("ovos_gui_file_server")
             self.gui_file_server = start_gui_http_server(self.gui_file_path)
             self._upload_system_resources()
+            if self._check_services_ready():
+                self._request_upload()
+            else:
+                # TODO - follow up PR to allow this step after skills but before mycroft.ready
+                #   via ready_settings in mycroft.conf
+                self.core_bus.on("mycroft.skills.loaded", self._request_upload)
+
+    def _check_services_ready(self):
+        """Report if all specified services are ready.
+
+        services (iterable): service names to check.
+        """
+        services = {k: False for k in ["skills",  # ovos-core
+                                       # "audio",  # ovos-audio
+                                       # "voice"  # ovos-dinkum-listener
+                                       ]}
+        for ser, rdy in services.items():
+            if rdy:
+                # already reported ready
+                continue
+            response = self.core_bus.wait_for_response(
+                Message(f'mycroft.{ser}.is_ready',
+                        context={"source": "ovos-gui", "destination": ser}))
+            if response and response.data['status']:
+                services[ser] = True
+        return all([services[ser] for ser in services])
 
     def _define_message_handlers(self):
         """
@@ -489,6 +514,24 @@ class NamespaceManager:
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
         self.core_bus.on("mycroft.ready", self.handle_ready)
+
+    def _request_upload(self, message=None):
+        """ request any skills that are already loaded to upload their UI data"""
+        self.core_bus.emit(Message("ovos.gui.upload.ready",
+                                   data={"framework": "all"},
+                                   context={"destination": "skills"}))
+        # only registered here to avoid uploads before core is ready
+        self.core_bus.on("ovos.gui.upload.announce",
+                         self.handle_skill_resources_announced)
+
+    def handle_skill_resources_announced(self, message=None):
+        """ a skill (re)loaded and announced it has files for us """
+        skill_id = message.data.get("skill_id") or message.context.get("skill_id")
+        # TODO - consider checking if files changed and avoid a re-upload
+        #  skills could send a hash of ui folder first
+        self.core_bus.emit(Message("ovos.gui.upload.ready",
+                                   data={"framework": "all", "skill_id": skill_id},
+                                   context={"destination": "skills"}))
 
     def handle_ready(self, message):
         self._ready_event.set()

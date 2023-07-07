@@ -51,6 +51,7 @@ class GUIService:
             self.bus.run_in_thread()
         self.bus.connected_event.wait()
         LOG.info('Connected to messagebus')
+        self.gui.init_gui_server()
 
     def run(self):
         """
