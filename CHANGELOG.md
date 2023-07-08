@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a6...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a7...HEAD)
+
+**Implemented enhancements:**
+
+- GUI File Server and Alternate GUI Framework Support [\#9](https://github.com/OpenVoiceOS/ovos-gui/pull/9) ([JarbasAl](https://github.com/JarbasAl))
+
+## [V0.0.3a7](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a7) (2023-07-04)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a6...V0.0.3a7)
 
 **Merged pull requests:**
 
