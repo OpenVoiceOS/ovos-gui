@@ -26,16 +26,18 @@ If the connection is lost, it must be renegotiated and restarted.
 import asyncio
 import json
 from threading import Lock
+from typing import List
 
 from ovos_bus_client import Message, GUIMessage
 from ovos_config.config import Configuration
-# from ovos_gui.namespace import NamespaceManager
+from ovos_gui.page import GuiPage
 from ovos_utils import create_daemon
 from ovos_utils.log import LOG
 from tornado import ioloop
 from tornado.options import parse_command_line
 from tornado.web import Application
 from tornado.websocket import WebSocketHandler
+# from ovos_gui.namespace import NamespaceManager
 
 _write_lock = Lock()
 
@@ -50,10 +52,10 @@ def get_gui_websocket_config() -> dict:
     return websocket_config
 
 
-def create_gui_service(enclosure) -> Application:
+def create_gui_service(nsmanager=None) -> Application:
     """
     Initiate a websocket for communicating with the GUI service.
-    @param enclosure: NamespaceManager instance
+    @param nsmanager: NamespaceManager instance
     """
     LOG.info('Starting message bus for GUI...')
     websocket_config = get_gui_websocket_config()
@@ -61,10 +63,7 @@ def create_gui_service(enclosure) -> Application:
     parse_command_line(['--logging=None'])
 
     routes = [(websocket_config['route'], GUIWebsocketHandler)]
-    application = Application(routes)
-    # TODO: Is the NamespaceManager used by `application`, or can it be a
-    #   GUIWebsocketHandler class variable
-    application.enclosure = enclosure
+    application = Application(routes, namespace_manager=nsmanager)
     application.listen(
         websocket_config['base_port'], websocket_config['host']
     )
@@ -76,7 +75,8 @@ def create_gui_service(enclosure) -> Application:
 
 def send_message_to_gui(message: dict):
     """
-    Sends the supplied message to all connected GUI clients.
+    Sends the supplied message to all connected GUI clients. This function does
+    NOT account for the GUI framework in use by each client
     @param message: dict data to send to GUI clients
     """
     for connection in GUIWebsocketHandler.clients:
@@ -97,6 +97,18 @@ class GUIWebsocketHandler(WebSocketHandler):
     """Defines the websocket pipeline between the GUI and Mycroft."""
     clients = []
 
+    def __init__(self, *args, **kwargs):
+        WebSocketHandler.__init__(self, *args, **kwargs)
+        self._framework = "qt5"
+        self.ns_manager = self.application.settings.get("namespace_manager")
+
+    @property
+    def framework(self) -> str:
+        """
+        Get the GUI framework used by this client
+        """
+        return self._framework or "qt5"
+
     def open(self):
         """
         Add a new connection to `clients` and synchronize
@@ -112,31 +124,46 @@ class GUIWebsocketHandler(WebSocketHandler):
         LOG.info('Closing {}'.format(id(self)))
         GUIWebsocketHandler.clients.remove(self)
 
+    def get_client_pages(self, namespace):
+        """
+        Get a list of client page URLs for the given namespace
+        @param namespace: Namespace to get pages for
+        @return: list of page URIs for this GUI Client
+        """
+        client_pages = []
+        server_url = self.ns_manager.gui_file_server.url if \
+            self.ns_manager.gui_file_server else None
+        for page in namespace.pages:
+            uri = page.get_uri(self.framework, server_url)
+            client_pages.append(uri)
+
+        return client_pages
+
     def synchronize(self):
         """
         Upload namespaces, pages and data to the last connected client.
         """
         namespace_pos = 0
-        enclosure = self.application.enclosure
 
-        for namespace in enclosure.active_namespaces:
-            LOG.info(f'Sync {namespace.name}')
+        for namespace in self.ns_manager.active_namespaces:
+            LOG.info(f'Sync {namespace.skill_id}')
             # Insert namespace
             self.send({"type": "mycroft.session.list.insert",
                        "namespace": "mycroft.system.active_skills",
                        "position": namespace_pos,
-                       "data": [{"skill_id": namespace.name}]
+                       "data": [{"skill_id": namespace.skill_id}]
                        })
             # Insert pages
             self.send({"type": "mycroft.gui.list.insert",
-                       "namespace": namespace.name,
+                       "namespace": namespace.skill_id,
                        "position": 0,
-                       "data": [{"url": p.url} for p in namespace.pages]
+                       "data": [{"url": url} for url in
+                                self.get_client_pages(namespace)]
                        })
             # Insert data
             for key, value in namespace.data.items():
                 self.send({"type": "mycroft.session.set",
-                           "namespace": namespace.name,
+                           "namespace": namespace.skill_id,
                            "data": {key: value}
                            })
             namespace_pos += 1
@@ -148,6 +175,7 @@ class GUIWebsocketHandler(WebSocketHandler):
         on the core messagebus.
         @param message: Serialized Message
         """
+        LOG.debug(f"Received: {message}")
         parsed_message = GUIMessage.deserialize(message)
         LOG.debug(f"Received: {parsed_message.msg_type}|{parsed_message.data}")
 
@@ -179,18 +207,37 @@ class GUIWebsocketHandler(WebSocketHandler):
             msg_data = parsed_message.data['data']
         elif parsed_message.msg_type == 'mycroft.gui.connected':
             # new client connected to GUI
+
+            # NOTE: mycroft-gui clients do this directly in core bus, don't
+            # send it to gui bus. In those cases, framework is read from config,
+            # defaulting to qt5 for backwards-compat.
+            default_qt_version = \
+                Configuration().get('gui', {}).get('default_qt_version') or 5
             msg_type = parsed_message.msg_type
             msg_data = parsed_message.data
+
+            framework = msg_data.get("framework")  # new api
+            if framework is None:
+                # mycroft-gui api
+                qt = msg_data.get("qt_version") or default_qt_version
+                if int(qt) == 6:
+                    framework = "qt6"
+                else:
+                    framework = "qt5"
+
+            self._framework = framework
         else:
             # message not in spec
             # https://github.com/MycroftAI/mycroft-gui/blob/master/transportProtocol.md
             LOG.error(f"unknown GUI protocol message type, ignoring: "
-                      f"{parsed_message}")
+                      f"{parsed_message.msg_type}")
             return
 
+        parsed_message.context["gui_framework"] = self.framework
         message = Message(msg_type, msg_data, parsed_message.context)
-        self.application.enclosure.core_bus.emit(message)
-        LOG.debug('Forwarded to core bus')
+        LOG.debug('Forwarding to core bus...')
+        self.ns_manager.core_bus.emit(message)
+        LOG.debug('Done!')
 
     def write_message(self, *arg, **kwarg):
         """
@@ -204,18 +251,37 @@ class GUIWebsocketHandler(WebSocketHandler):
         with _write_lock:
             super().write_message(*arg, **kwarg)
 
+    def send_gui_pages(self, pages: List[GuiPage], namespace: str,
+                       position: int):
+        """
+        Send GUI pages to this client, accounting for the client-specific pages
+        @param pages: list of GuiPage objects to send
+        @param namespace: namespace to put GuiPages in
+        @param position: position to insert pages at
+        """
+        server_url = self.ns_manager.gui_file_server.url if \
+            self.ns_manager.gui_file_server else None
+        framework = self.framework
+
+        message = {
+            "type": "mycroft.gui.list.insert",
+            "namespace": namespace,
+            "position": position,
+            "data": [{"url": page.get_uri(framework, server_url)}
+                     for page in pages]
+        }
+        self.send(message)
+
     def send(self, data: dict):
         """
         Send the given data across the socket as JSON
         @param data: Data to send to the GUI
         """
         s = json.dumps(data)
-        # LOG.info('Sending {}'.format(s))
         self.write_message(s)
 
     def check_origin(self, origin):
         """
-        Disable origin check to make js connections work.
+        Override origin check to make js connections work.
         """
-        # TODO: Should this be implemented or deprecated
         return True

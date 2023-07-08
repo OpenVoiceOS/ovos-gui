@@ -25,6 +25,13 @@ under mycroft.conf
     "generic": {
         "homescreen_supported": false
     }
+    
+    // Optional file server support for remote clients
+    // "gui_file_server": true,
+    // "file_server_port": 8000,
+        
+    // Optionally specify a default qt version for connected clients
+    // "default_qt_version": 5,
   },
   
   // The GUI messagebus websocket.  Once port is created per connected GUI
