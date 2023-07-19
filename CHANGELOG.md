@@ -2,7 +2,15 @@
 
 ## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui/tree/HEAD)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a7...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a8...HEAD)
+
+**Merged pull requests:**
+
+- Fix local system resource resolution [\#20](https://github.com/OpenVoiceOS/ovos-gui/pull/20) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.3a8](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a8) (2023-07-08)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a7...V0.0.3a8)
 
 **Implemented enhancements:**
 
