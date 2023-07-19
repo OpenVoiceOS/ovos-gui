@@ -507,6 +507,7 @@ class NamespaceManager:
             LOG.debug("No GUI file server running")
             return
 
+        LOG.debug(f"Requesting resources for {self._connected_frameworks}")
         for framework in self._connected_frameworks:
             skill_id = message.data.get("skill_id")
             self.core_bus.emit(message.reply("gui.request_page_upload",
