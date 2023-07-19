@@ -299,7 +299,11 @@ class Namespace:
         # Find position of new page in self.pages
         position = self.pages.index(new_pages[0])
         for client in GUIWebsocketHandler.clients:
-            client.send_gui_pages(new_pages, self.skill_id, position)
+            try:
+                LOG.debug(f"Updating {client.framework} client")
+                client.send_gui_pages(new_pages, self.skill_id, position)
+            except Exception as e:
+                LOG.exception(f"Error updating {client.framework} client: {e}")
 
     def _activate_page(self, page: GuiPage):
         """
@@ -507,6 +511,7 @@ class NamespaceManager:
             LOG.debug("No GUI file server running")
             return
 
+        LOG.debug(f"Requesting resources for {self._connected_frameworks}")
         for framework in self._connected_frameworks:
             skill_id = message.data.get("skill_id")
             self.core_bus.emit(message.reply("gui.request_page_upload",

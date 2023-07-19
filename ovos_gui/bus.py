@@ -270,6 +270,7 @@ class GUIWebsocketHandler(WebSocketHandler):
             "data": [{"url": page.get_uri(framework, server_url)}
                      for page in pages]
         }
+        LOG.debug(f"Showing pages: {message['data']}")
         self.send(message)
 
     def send(self, data: dict):

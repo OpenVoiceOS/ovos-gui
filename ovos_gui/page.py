@@ -76,7 +76,8 @@ class GuiPage:
         if isfile(file_path):
             return file_path
         # Check system resources
-        file_path = join(dirname(__file__), "res", "gui", framework)
+        file_path = join(dirname(__file__), "res", "gui", framework,
+                         res_filename)
         if isfile(file_path):
             return file_path
         raise FileNotFoundError(f"Unable to resolve resource file for "

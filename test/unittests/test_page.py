@@ -59,6 +59,12 @@ class TestGuiPage(unittest.TestCase):
         qt6 = qt6_page.get_uri("qt6")
         self.assertTrue(isfile(qt6))
 
+        # System page
+        system_page = GuiPage(None, "SYSTEM_ImageFrame", False, 30,
+                              "SYSTEM_ImageFrame", namespace, res_dirs)
+        qt5 = system_page.get_uri("qt5")
+        self.assertTrue(isfile(qt5))
+
         # Legacy GUI File organization
         res_dirs = {"qt5": join(dirname(__file__), "mock_data", "gui", "qt5"),
                     "qt6": join(dirname(__file__), "mock_data", "gui", "qt6")}
