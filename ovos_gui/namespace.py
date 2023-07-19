@@ -299,7 +299,11 @@ class Namespace:
         # Find position of new page in self.pages
         position = self.pages.index(new_pages[0])
         for client in GUIWebsocketHandler.clients:
-            client.send_gui_pages(new_pages, self.skill_id, position)
+            try:
+                LOG.debug(f"Updating {client.framework} client")
+                client.send_gui_pages(new_pages, self.skill_id, position)
+            except Exception as e:
+                LOG.exception(f"Error updating {client.framework} client: {e}")
 
     def _activate_page(self, page: GuiPage):
         """
