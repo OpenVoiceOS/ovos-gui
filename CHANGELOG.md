@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.3a11](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.3a11) (2023-07-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.3a10...0.0.3a11)
+
+**Merged pull requests:**
+
+- Add description to setup.py to fix \#21 [\#22](https://github.com/OpenVoiceOS/ovos-gui/pull/22) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.3a10](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.3a10) (2023-07-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a9...0.0.3a10)
