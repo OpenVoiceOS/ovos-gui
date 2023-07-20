@@ -1,8 +1,16 @@
 # Changelog
 
-## [Unreleased](https://github.com/OpenVoiceOS/ovos-gui/tree/HEAD)
+## [0.0.3a10](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.3a10) (2023-07-20)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a8...HEAD)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a9...0.0.3a10)
+
+**Merged pull requests:**
+
+- Update automation to current standards [\#21](https://github.com/OpenVoiceOS/ovos-gui/pull/21) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [V0.0.3a9](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a9) (2023-07-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a8...V0.0.3a9)
 
 **Merged pull requests:**
 
@@ -67,79 +75,6 @@
 ## [V0.0.3a1](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a1) (2023-04-30)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2...V0.0.3a1)
-
-## [V0.0.2](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2) (2023-04-29)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a12...V0.0.2)
-
-## [V0.0.2a12](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a12) (2023-04-27)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a11...V0.0.2a12)
-
-**Implemented enhancements:**
-
-- feat/ovos-gui-debugger [\#7](https://github.com/OpenVoiceOS/ovos-gui/pull/7) ([JarbasAl](https://github.com/JarbasAl))
-
-## [V0.0.2a11](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a11) (2023-04-27)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a10...V0.0.2a11)
-
-**Merged pull requests:**
-
-- Fix missing ovos-backend-client library [\#6](https://github.com/OpenVoiceOS/ovos-gui/pull/6) ([goldyfruit](https://github.com/goldyfruit))
-
-## [V0.0.2a10](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a10) (2023-04-08)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a9...V0.0.2a10)
-
-**Merged pull requests:**
-
-- mycroft-bus-client -\> ovos-bus-client [\#5](https://github.com/OpenVoiceOS/ovos-gui/pull/5) ([JarbasAl](https://github.com/JarbasAl))
-
-## [V0.0.2a9](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a9) (2023-04-05)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a8...V0.0.2a9)
-
-## [V0.0.2a8](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a8) (2023-04-05)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a7...V0.0.2a8)
-
-## [V0.0.2a7](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a7) (2023-04-05)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a6...V0.0.2a7)
-
-## [V0.0.2a6](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a6) (2023-04-05)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a5...V0.0.2a6)
-
-## [V0.0.2a5](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a5) (2023-04-05)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a4...V0.0.2a5)
-
-## [V0.0.2a4](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a4) (2023-04-04)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a3...V0.0.2a4)
-
-## [V0.0.2a3](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a3) (2023-04-04)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a2...V0.0.2a3)
-
-## [V0.0.2a2](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a2) (2023-04-04)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2a1...V0.0.2a2)
-
-## [V0.0.2a1](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.2a1) (2023-04-04)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/df12af7ee5204fdf331a0694fc1dafa2a54e2a5a...V0.0.2a1)
-
-**Implemented enhancements:**
-
-- Feat/bump ovos utils [\#3](https://github.com/OpenVoiceOS/ovos-gui/pull/3) ([JarbasAl](https://github.com/JarbasAl))
-- refactor/move\_gui\_from\_core [\#1](https://github.com/OpenVoiceOS/ovos-gui/pull/1) ([JarbasAl](https://github.com/JarbasAl))
-
-**Merged pull requests:**
-
-- Feat/bump ovos utils [\#4](https://github.com/OpenVoiceOS/ovos-gui/pull/4) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
