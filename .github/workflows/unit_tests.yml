@@ -30,11 +30,15 @@ on:
   workflow_dispatch:
 
 jobs:
+  py_build_tests:
+    uses: neongeckocom/.github/.github/workflows/python_build_tests.yml@master
+    with:
+      python_version: "3.8"
+
   unit_tests:
     strategy:
-      max-parallel: 2
       matrix:
-        python-version: [ 3.7, 3.8, 3.9]
+        python-version: [ 3.7, 3.8, 3.9, "3.10", "3.11" ]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -50,7 +54,7 @@ jobs:
           python -m pip install build wheel
       - name: Install repo
         run: |
-          pip install .
+          pip install -e .
       - name: Install test dependencies
         run: |
           pip install -r test/requirements.txt
@@ -61,6 +65,7 @@ jobs:
           #       or they will overwrite previous invocations' coverage reports
           #       (for an example, see OVOS Skill Manager's workflow)
       - name: Upload coverage
+        if: "${{ matrix.python-version == '3.9' }}"
         env:
           CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
         uses: codecov/codecov-action@v2

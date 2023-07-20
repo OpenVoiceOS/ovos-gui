@@ -16,6 +16,7 @@ import os.path
 from setuptools import setup
 
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
+os.chdir(BASEDIR)  # For relative `packages` spec in setup below
 
 
 def required(requirements_file):
@@ -62,13 +63,22 @@ def package_files(directory):
     return paths
 
 
+def get_description():
+    with open(os.path.join(BASEDIR, "README.md"), "r") as f:
+        long_description = f.read()
+    return long_description
+
+
 setup(
     name='ovos-gui',
     version=get_version(),
     license='Apache-2.0',
     url='https://github.com/OpenVoiceOS/ovos-gui',
     description='ovos-core gui service daemon',
+    long_description=get_description(),
+    long_description_content_type="text/markdown",
     include_package_data=True,
+    packages=["ovos_gui"],
     package_data={"": package_files('ovos_gui/res')},
     install_requires=required('requirements.txt'),
     entry_points={
