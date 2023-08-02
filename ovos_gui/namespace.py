@@ -459,24 +459,29 @@ class NamespaceManager:
         self._ready_event = Event()
         self.gui_file_server = None
         self.gui_file_path = None
+        self.gui_file_host_path = None
         self._connected_frameworks: List[str] = list()
-        self._init_gui_server()
+        self._init_gui_file_share()
         self._define_message_handlers()
 
     @property
     def _active_homescreen(self) -> str:
         return Configuration().get('gui', {}).get('idle_display_skill')
 
-    def _init_gui_server(self):
+    def _init_gui_file_share(self):
         """
-        Initialize a GUI HTTP file server if enabled in configuration
+        Initialize optional GUI file collection. if `gui_file_host_path` is
+        defined, resources are assumed to be referenced outside this container.
+        If `gui_file_server` is defined, resources will be served via HTTP
         """
         config = Configuration().get("gui", {})
-        if config.get("gui_file_server", False):
+        self.gui_file_host_path = config.get("gui_file_host_path")
+        if config.get("gui_file_server") or self.gui_file_host_path:
             from ovos_utils.file_utils import get_temp_path
             self.gui_file_path = config.get("server_path") or \
                 get_temp_path("ovos_gui_file_server")
-            self.gui_file_server = start_gui_http_server(self.gui_file_path)
+            if config.get("gui_file_server"):
+                self.gui_file_server = start_gui_http_server(self.gui_file_path)
             self._upload_system_resources()
 
     def _define_message_handlers(self):

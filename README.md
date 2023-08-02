@@ -39,7 +39,13 @@ under mycroft.conf
     // Optional file server support for remote clients
     // "gui_file_server": true,
     // "file_server_port": 8000,
-        
+    
+    // Optional support for collecting GUI files for container support
+    // This example describes a configuration where the host system has mounted 
+    // `/tmp/gui_files` to the container path `/mount/gui_files`
+    // "gui_file_host_path": "/tmp/gui_files"
+    // "server_path": "/mount/gui_files"
+    
     // Optionally specify a default qt version for connected clients that don't report it
     "default_qt_version": 5
   },

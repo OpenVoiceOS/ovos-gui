@@ -50,7 +50,8 @@ class GuiPage:
         """
         Get a valid URI for this Page.
         @param framework: String GUI framework to get resources for
-        @param server_url: String server URL if available
+        @param server_url: String server URL if available; this could be for a
+            web server (http://), or a container host path (file://)
         @return: Absolute path to the requested resource
         """
         if self.url:
