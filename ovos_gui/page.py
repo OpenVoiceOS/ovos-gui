@@ -44,6 +44,8 @@ class GuiPage:
         """
         if framework in ("qt5", "qt6"):
             return "qml"
+        if framework == "react":
+            return "jsx"
         return ""
 
     def get_uri(self, framework: str = "qt5", server_url: str = None) -> str:
