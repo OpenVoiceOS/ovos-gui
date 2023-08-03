@@ -5,6 +5,17 @@ GUI messagebus service, manages GUI state and implements the [gui protocol](./pr
 GUI clients (the application that actually draws the GUI) connect to this service
 
 
+# Plugins
+
+plugins provide platform specific GUI functionality, such as determining when to show a homescreen or close a window
+
+you should usually not need any of these unless instructed to install it from a GUI client application
+
+- https://github.com/OpenVoiceOS/ovos-gui-plugin-shell-companion
+- https://github.com/OpenVoiceOS/ovos-gui-plugin-mobile
+- https://github.com/OpenVoiceOS/ovos-gui-plugin-plasmoid
+- https://github.com/OpenVoiceOS/ovos-gui-plugin-bigscreen
+
 # Configuration
 
 under mycroft.conf
@@ -16,22 +27,21 @@ under mycroft.conf
     // Uncomment or add "idle_display_skill" to set initial homescreen
     // "idle_display_skill": "skill-ovos-homescreen.openvoiceos",
 
-    // Extensions provide additional GUI platform support for specific devices
-    // Currently supported devices: smartspeaker, bigscreen or generic
+    // Extensions are plugins that provide additional GUI platform support for specific devices
+    // eg, if using ovos-shell you should set extension to "ovos-gui-plugin-shell-companion"
     "extension": "generic",
 
-    // Generic extension can additionaly provide homescreen functionality
-    // homescreen support is disabled by default for generic extension
+    // Default generic extension can provide homescreen functionality if enabled
     "generic": {
         "homescreen_supported": false
-    }
+    },
     
     // Optional file server support for remote clients
     // "gui_file_server": true,
     // "file_server_port": 8000,
         
-    // Optionally specify a default qt version for connected clients
-    // "default_qt_version": 5,
+    // Optionally specify a default qt version for connected clients that don't report it
+    "default_qt_version": 5
   },
   
   // The GUI messagebus websocket.  Once port is created per connected GUI
