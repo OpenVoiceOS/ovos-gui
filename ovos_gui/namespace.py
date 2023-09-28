@@ -458,7 +458,8 @@ class NamespaceManager:
         self._system_res_dir = join(dirname(__file__), "res", "gui")
         self._ready_event = Event()
         self.gui_file_server = None
-        self.gui_file_path = None
+        self.gui_file_path = None  # HTTP Server local path
+        self.gui_file_host_path = None  # Docker host path
         self._connected_frameworks: List[str] = list()
         self._init_gui_file_share()
         self._define_message_handlers()
@@ -474,7 +475,7 @@ class NamespaceManager:
         If `gui_file_server` is defined, resources will be served via HTTP
         """
         config = Configuration().get("gui", {})
-        self.gui_file_path = config.get("gui_file_path")
+        self.gui_file_host_path = config.get("gui_file_host_path")
         if config.get("gui_file_server") or self.gui_file_path:
             from ovos_utils.xdg_utils import xdg_cache_home
             self.gui_file_path = config.get("server_path") or \
@@ -511,8 +512,8 @@ class NamespaceManager:
         GUI framework.
         @param message: `gui.volunteer_page_upload` message
         """
-        if not self.gui_file_path:
-            LOG.debug("No GUI file server running")
+        if not self.gui_file_path and not self.gui_file_server:
+            LOG.debug("No GUI file server running or host path configured")
             return
 
         LOG.debug(f"Requesting resources for {self._connected_frameworks}")

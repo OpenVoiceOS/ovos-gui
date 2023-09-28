@@ -23,6 +23,12 @@ class GuiFileHandler(http.server.SimpleHTTPRequestHandler):
 
 
 def start_gui_http_server(qml_path: str, port: int = None):
+    """
+    Start an http server to host GUI Resources
+    @param qml_path: Local file path to server
+    @param port: Host port to run file server on
+    @return: Initialized HTTP Server
+    """
     port = port or Configuration().get("gui", {}).get("file_server_port", 8089)
 
     if os.path.exists(qml_path):
