@@ -41,9 +41,10 @@ under mycroft.conf
     // "file_server_port": 8000,
     
     // Optional support for collecting GUI files for container support
-    // This example describes a configuration where the HOST system has collected 
-    // GUI resources at `/tmp/gui_files`. The container path for these files will be
-    // {XDG_CACHE_HOME}/ovos_gui_file_server
+    // The ovos-gui container path for these files will be {XDG_CACHE_HOME}/ovos_gui_file_server.
+    // With the below configuration, the GUI client will have files prefixed with the configured host path,
+    // so the example below describes a situation where `{XDG_CACHE_HOME}/ovos_gui_file_server` maps
+    // to `/tmp/gui_files` on the filesystem where the GUI client is running.    
     // "gui_file_host_path": "/tmp/gui_files",
     
     // Optionally specify a default qt version for connected clients that don't report it
