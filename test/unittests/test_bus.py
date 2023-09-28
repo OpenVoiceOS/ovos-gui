@@ -91,13 +91,20 @@ class TestGUIWebsocketHandler(unittest.TestCase):
 
         # Specify no host path mapping
         self.handler.ns_manager.gui_file_path = None
-        # TODO: Test with host path mapping
 
         # Test no server_url
         self.handler.ns_manager.gui_file_server = None
         pages = self.handler.get_client_pages(test_namespace)
         page_1.get_uri.assert_called_once_with(self.handler.framework, None)
         page_2.get_uri.assert_called_once_with(self.handler.framework, None)
+        self.assertEqual(pages, ["page_1_uri", "page_2_uri"])
+
+        # Test host path mapping
+        test_path = "/test/ovos-gui-file-server"
+        self.handler.ns_manager.gui_file_path = test_path
+        pages = self.handler.get_client_pages(test_namespace)
+        page_1.get_uri.assert_called_with(self.handler.framework, test_path)
+        page_2.get_uri.assert_called_with(self.handler.framework, test_path)
         self.assertEqual(pages, ["page_1_uri", "page_2_uri"])
 
         # Test with server_url
@@ -135,7 +142,6 @@ class TestGUIWebsocketHandler(unittest.TestCase):
 
         # Specify no host path mapping
         self.handler.ns_manager.gui_file_path = None
-        # TODO: Test with host path mapping
 
         # Test no server_url
         self.handler.ns_manager.gui_file_server = None
@@ -148,6 +154,13 @@ class TestGUIWebsocketHandler(unittest.TestCase):
              "namespace": test_ns,
              "position": test_pos,
              "data": [{"url": "page_1"}, {"url": "page_2"}]})
+
+        # Test host path mapping
+        test_path = "/test/ovos-gui-file-server"
+        self.handler.ns_manager.gui_file_path = test_path
+        self.handler.send_gui_pages([page_1, page_2], test_ns, test_pos)
+        page_1.get_uri.assert_called_with(self.handler.framework, test_path)
+        page_2.get_uri.assert_called_with(self.handler.framework, test_path)
 
         # Test with server_url
         self.handler.ns_manager.gui_file_server = Mock()
