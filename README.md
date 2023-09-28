@@ -44,7 +44,7 @@ under mycroft.conf
     // This example describes a configuration where the HOST system has collected 
     // GUI resources at `/tmp/gui_files`. The container path for these files will be
     // {XDG_CACHE_HOME}/ovos_gui_file_server
-    // "ui_file_path": "/tmp/gui_files"
+    // "ui_file_path": "/tmp/gui_files",
     
     // Optionally specify a default qt version for connected clients that don't report it
     "default_qt_version": 5
