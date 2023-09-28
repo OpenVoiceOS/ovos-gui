@@ -89,6 +89,10 @@ class TestGUIWebsocketHandler(unittest.TestCase):
         page_2.get_uri.return_value = "page_2_uri"
         test_namespace.pages = [page_1, page_2]
 
+        # Specify no host path mapping
+        self.handler.ns_manager.gui_file_path = None
+        # TODO: Test with host path mapping
+
         # Test no server_url
         self.handler.ns_manager.gui_file_server = None
         pages = self.handler.get_client_pages(test_namespace)
@@ -128,6 +132,10 @@ class TestGUIWebsocketHandler(unittest.TestCase):
 
         page_2 = GuiPage(None, "", False, False)
         page_2.get_uri = Mock(return_value="page_2")
+
+        # Specify no host path mapping
+        self.handler.ns_manager.gui_file_path = None
+        # TODO: Test with host path mapping
 
         # Test no server_url
         self.handler.ns_manager.gui_file_server = None
