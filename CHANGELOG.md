@@ -1,88 +1,17 @@
 # Changelog
 
-## [0.0.3a11](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.3a11) (2023-07-20)
+## [0.0.4a1](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a1) (2023-09-28)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.3a10...0.0.3a11)
-
-**Merged pull requests:**
-
-- Add description to setup.py to fix \#21 [\#22](https://github.com/OpenVoiceOS/ovos-gui/pull/22) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.3a10](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.3a10) (2023-07-20)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a9...0.0.3a10)
-
-**Merged pull requests:**
-
-- Update automation to current standards [\#21](https://github.com/OpenVoiceOS/ovos-gui/pull/21) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a9](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a9) (2023-07-19)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a8...V0.0.3a9)
-
-**Merged pull requests:**
-
-- Fix local system resource resolution [\#20](https://github.com/OpenVoiceOS/ovos-gui/pull/20) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a8](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a8) (2023-07-08)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a7...V0.0.3a8)
-
-**Implemented enhancements:**
-
-- GUI File Server and Alternate GUI Framework Support [\#9](https://github.com/OpenVoiceOS/ovos-gui/pull/9) ([JarbasAl](https://github.com/JarbasAl))
-
-## [V0.0.3a7](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a7) (2023-07-04)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a6...V0.0.3a7)
-
-**Merged pull requests:**
-
-- Update dependencies to stable versions [\#16](https://github.com/OpenVoiceOS/ovos-gui/pull/16) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a6](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a6) (2023-06-23)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a5...V0.0.3a6)
-
-**Merged pull requests:**
-
-- Unit Tests and Documentation [\#15](https://github.com/OpenVoiceOS/ovos-gui/pull/15) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a5](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a5) (2023-06-13)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a4...V0.0.3a5)
-
-**Merged pull requests:**
-
-- Remove unused ovos-backend-client dependency [\#14](https://github.com/OpenVoiceOS/ovos-gui/pull/14) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a4](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a4) (2023-06-09)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a3...V0.0.3a4)
-
-**Merged pull requests:**
-
-- Minor logging and method annotation changes [\#13](https://github.com/OpenVoiceOS/ovos-gui/pull/13) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a3](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a3) (2023-06-09)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a2...V0.0.3a3)
-
-**Implemented enhancements:**
-
-- :tada: - GUI plugin [\#11](https://github.com/OpenVoiceOS/ovos-gui/pull/11) ([JarbasAl](https://github.com/JarbasAl))
-
-## [V0.0.3a2](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a2) (2023-05-01)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a1...V0.0.3a2)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.3...0.0.4a1)
 
 **Fixed bugs:**
 
-- interfaces/ folder not getting packaged [\#8](https://github.com/OpenVoiceOS/ovos-gui/issues/8)
+- ovos-core must be restarted to re-upload QML files [\#28](https://github.com/OpenVoiceOS/ovos-gui/issues/28)
+- Check if Skills service is running on GUI service init [\#29](https://github.com/OpenVoiceOS/ovos-gui/pull/29) ([NeonDaniel](https://github.com/NeonDaniel))
 
-## [V0.0.3a1](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a1) (2023-04-30)
+**Merged pull requests:**
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2...V0.0.3a1)
+- add plugins to readme [\#27](https://github.com/OpenVoiceOS/ovos-gui/pull/27) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
