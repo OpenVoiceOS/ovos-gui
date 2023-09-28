@@ -930,12 +930,14 @@ class NamespaceManager:
             if not self._ready_event.wait(90):
                 LOG.warning("Not reported ready after 90s")
             if framework not in self._connected_frameworks:
+                LOG.debug(f"Requesting page upload for {framework}")
                 self.core_bus.emit(Message("gui.request_page_upload",
                                            {'framework': framework},
                                            {"source": "gui",
                                             "destination": ["skills", "PHAL"]}))
 
         if framework not in self._connected_frameworks:
+            LOG.debug(f"Connecting framework: {framework}")
             self._connected_frameworks.append(framework)
 
     def handle_page_interaction(self, message: Message):
