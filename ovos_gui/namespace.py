@@ -459,7 +459,7 @@ class NamespaceManager:
         self._ready_event = Event()
         self.gui_file_server = None
         self.gui_file_path = None
-        self.gui_file_host_path = None
+        self.ui_file_path = None
         self._connected_frameworks: List[str] = list()
         self._init_gui_file_share()
         self._define_message_handlers()
@@ -470,16 +470,16 @@ class NamespaceManager:
 
     def _init_gui_file_share(self):
         """
-        Initialize optional GUI file collection. if `gui_file_host_path` is
+        Initialize optional GUI file collection. if `ui_file_path` is
         defined, resources are assumed to be referenced outside this container.
         If `gui_file_server` is defined, resources will be served via HTTP
         """
         config = Configuration().get("gui", {})
-        self.gui_file_host_path = config.get("gui_file_host_path")
-        if config.get("gui_file_server") or self.gui_file_host_path:
-            from ovos_utils.file_utils import get_temp_path
+        self.ui_file_path = config.get("ui_file_path")
+        if config.get("gui_file_server") or self.ui_file_path:
+            from ovos_utils.xdg_utils import xdg_cache_home
             self.gui_file_path = config.get("server_path") or \
-                get_temp_path("ovos_gui_file_server")
+                join(xdg_cache_home(), "ovos_gui_file_server")
             if config.get("gui_file_server"):
                 self.gui_file_server = start_gui_http_server(self.gui_file_path)
             self._upload_system_resources()

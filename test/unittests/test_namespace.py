@@ -202,7 +202,7 @@ class TestNamespaceManager(TestCase):
         with mock.patch(PATCH_MODULE + ".create_gui_service"):
             self.namespace_manager = NamespaceManager(FakeBus())
 
-    def test_init_gui_server(self):
+    def test_init_gui_file_share(self):
         # TODO
         pass
 
