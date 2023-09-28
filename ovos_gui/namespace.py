@@ -512,7 +512,7 @@ class NamespaceManager:
         GUI framework.
         @param message: `gui.volunteer_page_upload` message
         """
-        if not self.gui_file_path and not self.gui_file_server:
+        if not any((self.gui_file_host_path, self.gui_file_server)):
             LOG.debug("No GUI file server running or host path configured")
             return
 
