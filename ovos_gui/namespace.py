@@ -49,7 +49,7 @@ from typing import List, Union, Optional, Dict
 
 from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration
-from ovos_utils.log import LOG
+from ovos_utils.log import LOG, log_deprecation
 
 from ovos_gui.bus import (
     create_gui_service,
@@ -476,8 +476,14 @@ class NamespaceManager:
         """
         config = Configuration().get("gui", {})
         self.gui_file_host_path = config.get("gui_file_host_path")
-        if config.get("gui_file_server") or self.gui_file_path:
+
+        # Check for GUI file sharing via HTTP server or mounted host path
+        if config.get("gui_file_server") or self.gui_file_host_path:
             from ovos_utils.xdg_utils import xdg_cache_home
+            if config.get("server_path"):
+                log_deprecation("`server_path` configuration is deprecated. "
+                                "Files will always be saved to "
+                                "XDG_CACHE_HOME/ovos_gui_file_server", "0.1.0")
             self.gui_file_path = config.get("server_path") or \
                 join(xdg_cache_home(), "ovos_gui_file_server")
             if config.get("gui_file_server"):
