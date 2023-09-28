@@ -926,7 +926,7 @@ class NamespaceManager:
                                   dict(port=port, gui_id=gui_id))
         self.core_bus.emit(message)
 
-        if self.gui_file_path:
+        if self.gui_file_path or self.gui_file_host_path:
             if not self._ready_event.wait(90):
                 LOG.warning("Not reported ready after 90s")
             if framework not in self._connected_frameworks:
