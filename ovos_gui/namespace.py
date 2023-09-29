@@ -464,12 +464,6 @@ class NamespaceManager:
         self._init_gui_file_share()
         self._define_message_handlers()
 
-        resp = self.core_bus.wait_for_response(Message("mycroft.skills.is_ready",
-                                                       context={"source": "gui", "destination": ["skills"]}))
-        if resp and resp.data.get("status"):
-            LOG.debug("Skills service already running")
-            self.handle_ready()
-
     @property
     def _active_homescreen(self) -> str:
         return Configuration().get('gui', {}).get('idle_display_skill')
@@ -512,7 +506,7 @@ class NamespaceManager:
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
         self.core_bus.on("mycroft.skills.trained", self.handle_ready)
 
-    def handle_ready(self, message=None):
+    def handle_ready(self, message):
         self._ready_event.set()
         self.core_bus.on("gui.volunteer_page_upload",
                          self.handle_gui_pages_available)
