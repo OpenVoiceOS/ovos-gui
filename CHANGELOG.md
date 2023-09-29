@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.4a2](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a2) (2023-09-29)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a1...0.0.4a2)
+
+**Implemented enhancements:**
+
+- Add option to use host paths in containers in addition to http URLs [\#25](https://github.com/OpenVoiceOS/ovos-gui/pull/25) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.0.4a1](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a1) (2023-09-28)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.3...0.0.4a1)
