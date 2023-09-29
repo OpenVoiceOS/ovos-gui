@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.4a3](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a3) (2023-09-29)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a2...0.0.4a3)
+
+**Fixed bugs:**
+
+- Refactor skills status check to resolve init bug [\#31](https://github.com/OpenVoiceOS/ovos-gui/pull/31) ([NeonDaniel](https://github.com/NeonDaniel))
+
+**Closed issues:**
+
+- You must execute run\_forever\(\) before emitting messages [\#30](https://github.com/OpenVoiceOS/ovos-gui/issues/30)
+
 ## [0.0.4a2](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a2) (2023-09-29)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a1...0.0.4a2)
