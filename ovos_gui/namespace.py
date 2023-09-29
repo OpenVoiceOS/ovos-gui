@@ -49,7 +49,7 @@ from typing import List, Union, Optional, Dict
 
 from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration
-from ovos_utils.log import LOG
+from ovos_utils.log import LOG, log_deprecation
 
 from ovos_gui.bus import (
     create_gui_service,
@@ -458,9 +458,10 @@ class NamespaceManager:
         self._system_res_dir = join(dirname(__file__), "res", "gui")
         self._ready_event = Event()
         self.gui_file_server = None
-        self.gui_file_path = None
+        self.gui_file_path = None  # HTTP Server local path
+        self.gui_file_host_path = None  # Docker host path
         self._connected_frameworks: List[str] = list()
-        self._init_gui_server()
+        self._init_gui_file_share()
         self._define_message_handlers()
 
         resp = self.core_bus.wait_for_response(Message("mycroft.skills.is_ready",
@@ -473,16 +474,26 @@ class NamespaceManager:
     def _active_homescreen(self) -> str:
         return Configuration().get('gui', {}).get('idle_display_skill')
 
-    def _init_gui_server(self):
+    def _init_gui_file_share(self):
         """
-        Initialize a GUI HTTP file server if enabled in configuration
+        Initialize optional GUI file collection. if `gui_file_path` is
+        defined, resources are assumed to be referenced outside this container.
+        If `gui_file_server` is defined, resources will be served via HTTP
         """
         config = Configuration().get("gui", {})
-        if config.get("gui_file_server", False):
-            from ovos_utils.file_utils import get_temp_path
+        self.gui_file_host_path = config.get("gui_file_host_path")
+
+        # Check for GUI file sharing via HTTP server or mounted host path
+        if config.get("gui_file_server") or self.gui_file_host_path:
+            from ovos_utils.xdg_utils import xdg_cache_home
+            if config.get("server_path"):
+                log_deprecation("`server_path` configuration is deprecated. "
+                                "Files will always be saved to "
+                                "XDG_CACHE_HOME/ovos_gui_file_server", "0.1.0")
             self.gui_file_path = config.get("server_path") or \
-                get_temp_path("ovos_gui_file_server")
-            self.gui_file_server = start_gui_http_server(self.gui_file_path)
+                join(xdg_cache_home(), "ovos_gui_file_server")
+            if config.get("gui_file_server"):
+                self.gui_file_server = start_gui_http_server(self.gui_file_path)
             self._upload_system_resources()
 
     def _define_message_handlers(self):
@@ -513,8 +524,8 @@ class NamespaceManager:
         GUI framework.
         @param message: `gui.volunteer_page_upload` message
         """
-        if not self.gui_file_path:
-            LOG.debug("No GUI file server running")
+        if not any((self.gui_file_host_path, self.gui_file_server)):
+            LOG.debug("No GUI file server running or host path configured")
             return
 
         LOG.debug(f"Requesting resources for {self._connected_frameworks}")
@@ -921,16 +932,18 @@ class NamespaceManager:
                                   dict(port=port, gui_id=gui_id))
         self.core_bus.emit(message)
 
-        if self.gui_file_path:
+        if self.gui_file_path or self.gui_file_host_path:
             if not self._ready_event.wait(90):
                 LOG.warning("Not reported ready after 90s")
             if framework not in self._connected_frameworks:
+                LOG.debug(f"Requesting page upload for {framework}")
                 self.core_bus.emit(Message("gui.request_page_upload",
                                            {'framework': framework},
                                            {"source": "gui",
                                             "destination": ["skills", "PHAL"]}))
 
         if framework not in self._connected_frameworks:
+            LOG.debug(f"Connecting framework: {framework}")
             self._connected_frameworks.append(framework)
 
     def handle_page_interaction(self, message: Message):

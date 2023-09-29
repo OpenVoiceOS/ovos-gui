@@ -50,7 +50,8 @@ class GuiPage:
         """
         Get a valid URI for this Page.
         @param framework: String GUI framework to get resources for
-        @param server_url: String server URL if available
+        @param server_url: String server URL if available; this could be for a
+            web server (http://), or a container host path (file://)
         @return: Absolute path to the requested resource
         """
         if self.url:
@@ -62,8 +63,12 @@ class GuiPage:
             self.namespace
         if server_url:
             if "://" not in server_url:
-                LOG.debug(f"No schema in server_url, assuming 'http'")
-                server_url = f"http://{server_url}"
+                if server_url.startswith("/"):
+                    LOG.debug(f"No schema in server_url, assuming 'file'")
+                    server_url = f"file://{server_url}"
+                else:
+                    LOG.debug(f"No schema in server_url, assuming 'http'")
+                    server_url = f"http://{server_url}"
             path = f"{server_url}/{res_namespace}/{framework}/{res_filename}"
             LOG.info(f"Resolved server URI: {path}")
             return path

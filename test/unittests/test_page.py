@@ -36,6 +36,22 @@ class TestGuiPage(unittest.TestCase):
         self.assertEqual(qt6,
                          f"https://files.local/{namespace}/qt5/{page_id}.qml")
 
+    def test_gui_page_from_mapped_path(self):
+        name = "test_page"
+        persistent = False
+        duration = 60
+        page_id = "test_page"
+        namespace = "skill.test"
+
+        page = GuiPage(None, name, persistent, duration, page_id, namespace)
+        qt5 = page.get_uri(server_url="/path/for/gui/client")
+        self.assertEqual(qt5,
+                         f"file:///path/for/gui/client/{namespace}/qt5/{page_id}.qml")
+
+        qt6 = page.get_uri(server_url="/path/for/gui/client")
+        self.assertEqual(qt6,
+                         f"file:///path/for/gui/client/{namespace}/qt5/{page_id}.qml")
+
     def test_gui_page_from_local_path(self):
         name = "test"
         persistent = True

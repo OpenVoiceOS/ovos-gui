@@ -132,7 +132,8 @@ class GUIWebsocketHandler(WebSocketHandler):
         """
         client_pages = []
         server_url = self.ns_manager.gui_file_server.url if \
-            self.ns_manager.gui_file_server else None
+            self.ns_manager.gui_file_server else \
+            self.ns_manager.gui_file_host_path
         for page in namespace.pages:
             uri = page.get_uri(self.framework, server_url)
             client_pages.append(uri)
@@ -260,7 +261,8 @@ class GUIWebsocketHandler(WebSocketHandler):
         @param position: position to insert pages at
         """
         server_url = self.ns_manager.gui_file_server.url if \
-            self.ns_manager.gui_file_server else None
+            self.ns_manager.gui_file_server else \
+            self.ns_manager.gui_file_host_path
         framework = self.framework
 
         message = {

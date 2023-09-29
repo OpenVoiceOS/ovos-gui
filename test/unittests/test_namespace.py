@@ -44,6 +44,10 @@ class TestNamespace(TestCase):
     def setUp(self):
         self.namespace = Namespace("foo")
 
+    def test_init_gui_file_share(self):
+        # TODO: Test init with/without server and host config
+        pass
+
     def test_add(self):
         add_namespace_message = dict(
             type="mycroft.session.list.insert",
@@ -202,7 +206,7 @@ class TestNamespaceManager(TestCase):
         with mock.patch(PATCH_MODULE + ".create_gui_service"):
             self.namespace_manager = NamespaceManager(FakeBus())
 
-    def test_init_gui_server(self):
+    def test_init_gui_file_share(self):
         # TODO
         pass
 
