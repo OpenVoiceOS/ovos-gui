@@ -499,7 +499,7 @@ class NamespaceManager:
         self.core_bus.on("recognizer_loop:audio_output_end",
                          self.forward_to_gui)
         self.core_bus.on("mycroft.ready", self.forward_to_gui)
-        self.core_bus.on("mycroft.gui.port", self.forward_to_gui)
+        # self.core_bus.on("mycroft.gui.port", self.forward_to_gui)
 
         self.core_bus.on("gui.clear.namespace", self.handle_clear_namespace)
         self.core_bus.on("gui.event.send", self.handle_send_event)
