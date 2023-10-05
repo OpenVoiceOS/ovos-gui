@@ -221,11 +221,12 @@ class GUIWebsocketHandler(WebSocketHandler):
             if framework is None:
                 # mycroft-gui api
                 qt = msg_data.get("qt_version") or default_qt_version
+                LOG.debug(f"Backwards-compat handling for qt{qt} client")
                 if int(qt) == 6:
                     framework = "qt6"
                 else:
                     framework = "qt5"
-
+            LOG.info(f"New connection for framework: {framework}")
             self._framework = framework
         else:
             # message not in spec

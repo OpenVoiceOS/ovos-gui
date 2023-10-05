@@ -1,11 +1,12 @@
-import React, { Component } from "react";
+import React from "react";
 import { ContentElement } from "core_components/utils";
 
-export function RenderPage(props) {
+function RenderPage(props) {
 	const skill_props = props.skillState;
-
+	console.log(skill_props)
 	return (
 		<div className="v-aligned-container text-center">
+			<div className="v-aligned-container text-center">
             <ContentElement
 				elementType={"TextFrame"}
 				id={"title"}
@@ -14,6 +15,8 @@ export function RenderPage(props) {
 				display={skill_props.display}
 				duration={15000}
 			/>
+			</div>
+			<div className="v-aligned-container text-center">
 			<ContentElement
 				elementType={"TextFrame"}
 				id={"text"}
@@ -22,6 +25,9 @@ export function RenderPage(props) {
 				display={skill_props.display}
 				duration={15000}
 			/>
+			</div>
 		</div>
 	);
 }
+
+export default RenderPage

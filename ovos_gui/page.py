@@ -68,6 +68,9 @@ class GuiPage:
                 if server_url.startswith("/"):
                     LOG.debug(f"No schema in server_url, assuming 'file'")
                     server_url = f"file://{server_url}"
+                elif server_url.startswith("./") or \
+                        server_url.startswith("../"):
+                    LOG.debug(r'Relative path; assuming no schema expected')
                 else:
                     LOG.debug(f"No schema in server_url, assuming 'http'")
                     server_url = f"http://{server_url}"
