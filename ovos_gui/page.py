@@ -1,7 +1,7 @@
 from os.path import join, isfile, dirname
 from typing import Union, Optional
 from dataclasses import dataclass
-from ovos_utils.log import LOG
+from ovos_utils.log import LOG, log_deprecation
 
 
 @dataclass
@@ -68,12 +68,11 @@ class GuiPage:
                 if server_url.startswith("/"):
                     LOG.debug(f"No schema in server_url, assuming 'file'")
                     server_url = f"file://{server_url}"
-                elif server_url.startswith("./") or \
-                        server_url.startswith("../"):
-                    LOG.debug(r'Relative path; assuming no schema expected')
-                else:
-                    LOG.debug(f"No schema in server_url, assuming 'http'")
+                elif ':' in server_url:  # looks like host:port
+                    log_deprecation(f"No schema in server_url, assuming 'http'",
+                                    "0.1.0")
                     server_url = f"http://{server_url}"
+                # React will use a path alias like `gui/`
             path = f"{server_url}/{res_namespace}/{framework}/{res_filename}"
             LOG.info(f"Resolved server URI: {path}")
             return path
