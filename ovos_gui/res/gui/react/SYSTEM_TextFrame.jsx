@@ -1,5 +1,5 @@
 import React from "react";
-import { ContentElement } from "core_components/utils";
+import { ContentElement } from "CORE/utils";
 
 function RenderPage(props) {
 	const skill_props = props.skillState;
