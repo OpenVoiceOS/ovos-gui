@@ -43,7 +43,7 @@ Every message in the gui protocol specifies a namespace it belongs to
 
 gui clients usualy display all namespaces, but can be requested to display a single one, 
 
-  eg, have a dedicated window to show a skill as a traditional desktop app
+eg, have a dedicated window to show a skill as a [traditional desktop app](https://github.com/OpenVoiceOS/ovos-ocp-audio-plugin/blob/dev/ovos_plugin_common_play/ocp/res/desktop/OCP.desktop)
 
 
 ## Active Skills - mycroft.system.active_skills
