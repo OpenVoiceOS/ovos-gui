@@ -2,7 +2,7 @@
 
 This protocol defines how ovos-gui communicates with connected clients
 
-- [CONNECTION](#connection)
+- [CONNECTION](#connection---mycroftguiconnected)
 - [NAMESPACES](#namespaces)
   * [Active Skills - mycroft.system.active_skills](#active-skills---mycroftsystemactive-skills)
 - [PAGES - mycroft.gui.list.xxx](#pages---mycroftguilistxxx)
@@ -21,7 +21,7 @@ This protocol defines how ovos-gui communicates with connected clients
     + [Remove items from the list](#remove-items-from-the-list)
 
 
-# CONNECTION
+# CONNECTION - mycroft.gui.connected
 
 on connection gui clients announce themselves
 
