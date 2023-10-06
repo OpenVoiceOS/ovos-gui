@@ -15,20 +15,20 @@ function RenderPage(props) {
 				id="title"
 				className="col-12 h2"
 				text={skill_props["title"] || null}
-				duration={2000}
+				duration={15000}
 			/>
 			<ContentElement
 				elementType="ImageFrame"
 				id={"image"}
 				className="col-12"
 				src={skill_props["image"] || null}
-				duration={2000}
+				duration={15000}
 			/>
 			<ContentElement
 				elementType="TextFrame"
 				className="col-12 h4"
 				text={skill_props["caption"] || null}
-				duration={2000}
+				duration={15000}
 			/>
 		</div>
 	);

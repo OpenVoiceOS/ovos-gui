@@ -25,7 +25,7 @@ function RenderPage(props) {
 				className={"col-12 h3"}
 				text={skill_props.text}
 				display={skill_props.display}
-				duration={150000}
+				duration={15000}
 				// TODO: duration from config
 			/>
 		</div>
