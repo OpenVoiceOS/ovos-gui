@@ -50,14 +50,14 @@ eg, have a dedicated window to show a skill as a [traditional desktop app](https
 
 a reserved namespace is "mycroft.system.active_skills", the data contained in this namespace defines the namespace display priority
 
-Recent skills are ordered from the last used to the oldest, so the first item of the model will always be the the one showing any GUI page, if available.
+Recent skills are ordered from the last used to the oldest, so the first item of the list will always be the the one showing any GUI page, if available.
 
 see the section about [lists](https://github.com/OpenVoiceOS/ovos-gui/blob/dev/protocol.md#lists) if you need to modify active skills
 
 
 # PAGES - mycroft.gui.list.xxx
 
-Each active skill is associated with a model with uris to the QML files of all gui items that are supposed to be visible.
+Each active skill is associated with a list of uris to the QML files of all gui items that are supposed to be visible.
 
 Non QT GUIS get sent other file extensions such as .jsx or .html using the same message format
 
@@ -125,14 +125,13 @@ NOTE: for responsiveness it is recommened this message is only emitted after the
 }
 ```
 
-The parameter "number" is the position (starting from zero) of the page in the gui model.
-
+The parameter "number" is the position (starting from zero) of the page
 
 # SKILL DATA - mycroft.session.xxx
 
 At the center of data sharing there is a key/value dictionary that is kept synchronized between ovos-gui and the GUI client.
 
-Values can either be simple strings, numbers and booleans or be more complicated data models as described in the MODELS section.
+Values can either be simple strings, numbers and booleans or be more complicated data types
 
 this event can be sent from gui clients (eg, in response to a dropdown selection) or from skills (eg, change weather data)
 
@@ -182,7 +181,7 @@ Either sets a new key/value pair or replace an existing old value.
 {
     "type": "mycroft.session.list.update",
     "namespace": "weather.mycroft"
-    "property": "forecast" //in the future this can become a path if we want lists of lists
+    "property": "forecast"
     "position": 2
     "values": [{"date": "tomorrow", "temperature" : 13, ...}, ...] //values must always be in array form
 }
