@@ -52,7 +52,7 @@ a reserved namespace is "mycroft.system.active_skills", the data contained in th
 
 Recent skills are ordered from the last used to the oldest, so the first item of the model will always be the the one showing any GUI page, if available.
 
-see the section about [#lists](lists) if you need to modify active skills
+see the section about [lists](#lists) if you need to modify active skills
 
 
 # PAGES - mycroft.gui.list.xxx
