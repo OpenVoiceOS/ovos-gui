@@ -5,10 +5,10 @@ This protocol defines how ovos-gui communicates with connected clients
 - [CONNECTION](#connection)
 - [NAMESPACES](#namespaces)
   * [Active Skills - mycroft.system.active_skills](#active-skills---mycroftsystemactive-skills)
-  * [Pages - mycroft.gui.list.xxx](#pages---mycroftguilistxxx)
-    + [Insert new page at position](#insert-new-page-at-position)
-    + [Move pages within the list](#move-pages-within-the-list)
-    + [Remove pages from the list](#remove-pages-from-the-list)
+- [PAGES - mycroft.gui.list.xxx](#pages---mycroftguilistxxx)
+  * [Insert new page at position](#insert-new-page-at-position)
+  * [Move pages within the list](#move-pages-within-the-list)
+  * [Remove pages from the list](#remove-pages-from-the-list)
 - [EVENTS - mycroft.events.triggered](#events---mycrofteventstriggered)
   * [SPECIAL EVENT: page_gained_focus](#special-event--page-gained-focus)
 - [SKILL DATA - mycroft.session.xxx](#skill-data---mycroftsessionxxx)
@@ -19,6 +19,7 @@ This protocol defines how ovos-gui communicates with connected clients
     + [Updates item values starting at the given position, as many items as there are in the array](#updates-item-values-starting-at-the-given-position--as-many-items-as-there-are-in-the-array)
     + [Move items within the list](#move-items-within-the-list)
     + [Remove items from the list](#remove-items-from-the-list)
+
 
 # CONNECTION
 
@@ -52,13 +53,13 @@ a reserved namespace is "mycroft.system.active_skills", the data contained in th
 Recent skills are ordered from the last used to the oldest, so the first item of the model will always be the the one showing any GUI page, if available.
 
 
-## Pages - mycroft.gui.list.xxx
+# PAGES - mycroft.gui.list.xxx
 
 Each active skill is associated with a model with uris to the QML files of all gui items that are supposed to be visible.
 
 Non QT GUIS get sent other file extensions such as .jsx or .html using the same message format
 
-### Insert new page at position
+## Insert new page at position
 ```javascript
 {
     "type": "mycroft.gui.list.insert",
@@ -68,7 +69,7 @@ Non QT GUIS get sent other file extensions such as .jsx or .html using the same 
 }
 ```
 
-### Move pages within the list
+## Move pages within the list
 ```javascript
 {
     "type": "mycroft.gui.list.move",
@@ -79,7 +80,7 @@ Non QT GUIS get sent other file extensions such as .jsx or .html using the same 
 }
 ```
 
-### Remove pages from the list
+## Remove pages from the list
 ```javascript
 {
     "type": "mycroft.gui.list.remove",
