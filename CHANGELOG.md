@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.0.4a4](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a4) (2023-10-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a3...0.0.4a4)
+
+**Merged pull requests:**
+
+- Update protocol.md [\#32](https://github.com/OpenVoiceOS/ovos-gui/pull/32) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.4a3](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a3) (2023-09-29)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a2...0.0.4a3)
