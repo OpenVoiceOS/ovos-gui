@@ -2,25 +2,23 @@
 
 This protocol defines how ovos-gui communicates with connected clients
 
-- [OVOS GUI service protocol](#ovos-gui-service-protocol)
 - [CONNECTION](#connection)
 - [NAMESPACES](#namespaces)
-  * [Pages](#pages)
-    + [Inserts new GUI items at position](#inserts-new-gui-items-at-position)
-    + [Move items within the list](#move-items-within-the-list)
-    + [Remove items from the list](#remove-items-from-the-list)
-- [EVENTS](#events)
+  * [Active Skills - mycroft.system.active_skills](#active-skills---mycroftsystemactive-skills)
+  * [Pages - mycroft.gui.list.xxx](#pages---mycroftguilistxxx)
+    + [Insert new page at position](#insert-new-page-at-position)
+    + [Move pages within the list](#move-pages-within-the-list)
+    + [Remove pages from the list](#remove-pages-from-the-list)
+- [EVENTS - mycroft.events.triggered](#events---mycrofteventstriggered)
   * [SPECIAL EVENT: page_gained_focus](#special-event--page-gained-focus)
-- [SKILL DATA](#skill-data)
+- [SKILL DATA - mycroft.session.xxx](#skill-data---mycroftsessionxxx)
   * [Sets a new key/value in the sessionData dictionary](#sets-a-new-key-value-in-the-sessiondata-dictionary)
   * [Deletes a key/value pair from the sessionData dictionary](#deletes-a-key-value-pair-from-the-sessiondata-dictionary)
   * [Lists](#lists)
     + [Inserts new items at position](#inserts-new-items-at-position)
     + [Updates item values starting at the given position, as many items as there are in the array](#updates-item-values-starting-at-the-given-position--as-many-items-as-there-are-in-the-array)
-    + [Move items within the list](#move-items-within-the-list-1)
-    + [Remove items from the list](#remove-items-from-the-list-1)
-  * [Active Skills - mycroft.system.active_skills](#active-skills---mycroftsystemactive-skills)
-
+    + [Move items within the list](#move-items-within-the-list)
+    + [Remove items from the list](#remove-items-from-the-list)
 
 # CONNECTION
 
@@ -47,13 +45,20 @@ gui clients usualy display all namespaces, but can be requested to display a sin
   eg, have a dedicated window to show a skill as a traditional desktop app
 
 
-## Pages
+## Active Skills - mycroft.system.active_skills
+
+a reserved namespace is "mycroft.system.active_skills", the data contained in this namespace defines the namespace display priority
+
+Recent skills are ordered from the last used to the oldest, so the first item of the model will always be the the one showing any GUI page, if available.
+
+
+## Pages - mycroft.gui.list.xxx
 
 Each active skill is associated with a model with uris to the QML files of all gui items that are supposed to be visible.
 
 Non QT GUIS get sent other file extensions such as .jsx or .html using the same message format
 
-### Inserts new GUI items at position
+### Insert new page at position
 ```javascript
 {
     "type": "mycroft.gui.list.insert",
@@ -63,7 +68,7 @@ Non QT GUIS get sent other file extensions such as .jsx or .html using the same 
 }
 ```
 
-### Move items within the list
+### Move pages within the list
 ```javascript
 {
     "type": "mycroft.gui.list.move",
@@ -74,7 +79,7 @@ Non QT GUIS get sent other file extensions such as .jsx or .html using the same 
 }
 ```
 
-### Remove items from the list
+### Remove pages from the list
 ```javascript
 {
     "type": "mycroft.gui.list.remove",
@@ -85,7 +90,7 @@ Non QT GUIS get sent other file extensions such as .jsx or .html using the same 
 ```
 
 
-# EVENTS
+# EVENTS - mycroft.events.triggered
 
 Events can either be emitted by a gui client (eg, some element clicked) or by the skill (eg, in response to a voice command)
 
@@ -120,7 +125,7 @@ NOTE: for responsiveness it is recommened this message is only emitted after the
 The parameter "number" is the position (starting from zero) of the page in the gui model.
 
 
-# SKILL DATA
+# SKILL DATA - mycroft.session.xxx
 
 At the center of data sharing there is a key/value dictionary that is kept synchronized between ovos-gui and the GUI client.
 
@@ -142,7 +147,7 @@ Either sets a new key/value pair or replace an existing old value.
     "data": {
         "temperature": "28",
         "icon": "cloudy",
-        "forecast": [{...},...] //if it's a list a model gets created, or resetted if it was already existing, see the MODELS section
+        "forecast": [{...},...] //if it's a list see below for more message types
     }
 }
 ```
@@ -168,8 +173,6 @@ Either sets a new key/value pair or replace an existing old value.
     "values": [{"date": "tomorrow", "temperature" : 13, ...}, ...] //values must always be in array form
 }
 ```
-
-Values is an ordered dict, for a shopping cart it would need multiple roles like product name, price, image
 
 ### Updates item values starting at the given position, as many items as there are in the array
 ```javascript
@@ -206,10 +209,4 @@ Values is an ordered dict, for a shopping cart it would need multiple roles like
 ```
 
 
-
-## Active Skills - mycroft.system.active_skills
-
-a reserved namespace is "mycroft.system.active_skills", the data contained in this namespace defines the namespace display priority
-
-Recent skills are ordered from the last used to the oldest, so the first item of the model will always be the the one showing any GUI page, if available.
 
