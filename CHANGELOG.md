@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.0.4a5](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a5) (2023-12-29)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a4...0.0.4a5)
+
+**Closed issues:**
+
+- "OSError: \[Errno 98\] Address already in use" when restarted too fast [\#24](https://github.com/OpenVoiceOS/ovos-gui/issues/24)
+
+**Merged pull requests:**
+
+- Update requirements.txt [\#33](https://github.com/OpenVoiceOS/ovos-gui/pull/33) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [0.0.4a4](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a4) (2023-10-06)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a3...0.0.4a4)
