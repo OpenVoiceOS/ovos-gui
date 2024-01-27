@@ -613,7 +613,7 @@ class NamespaceManager:
         message_is_valid = _validate_page_message(message)
         if message_is_valid:
             namespace_name = message.data["__from"]
-            pages_to_remove = message.data["page"]
+            pages_to_remove = message.data["page_names"]
             with namespace_lock:
                 self._remove_pages(namespace_name, pages_to_remove)
 
@@ -627,8 +627,8 @@ class NamespaceManager:
         namespace = self.loaded_namespaces.get(namespace_name)
         if namespace is not None and namespace in self.active_namespaces:
             page_positions = []
-            for index, page in enumerate(pages_to_remove):
-                if page == namespace.pages[index].id:
+            for index, page in enumerate(namespace.pages):
+                if page.name in pages_to_remove:
                     page_positions.append(index)
 
             page_positions.sort(reverse=True)
@@ -981,6 +981,7 @@ class NamespaceManager:
         Handles global back events from the GUI.
         @param message: the event sent by the GUI
         """
+        # TODO - unused ? missing bus event ?
         namespace_name = self.active_namespaces[0].skill_id
         namespace = self.loaded_namespaces.get(namespace_name)
         if namespace in self.active_namespaces:
