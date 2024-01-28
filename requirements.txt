@@ -1,5 +1,5 @@
 ovos-bus-client~=0.0, >=0.0.7
 ovos-utils~=0.0, >=0.0.37
 ovos-config~=0.0,>=0.0.12
-tornado~=6.0, >=6.0.3
+tornado~=6.4
 ovos-plugin-manager>=0.0.24
