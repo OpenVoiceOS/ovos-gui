@@ -26,8 +26,6 @@ class GuiPage:
     namespace: Optional[str] = None
     resource_dirs: Optional[dict] = None
 
-    active: bool = False
-
     @property
     def id(self):
         """

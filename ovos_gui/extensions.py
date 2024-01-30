@@ -55,8 +55,8 @@ class ExtensionsManager:
             self.extension = OVOSGuiFactory.create(cfg, bus=self.bus)
         self.extension.bind_homescreen()
 
-        LOG.info(f"Extensions Manager: Activated Extension {extension_id} "
-                 f"({self.extension.__class__})")
+        LOG.info(f"Extensions Manager - Activated: {extension_id} "
+                 f"({self.extension.__class__.__name__})")
         self.bus.emit(
             Message("extension.manager.activated", {"id": extension_id}))
 

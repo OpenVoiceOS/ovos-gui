@@ -4,21 +4,6 @@ from ovos_gui.page import GuiPage
 
 
 class TestGuiPage(unittest.TestCase):
-    def test_gui_page_legacy(self):
-        uri = __file__
-        name = "test"
-        persistent = True
-        duration = 0
-        page = GuiPage(uri, name, persistent, duration)
-        self.assertEqual(page.url, uri)
-        self.assertEqual(page.name, name)
-        self.assertEqual(page.persistent, persistent)
-        self.assertEqual(page.duration, 0)
-        self.assertFalse(page.active)
-        self.assertEqual(page.id, page.url)
-        self.assertEqual(page.get_uri(), page.url)
-        self.assertEqual(page.get_uri("qt6", "http://0.0.0.0:80"), page.url)
-        self.assertEqual(page.get_uri("qt6", "/var/www/app"), page.url)
 
     def test_gui_page_from_server(self):
         name = "test_page"
@@ -27,7 +12,7 @@ class TestGuiPage(unittest.TestCase):
         page_id = "test_page"
         namespace = "skill.test"
 
-        page = GuiPage(None, name, persistent, duration, page_id, namespace)
+        page = GuiPage(name, persistent, duration, page_id, namespace)
         qt5 = page.get_uri(server_url="localhost:80")
         self.assertEqual(qt5,
                          f"http://localhost:80/{namespace}/qt5/{page_id}.qml")
@@ -43,7 +28,7 @@ class TestGuiPage(unittest.TestCase):
         page_id = "test_page"
         namespace = "skill.test"
 
-        page = GuiPage(None, name, persistent, duration, page_id, namespace)
+        page = GuiPage(name, persistent, duration, page_id, namespace)
         qt5 = page.get_uri(server_url="/path/for/gui/client")
         self.assertEqual(qt5,
                          f"file:///path/for/gui/client/{namespace}/qt5/{page_id}.qml")
@@ -60,8 +45,7 @@ class TestGuiPage(unittest.TestCase):
         namespace = "skill.test"
         res_dirs = {"all": join(dirname(__file__), "mock_data", "gui")}
         # Modern GUI File organization
-        page = GuiPage(None, name, persistent, duration, page_id, namespace,
-                       res_dirs)
+        page = GuiPage(name, persistent, duration, page_id, namespace, res_dirs)
         qt5 = page.get_uri("qt5")
         qt6 = page.get_uri("qt6")
         self.assertTrue(isfile(qt5))
