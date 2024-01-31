@@ -215,8 +215,6 @@ class Namespace:
             namespace=self.skill_id,
             data={name: value}
         )
-
-        # LOG.info(f"Setting data {message} in GUI namespace \"{self.skill_id}\"")
         send_message_to_gui(message)
 
     def unload_data(self, name: str):
@@ -230,7 +228,6 @@ class Namespace:
             property=name,
             namespace=self.skill_id
         )
-        # LOG.info(f"Deleting data {message} from GUI namespace \"{self.skill_id}\"")
         send_message_to_gui(message)
 
     def get_position_of_last_item_in_data(self) -> int:
