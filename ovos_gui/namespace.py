@@ -323,6 +323,11 @@ class Namespace:
                 LOG.exception(f"Error updating {client.framework} client: {e}")
 
     def focus_page(self, page):
+        """
+        Returns focus to a page already in the active page list.
+
+        @param page: the page that will gain focus
+        """
         # set the index of the page in the self.pages list
         page_index = None
         for i, p in enumerate(self.pages):
@@ -346,7 +351,7 @@ class Namespace:
 
     def _activate_page(self, page: GuiPage):
         """
-        Returns focus to a page already in the active page list.
+        Tells mycroft-gui to returns focus to a page
 
         @param page: the page that will gain focus
         """
