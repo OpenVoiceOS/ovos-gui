@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.0a2](https://github.com/OpenVoiceOS/ovos-gui/tree/0.1.0a2) (2024-02-08)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a5...0.1.0a2)
+
+**Implemented enhancements:**
+
+- house cleaning [\#39](https://github.com/OpenVoiceOS/ovos-gui/pull/39) ([NeonJarbas](https://github.com/NeonJarbas))
+
 ## [0.0.4a5](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a5) (2023-12-29)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a4...0.0.4a5)
