@@ -139,6 +139,10 @@ class Namespace:
         self.session_set = False
 
     @property
+    def page_names(self):
+        return [page.name for page in self.pages]
+
+    @property
     def active_page(self):
         if len(self.pages):
             if self.page_number >= len(self.pages):

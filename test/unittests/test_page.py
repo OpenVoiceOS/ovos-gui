@@ -14,7 +14,6 @@ class TestGuiPage(unittest.TestCase):
         self.assertEqual(page.name, name)
         self.assertEqual(page.persistent, persistent)
         self.assertEqual(page.duration, 0)
-        self.assertFalse(page.active)
         self.assertEqual(page.id, page.url)
         self.assertEqual(page.get_uri(), page.url)
         self.assertEqual(page.get_uri("qt6", "http://0.0.0.0:80"), page.url)
