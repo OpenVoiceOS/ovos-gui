@@ -1,24 +1,23 @@
 from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration
-from ovos_gui.namespace import NamespaceManager
 from ovos_utils.log import LOG
 from ovos_plugin_manager.gui import OVOSGuiFactory
+from ovos_gui.homescreen import HomescreenManager
 
 
 class ExtensionsManager:
-    def __init__(self, name: str, bus: MessageBusClient, gui: NamespaceManager):
+    def __init__(self, name: str, bus: MessageBusClient):
         """
         Constructor for the Extension Manager. The Extension Manager is
         responsible for managing the extensions that define additional GUI
         behaviours for specific platforms.
         @param name: Name of the extension manager
         @param bus: MessageBus instance
-        @param gui: GUI instance
         """
 
         self.name = name
         self.bus = bus
-        self.gui = gui
+        self.homescreen_manager = HomescreenManager(self.bus)
         core_config = Configuration()
         enclosure_config = core_config.get("gui") or {}
         self.active_extension = enclosure_config.get("extension", "generic")
@@ -53,10 +52,11 @@ class ExtensionsManager:
                           f"falling back to 'generic'")
             cfg["module"] = "generic"
             self.extension = OVOSGuiFactory.create(cfg, bus=self.bus)
-        self.extension.bind_homescreen()
 
-        LOG.info(f"Extensions Manager: Activated Extension {extension_id} "
-                 f"({self.extension.__class__})")
+        self.extension.bind_homescreen(self.homescreen_manager)
+
+        LOG.info(f"Extensions Manager - Activated: {extension_id} "
+                 f"({self.extension.__class__.__name__})")
         self.bus.emit(
             Message("extension.manager.activated", {"id": extension_id}))
 

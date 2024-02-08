@@ -14,29 +14,31 @@
 #
 """Tests for the GUI namespace helper class."""
 from os import makedirs
+from os.path import join, dirname, isdir, isfile
 from shutil import rmtree
 from unittest import TestCase, mock
 from unittest.mock import Mock
-from os.path import join, dirname, isdir, isfile
+
 from ovos_bus_client.message import Message
 from ovos_utils.messagebus import FakeBus
-from ovos_gui.page import GuiPage
+
 from ovos_gui.namespace import Namespace
+from ovos_gui.page import GuiPage
 
 PATCH_MODULE = "ovos_gui.namespace"
 
 
 class TestNamespaceFunctions(TestCase):
     def test_validate_page_message(self):
-        from ovos_gui.namespace import _validate_page_message
+        pass
         # TODO
 
     def test_get_idle_display_config(self):
-        from ovos_gui.namespace import _get_idle_display_config
+        pass
         # TODO
 
     def test_get_active_gui_extension(self):
-        from ovos_gui.namespace import _get_active_gui_extension
+        pass
         # TODO
 
 
@@ -61,6 +63,13 @@ class TestNamespace(TestCase):
             send_message_mock.assert_called_with(add_namespace_message)
 
     def test_activate(self):
+        self.namespace.load_pages([
+            GuiPage(name="foo", url="", persistent=False, duration=False),
+            GuiPage(name="bar", url="", persistent=False, duration=False),
+            GuiPage(name="foobar", url="", persistent=False, duration=False),
+            GuiPage(name="baz", url="", persistent=False, duration=False),
+            GuiPage(name="foobaz", url="", persistent=False, duration=False)
+        ])
         activate_namespace_message = {
             "type": "mycroft.session.list.move",
             "namespace": "mycroft.system.active_skills",
@@ -120,9 +129,9 @@ class TestNamespace(TestCase):
         self.assertTrue(self.namespace.persistent)
 
     def test_load_pages_new(self):
-        self.namespace.pages = [GuiPage("foo", "foo.qml", True, 0),
-                                GuiPage("bar", "bar.qml", False, 30)]
-        new_pages = [GuiPage("foobar", "foobar.qml", False, 30)]
+        self.namespace.pages = [GuiPage(name="foo", url="foo.qml", persistent=True, duration=0),
+                                GuiPage(name="bar", url="bar.qml", persistent=False, duration=30)]
+        new_pages = [GuiPage(name="foobar", url="foobar.qml", persistent=False, duration=30)]
         load_page_message = dict(
             type="mycroft.events.triggered",
             namespace="foo",
@@ -137,9 +146,9 @@ class TestNamespace(TestCase):
         self.assertListEqual(self.namespace.pages, self.namespace.pages)
 
     def test_load_pages_existing(self):
-        self.namespace.pages = [GuiPage("foo", "foo.qml", True, 0),
-                                GuiPage("bar", "bar.qml", False, 30)]
-        new_pages = [GuiPage("foo", "foo.qml", True, 0)]
+        self.namespace.pages = [GuiPage(name="foo", url="foo.qml", persistent=True, duration=0),
+                                GuiPage(name="bar", url="bar.qml", persistent=False, duration=30)]
+        new_pages = [GuiPage(name="foo", url="foo.qml", persistent=True, duration=0)]
         load_page_message = dict(
             type="mycroft.events.triggered",
             namespace="foo",
@@ -162,7 +171,9 @@ class TestNamespace(TestCase):
         pass
 
     def test_remove_pages(self):
-        self.namespace.pages = ["foo", "bar", "foobar"]
+        self.namespace.pages = [GuiPage(name="foo", url="", persistent=False, duration=False),
+                                GuiPage(name="bar", url="", persistent=False, duration=False),
+                                GuiPage(name="foobar", url="", persistent=False, duration=False)]
         remove_page_message = dict(
             type="mycroft.gui.list.remove",
             namespace="foo",
@@ -173,7 +184,7 @@ class TestNamespace(TestCase):
         with mock.patch(patch_function) as send_message_mock:
             self.namespace.remove_pages([2])
             send_message_mock.assert_called_with(remove_page_message)
-        self.assertListEqual(["foo", "bar"], self.namespace.pages)
+        self.assertListEqual(["foo", "bar"], self.namespace.page_names)
 
     def test_page_gained_focus(self):
         # TODO
@@ -262,7 +273,7 @@ class TestNamespaceManager(TestCase):
 
     def test_handle_delete_page_active_namespace(self):
         namespace = Namespace("foo")
-        namespace.pages = [GuiPage("bar", "bar.qml", True, 0)]
+        namespace.pages = [GuiPage(name="bar", url="bar.qml", persistent=True, duration=0)]
         namespace.remove_pages = mock.Mock()
         self.namespace_manager.loaded_namespaces = dict(foo=namespace)
         self.namespace_manager.active_namespaces = [namespace]
@@ -326,7 +337,7 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager._legacy_show_page.assert_called_once_with(message)
         self.namespace_manager._activate_namespace.assert_called_with("foo")
         self.namespace_manager._load_pages.assert_called_with(["pages"], None)
-        self.namespace_manager._update_namespace_persistence.\
+        self.namespace_manager._update_namespace_persistence. \
             assert_called_with(10)
 
         # With resource info
@@ -347,7 +358,7 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager._load_pages.assert_called_with([expected_page1,
                                                                expected_page2],
                                                               1)
-        self.namespace_manager._update_namespace_persistence.\
+        self.namespace_manager._update_namespace_persistence. \
             assert_called_with(False)
 
         # System resources
@@ -365,7 +376,7 @@ class TestNamespaceManager(TestCase):
             "skill_no_res")
         self.namespace_manager._load_pages.assert_called_with([expected_page],
                                                               2)
-        self.namespace_manager._update_namespace_persistence.\
+        self.namespace_manager._update_namespace_persistence. \
             assert_called_with(True)
         # TODO: Test page_names with files and URIs
 

@@ -32,7 +32,7 @@ class GUIService:
                  stopping_hook=on_stopping):
         self.bus = MessageBusClient()
         self.extension_manager = None
-        self.gui = NamespaceManager(self.bus)
+        self.namespace_manager = None
         callbacks = StatusCallbackMap(on_started=started_hook,
                                       on_alive=alive_hook,
                                       on_ready=ready_hook,
@@ -61,16 +61,18 @@ class GUIService:
         self.status.set_alive()
         self._init_bus_client()
 
+        self.extension_manager = ExtensionsManager("EXTENSION_SERVICE", self.bus)
+        self.namespace_manager = NamespaceManager(self.bus)
+
         # Bus is connected, check if the skills service is ready
         resp = self.bus.wait_for_response(
             Message("mycroft.skills.is_ready",
                     context={"source": "gui", "destination": ["skills"]}))
         if resp and resp.data.get("status"):
             LOG.debug("Skills service already running")
-            self.gui.handle_ready(resp)
+            self.namespace_manager.handle_ready(resp)
+            self.extension_manager.homescreen_manager.set_mycroft_ready(resp)
 
-        self.extension_manager = ExtensionsManager("EXTENSION_SERVICE",
-                                                   self.bus, self.gui)
         self.status.set_ready()
         LOG.info(f"GUI Service Ready")
 

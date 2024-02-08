@@ -9,12 +9,10 @@ from ovos_gui.namespace import NamespaceManager
 class TestHomescreenManager(unittest.TestCase):
     from ovos_gui.homescreen import HomescreenManager
     bus = FakeBus()
-    gui = NamespaceManager(bus)
-    homescreen_manager = HomescreenManager(bus, gui)
+    homescreen_manager = HomescreenManager(bus)
 
     def test_00_homescreen_manager_init(self):
         self.assertEqual(self.homescreen_manager.bus, self.bus)
-        self.assertEqual(self.homescreen_manager.gui, self.gui)
         self.assertFalse(self.homescreen_manager.mycroft_ready)
         self.assertIsInstance(self.homescreen_manager.homescreens, list)
         # TODO: Test messagebus handlers
