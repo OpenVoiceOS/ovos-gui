@@ -6,14 +6,12 @@ from ovos_utils.log import LOG, log_deprecation
 
 from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.message import dig_for_message
-from ovos_gui.namespace import NamespaceManager
 
 
 class HomescreenManager(Thread):
-    def __init__(self, bus: MessageBusClient, gui: NamespaceManager):
+    def __init__(self, bus: MessageBusClient):
         super().__init__()
         self.bus = bus
-        self.gui = gui
         self.homescreens: List[dict] = []
         self.mycroft_ready = False
 
@@ -24,13 +22,7 @@ class HomescreenManager(Thread):
         self.bus.on("homescreen.manager.set_active", self.handle_set_active_homescreen)
         self.bus.on("homescreen.manager.disable_active", self.disable_active_homescreen)
         self.bus.on("homescreen.manager.show_active", self.show_homescreen)
-
-        # show homescreen once core is ready
-        ready = self.bus.wait_for_response(Message('mycroft.skills.is_ready'))
-        if ready is not None and ready.data.get("status"):
-            self.set_mycroft_ready(ready)
-        else:
-            self.bus.on("mycroft.ready", self.set_mycroft_ready)
+        self.bus.on("mycroft.ready", self.set_mycroft_ready)
 
     def run(self):
         """
@@ -187,4 +179,5 @@ class HomescreenManager(Thread):
         @param message: `mycroft.ready` Message
         """
         self.mycroft_ready = True
+        self.reload_homescreens_list()
         self.show_homescreen()

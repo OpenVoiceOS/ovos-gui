@@ -479,11 +479,6 @@ class NamespaceManager:
         self.core_bus.on("mycroft.skills.trained", self.handle_ready)
         self.core_bus.on("mycroft.gui.screen.close", self.handle_namespace_global_back)
 
-        # upload gui pages if core is loaded (likely a reload of gui service)
-        ready = self.core_bus.wait_for_response(Message('mycroft.skills.is_ready'))
-        if ready is not None and ready.data.get("status"):
-            self.handle_ready(ready)
-
     def handle_ready(self, message):
         self._ready_event.set()
         self.core_bus.on("gui.volunteer_page_upload",
