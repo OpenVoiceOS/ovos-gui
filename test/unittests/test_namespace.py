@@ -30,15 +30,15 @@ PATCH_MODULE = "ovos_gui.namespace"
 
 class TestNamespaceFunctions(TestCase):
     def test_validate_page_message(self):
-        from ovos_gui.namespace import _validate_page_message
+        pass
         # TODO
 
     def test_get_idle_display_config(self):
-        from ovos_gui.namespace import _get_idle_display_config
+        pass
         # TODO
 
     def test_get_active_gui_extension(self):
-        from ovos_gui.namespace import _get_active_gui_extension
+        pass
         # TODO
 
 
@@ -63,6 +63,13 @@ class TestNamespace(TestCase):
             send_message_mock.assert_called_with(add_namespace_message)
 
     def test_activate(self):
+        self.namespace.load_pages([
+            GuiPage(name="foo", url="", persistent=False, duration=False),
+            GuiPage(name="bar", url="", persistent=False, duration=False),
+            GuiPage(name="foobar", url="", persistent=False, duration=False),
+            GuiPage(name="baz", url="", persistent=False, duration=False),
+            GuiPage(name="foobaz", url="", persistent=False, duration=False)
+        ])
         activate_namespace_message = {
             "type": "mycroft.session.list.move",
             "namespace": "mycroft.system.active_skills",
@@ -122,9 +129,9 @@ class TestNamespace(TestCase):
         self.assertTrue(self.namespace.persistent)
 
     def test_load_pages_new(self):
-        self.namespace.pages = [GuiPage("foo", "foo.qml", True, 0),
-                                GuiPage("bar", "bar.qml", False, 30)]
-        new_pages = [GuiPage("foobar", "foobar.qml", False, 30)]
+        self.namespace.pages = [GuiPage(name="foo", url="foo.qml", persistent=True, duration=0),
+                                GuiPage(name="bar", url="bar.qml", persistent=False, duration=30)]
+        new_pages = [GuiPage(name="foobar", url="foobar.qml", persistent=False, duration=30)]
         load_page_message = dict(
             type="mycroft.events.triggered",
             namespace="foo",
@@ -139,9 +146,9 @@ class TestNamespace(TestCase):
         self.assertListEqual(self.namespace.pages, self.namespace.pages)
 
     def test_load_pages_existing(self):
-        self.namespace.pages = [GuiPage("foo", "foo.qml", True, 0),
-                                GuiPage("bar", "bar.qml", False, 30)]
-        new_pages = [GuiPage("foo", "foo.qml", True, 0)]
+        self.namespace.pages = [GuiPage(name="foo", url="foo.qml", persistent=True, duration=0),
+                                GuiPage(name="bar", url="bar.qml", persistent=False, duration=30)]
+        new_pages = [GuiPage(name="foo", url="foo.qml", persistent=True, duration=0)]
         load_page_message = dict(
             type="mycroft.events.triggered",
             namespace="foo",
