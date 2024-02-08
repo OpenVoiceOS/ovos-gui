@@ -399,7 +399,7 @@ class Namespace:
         """
         Returns to the previous page in the active page list.
         """
-        if self.page_number > 0:
+        if self.page_number > 0:  # go back 1 page
             self.remove_pages([self.page_number])
             self.page_gained_focus(self.page_number - 1)
 
@@ -477,6 +477,7 @@ class NamespaceManager:
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
         self.core_bus.on("mycroft.skills.trained", self.handle_ready)
+        self.core_bus.on("mycroft.gui.screen.close", self.handle_namespace_global_back)
 
     def handle_ready(self, message):
         self._ready_event.set()
@@ -1005,11 +1006,15 @@ class NamespaceManager:
         Handles global back events from the GUI.
         @param message: the event sent by the GUI
         """
-        # TODO - unused ? missing bus event ?
         namespace_name = self.active_namespaces[0].skill_id
         namespace = self.loaded_namespaces.get(namespace_name)
         if namespace in self.active_namespaces:
-            namespace.global_back()
+            # prev page
+            if namespace.page_number > 0:
+                namespace.global_back()
+            # homescreen
+            else:
+                self.core_bus.emit(Message("homescreen.manager.show_active"))
 
     def _del_namespace_in_remove_timers(self, namespace_name: str):
         """
