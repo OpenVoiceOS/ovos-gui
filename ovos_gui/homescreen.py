@@ -16,8 +16,7 @@ class HomescreenManager(Thread):
         self.gui = gui
         self.homescreens: List[dict] = []
         self.mycroft_ready = False
-        # TODO: If service starts after `mycroft_ready`,
-        #       homescreen is never shown
+
         self.bus.on('homescreen.manager.add', self.add_homescreen)
         self.bus.on('homescreen.manager.remove', self.remove_homescreen)
         self.bus.on('homescreen.manager.list', self.get_homescreens)
@@ -25,7 +24,13 @@ class HomescreenManager(Thread):
         self.bus.on("homescreen.manager.set_active", self.handle_set_active_homescreen)
         self.bus.on("homescreen.manager.disable_active", self.disable_active_homescreen)
         self.bus.on("homescreen.manager.show_active", self.show_homescreen)
-        self.bus.on("mycroft.ready", self.set_mycroft_ready)
+
+        # show homescreen once core is ready
+        ready = self.bus.wait_for_response(Message('mycroft.skills.is_ready'))
+        if ready is not None and ready.data.get("status"):
+            self.set_mycroft_ready(ready)
+        else:
+            self.bus.on("mycroft.ready", self.set_mycroft_ready)
 
     def run(self):
         """
