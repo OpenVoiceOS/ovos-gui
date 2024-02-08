@@ -15,6 +15,9 @@ class HomescreenManager(Thread):
         self.bus = bus
         self.gui = gui
         self.homescreens: List[dict] = []
+        self.mycroft_ready = False
+        # TODO: If service starts after `mycroft_ready`,
+        #       homescreen is never shown
         self.bus.on('homescreen.manager.add', self.add_homescreen)
         self.bus.on('homescreen.manager.remove', self.remove_homescreen)
         self.bus.on('homescreen.manager.list', self.get_homescreens)
@@ -127,6 +130,9 @@ class HomescreenManager(Thread):
         Check if a homescreen should be displayed immediately upon addition
         @param homescreen_id: ID of added homescreen
         """
+        if not self.mycroft_ready:
+            LOG.debug("Not ready yet, don't display homescreen")
+            return
         LOG.debug(f"Checking {homescreen_id}")
         if self.get_active_homescreen() != homescreen_id:
             # Added homescreen isn't the configured one, do nothing
@@ -175,4 +181,5 @@ class HomescreenManager(Thread):
         Handle `mycroft.ready` and show the homescreen
         @param message: `mycroft.ready` Message
         """
+        self.mycroft_ready = True
         self.show_homescreen()
