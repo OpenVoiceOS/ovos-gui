@@ -608,7 +608,8 @@ class NamespaceManager:
         message_is_valid = _validate_page_message(message)
         if message_is_valid:
             namespace_name = message.data["__from"]
-            pages_to_remove = message.data["page_names"]
+            pages_to_remove = message.data.get("page_names") or \
+                              message.data.get("page")  # backwards compat
             LOG.debug(f"Got {namespace_name} request to delete: {pages_to_remove}")
             with namespace_lock:
                 self._remove_pages(namespace_name, pages_to_remove)
