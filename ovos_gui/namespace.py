@@ -469,6 +469,13 @@ class NamespaceManager:
         """
         Defines event handlers for core messagebus.
         """
+        self.core_bus.on("recognizer_loop:audio_output_start",
+                         self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:audio_output_end",
+                         self.forward_to_gui)
+        self.core_bus.on("mycroft.ready", self.forward_to_gui)
+        # self.core_bus.on("mycroft.gui.port", self.forward_to_gui)
+
         self.core_bus.on("gui.clear.namespace", self.handle_clear_namespace)
         self.core_bus.on("gui.event.send", self.handle_send_event)
         self.core_bus.on("gui.page.delete", self.handle_delete_page)
@@ -482,6 +489,14 @@ class NamespaceManager:
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
         self.core_bus.on("mycroft.skills.trained", self.handle_ready)
         self.core_bus.on("mycroft.gui.screen.close", self.handle_namespace_global_back)
+
+    @staticmethod
+    def forward_to_gui(message: Message):
+        """
+        Forward a core Message to the GUI
+        @param message: Core message to forward
+        """
+        send_message_to_gui(message.as_dict)
 
     def handle_ready(self, message):
         self._ready_event.set()
