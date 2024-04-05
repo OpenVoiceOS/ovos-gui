@@ -508,6 +508,10 @@ class NamespaceManager:
         self.core_bus.on("recognizer_loop:record_begin", self.forward_to_gui)
         self.core_bus.on("recognizer_loop:record_end", self.forward_to_gui)
         
+        # Enclosure Service
+        self.core_bus.on("enclosure.mouth.viseme_list", self.forward_to_gui)
+        # TODO: Add other enclosure events
+
         # self.core_bus.on("mycroft.gui.port", self.forward_to_gui)
 
         self.core_bus.on("gui.clear.namespace", self.handle_clear_namespace)
