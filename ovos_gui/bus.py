@@ -115,7 +115,6 @@ class GUIWebsocketHandler(WebSocketHandler):
         """
         GUIWebsocketHandler.clients.append(self)
         LOG.info('New Connection opened!')
-        self.synchronize()
 
     def on_close(self):
         """
@@ -221,12 +220,16 @@ class GUIWebsocketHandler(WebSocketHandler):
             if framework is None:
                 # mycroft-gui api
                 qt = msg_data.get("qt_version") or default_qt_version
+                LOG.debug(f"Backwards-compat handling for qt{qt} client")
                 if int(qt) == 6:
                     framework = "qt6"
                 else:
                     framework = "qt5"
-
+            LOG.info(f"New connection for framework: {framework}")
             self._framework = framework
+
+            # sync after we've determined what framework this GUI uses
+            self.synchronize()
         else:
             # message not in spec
             # https://github.com/MycroftAI/mycroft-gui/blob/master/transportProtocol.md
