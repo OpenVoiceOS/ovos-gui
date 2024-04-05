@@ -494,11 +494,20 @@ class NamespaceManager:
         """
         Defines event handlers for core messagebus.
         """
+        # Audio Service
         self.core_bus.on("recognizer_loop:audio_output_start",
                          self.forward_to_gui)
         self.core_bus.on("recognizer_loop:audio_output_end",
                          self.forward_to_gui)
-        self.core_bus.on("mycroft.ready", self.forward_to_gui)
+
+        # Speech Service
+        self.core_bus.on("recognizer_loop:sleep", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:wake_up", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:wakeword", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:recognition_unknown", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:record_begin", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:record_end", self.forward_to_gui)
+        
         # self.core_bus.on("mycroft.gui.port", self.forward_to_gui)
 
         self.core_bus.on("gui.clear.namespace", self.handle_clear_namespace)
