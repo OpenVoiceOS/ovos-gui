@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/OpenVoiceOS/ovos-gui/tree/0.2.0) (2024-09-02)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.1.0a2...0.2.0)
+
+**Fixed bugs:**
+
+- Stuck on OVOS logo [\#42](https://github.com/OpenVoiceOS/ovos-gui/issues/42)
+
+**Closed issues:**
+
+- Gui roadmap [\#2](https://github.com/OpenVoiceOS/ovos-gui/issues/2)
+
 ## [0.1.0a2](https://github.com/OpenVoiceOS/ovos-gui/tree/0.1.0a2) (2024-02-08)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a5...0.1.0a2)
