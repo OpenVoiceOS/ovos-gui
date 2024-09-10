@@ -1,4 +1,4 @@
-from ovos_bus_client import MessageBusClient
+from ovos_bus_client import MessageBusClient, Message
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 from ovos_config.config import Configuration
@@ -32,7 +32,7 @@ class GUIService:
                  stopping_hook=on_stopping):
         self.bus = MessageBusClient()
         self.extension_manager = None
-        self.gui = NamespaceManager(self.bus)
+        self.namespace_manager = None
         callbacks = StatusCallbackMap(on_started=started_hook,
                                       on_alive=alive_hook,
                                       on_ready=ready_hook,
@@ -60,8 +60,19 @@ class GUIService:
         # if they may cause the Service to fail.
         self.status.set_alive()
         self._init_bus_client()
-        self.extension_manager = ExtensionsManager("EXTENSION_SERVICE",
-                                                   self.bus, self.gui)
+
+        self.extension_manager = ExtensionsManager("EXTENSION_SERVICE", self.bus)
+        self.namespace_manager = NamespaceManager(self.bus)
+
+        # Bus is connected, check if the skills service is ready
+        resp = self.bus.wait_for_response(
+            Message("mycroft.skills.is_ready",
+                    context={"source": "gui", "destination": ["skills"]}))
+        if resp and resp.data.get("status"):
+            LOG.debug("Skills service already running")
+            self.namespace_manager.handle_ready(resp)
+            self.extension_manager.homescreen_manager.set_mycroft_ready(resp)
+
         self.status.set_ready()
         LOG.info(f"GUI Service Ready")
 

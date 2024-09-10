@@ -2,28 +2,30 @@
 
 This protocol defines how ovos-gui communicates with connected clients
 
-- [ACTIVE SKILLS LIST](#active-skills-list)
-- [EVENTS](#events)
+- [CONNECTION - mycroft.gui.connected](#connection---mycroftguiconnected)
+- [NAMESPACES](#namespaces)
+  * [Active Skills - mycroft.system.active_skills](#active-skills---mycroftsystemactive-skills)
+- [PAGES - mycroft.gui.list.xxx](#pages---mycroftguilistxxx)
+  * [Insert new page at position](#insert-new-page-at-position)
+  * [Move pages within the list](#move-pages-within-the-list)
+  * [Remove pages from the list](#remove-pages-from-the-list)
+- [EVENTS - mycroft.events.triggered](#events---mycrofteventstriggered)
   * [SPECIAL EVENT: page_gained_focus](#special-event--page-gained-focus)
-- [SKILL DATA](#skill-data)
+- [SKILL DATA - mycroft.session.xxx](#skill-data---mycroftsessionxxx)
   * [Sets a new key/value in the sessionData dictionary](#sets-a-new-key-value-in-the-sessiondata-dictionary)
   * [Deletes a key/value pair from the sessionData dictionary](#deletes-a-key-value-pair-from-the-sessiondata-dictionary)
-- [MODELS](#models)
-  * [Inserts new items at position](#inserts-new-items-at-position)
-  * [Updates item values starting at the given position, as many items as there are in the array](#updates-item-values-starting-at-the-given-position--as-many-items-as-there-are-in-the-array)
-  * [Move items within the list](#move-items-within-the-list)
-  * [Remove items from the list](#remove-items-from-the-list)
-- [GUI MODEL](#gui-model)
-  * [Inserts new GUI items at position](#inserts-new-gui-items-at-position)
-  * [Move items within the list](#move-items-within-the-list-1)
-  * [Remove items from the list](#remove-items-from-the-list-1)
+  * [Lists](#lists)
+    + [Inserts new items at position](#inserts-new-items-at-position)
+    + [Updates item values starting at the given position, as many items as there are in the array](#updates-item-values-starting-at-the-given-position--as-many-items-as-there-are-in-the-array)
+    + [Move items within the list](#move-items-within-the-list)
+    + [Remove items from the list](#remove-items-from-the-list)
 
 
-# CONNECTION
+# CONNECTION - mycroft.gui.connected
 
 on connection gui clients announce themselves
 
-This is an extension by OVOS to the original mycroft protocol
+This is an extension by OVOS to the [original mycroft protocol](https://github.com/MycroftAI/mycroft-gui/blob/master/transportProtocol.md)
 
 
 ```javascript
@@ -33,25 +35,87 @@ This is an extension by OVOS to the original mycroft protocol
 }
 ```
 
-# ACTIVE SKILLS LIST
+# NAMESPACES
 
-The active skill data, described in the section MODELS is mandatory for the rest of the protocol to work. I.e. if some data or an event arrives with namespace "mycroft.weather", the skill id "mycroft.weather" must have been advertised as recently used in the recent skills model beforehand, otherwise all requests on that namespace will be ignored on both client and serverside and considered a protocol error.
-Recent skills are ordered from the last used to the oldest, so the first item of the model will always be the the one showing any QML GUI, if available.
+ovos-gui maintains a list of namespaces with GUI data, namespaces usually correspond to a skill_id
 
-# EVENTS
+Every message in the gui protocol specifies a namespace it belongs to
+
+gui clients usualy display all namespaces, but can be requested to display a single one, 
+
+eg, have a dedicated window to show a skill as a [traditional desktop app](https://github.com/OpenVoiceOS/ovos-ocp-audio-plugin/blob/dev/ovos_plugin_common_play/ocp/res/desktop/OCP.desktop)
+
+
+## Active Skills - mycroft.system.active_skills
+
+a reserved namespace is "mycroft.system.active_skills", the data contained in this namespace defines the namespace display priority
+
+Recent skills are ordered from the last used to the oldest, so the first item of the list will always be the the one showing any GUI page, if available.
+
+see the section about [lists](https://github.com/OpenVoiceOS/ovos-gui/blob/dev/protocol.md#lists) if you need to modify active skills
+
+
+# PAGES - mycroft.gui.list.xxx
+
+Each active skill is associated with a list of uris to the QML files of all gui items that are supposed to be visible.
+
+Non QT GUIS get sent other file extensions such as .jsx or .html using the same message format
+
+## Insert new page at position
+```javascript
+{
+    "type": "mycroft.gui.list.insert",
+    "namespace": "mycroft.weather"
+    "position": 2
+    "values": [{"url": "file://..../currentWeather.qml"}, ...] //values must always be in array form
+}
+```
+
+## Move pages within the list
+```javascript
+{
+    "type": "mycroft.gui.list.move",
+    "namespace": "mycroft.weather"
+    "from": 2
+    "to": 5
+    "items_number": 2 //optional in case we want to move a big chunk of list at once
+}
+```
+
+## Remove pages from the list
+```javascript
+{
+    "type": "mycroft.gui.list.remove",
+    "namespace": "mycroft.weather"
+    "position": 2
+    "items_number": 5 //optional in case we want to get rid a big chunk of list at once
+}
+```
+
+
+# EVENTS - mycroft.events.triggered
+
+Events can either be emitted by a gui client (eg, some element clicked) or by the skill (eg, in response to a voice command)
+
 ```javascript
 {
     "type": "mycroft.events.triggered"
-    "namespace": "weather.mycroft"
-    "event_name": "system.pick",
+    "namespace": "my_skill_id"
+    "event_name": "my.gui.event",
     "parameters": {"item": 3}
 }
 ```
 
-* event names that start with "system." are available to all skills, like previous/next/pick. the skill author can have as many custom events as he wants
-* same message format goes both ways python->gui and gui->python
-
 ## SPECIAL EVENT: page_gained_focus
+
+This event is used when the ovos-gui wants a page of a particular skill to gain user attention focus and become the current active view and "focus of attention" of the user. 
+
+when a GUI client receives it, it should render the requested GUI page
+
+GUI clients can also emit this event, if a new page was rendered (eg, in response to a user swipping left)
+
+NOTE: for responsiveness it is recommened this message is only emitted after the rendering has actually been done, skills may be waiting for this event to initiate some actons
+
 ```javascript
 {
     "type": "mycroft.events.triggered",
@@ -60,17 +124,24 @@ Recent skills are ordered from the last used to the oldest, so the first item of
     "data": {"number": 0}
 }
 ```
-This event is used when the server wants a page of the gui model of a particular skill to gain user attention focus and become the current active view and "focus of attention" of the user. This event is supported on both directions of communication between server and gui.
-The parameter "number" is the position (starting from zero) of the page in the gui model (see the section gui model).
 
+The parameter "number" is the position (starting from zero) of the page
 
-# SKILL DATA
+# SKILL DATA - mycroft.session.xxx
 
-At the center of data sharing there is a key/value dictionary that is kept synchronized between the server and the GUI client.
-Values can either be simple strings, numbers and booleans or be more complicated data models as described in the MODELS section.
+At the center of data sharing there is a key/value dictionary that is kept synchronized between ovos-gui and the GUI client.
+
+Values can either be simple strings, numbers and booleans or be more complicated data types
+
+this event can be sent from gui clients (eg, in response to a dropdown selection) or from skills (eg, change weather data)
+
+NOTE: Once a new gui client connects to ovos-gui, all existing session data is sent to the client, 
+after that the client gets live updates via these events
 
 ## Sets a new key/value in the sessionData dictionary
+
 Either sets a new key/value pair or replace an existing old value.
+
 ```javascript
 {
     "type": "mycroft.session.set",
@@ -78,7 +149,7 @@ Either sets a new key/value pair or replace an existing old value.
     "data": {
         "temperature": "28",
         "icon": "cloudy",
-        "forecast": [{...},...] //if it's a list a model gets created, or resetted if it was already existing, see the MODELS section
+        "forecast": [{...},...] //if it's a list see below for more message types
     }
 }
 ```
@@ -92,61 +163,35 @@ Either sets a new key/value pair or replace an existing old value.
 }
 ```
 
-All properties already in the dictionary need to be sent as soon as a new client connects to the web socket
+## Lists
 
-The exact message format would be in both direction both server->gui and gui->server
-
-
-# MODELS
-Models are for both skill data and active skills, distinction is just between "namespace": "mycroft.system.active_skills" and "namespace": "mycroft.weather"
-All operations have a type which starts by "type": "mycroft.session.list."
-
-The format of the data passed via the socket is of an ordered map
-```javascript
-[
-{
-  "key1": "value1",
-  "key2": "value2"
-},
-{
-  "key1": "value3",
-  "key2": "value4"
-}
-]
-```
-
-It must always be an array, even if contains a single item, and each item must contain the exact same set of keys, even if some of them could be empty.
-If subsequent inserts of items will contain a different set of keys, or toehr keys more, those new keys will be ignored by the GUI.
-
-## Inserts new items at position
+### Inserts new items at position
 ```javascript
 {
     "type": "mycroft.session.list.insert",
-    "namespace": "mycroft.system.active_skills" // skill: mycroft.weather
+    "namespace": "weather.mycroft"
     "property": "forecast" //the key of the main data map this list in contained into
     "position": 2
     "values": [{"date": "tomorrow", "temperature" : 13, ...}, ...] //values must always be in array form
 }
 ```
 
-Values is an ordered dict, for a shopping cart it would need multiple roles like product name, price, image
-
-## Updates item values starting at the given position, as many items as there are in the array
+### Updates item values starting at the given position, as many items as there are in the array
 ```javascript
 {
     "type": "mycroft.session.list.update",
-    "namespace": "mycroft.system.active_skills" // skill: mycroft.weather
-    "property": "forecast" //in the future this can become a path if we want lists of lists
+    "namespace": "weather.mycroft"
+    "property": "forecast"
     "position": 2
     "values": [{"date": "tomorrow", "temperature" : 13, ...}, ...] //values must always be in array form
 }
 ```
 
-## Move items within the list
+### Move items within the list
 ```javascript
 {
     "type": "mycroft.session.list.move",
-    "namespace": "mycroft.system.active_skills" // skill: mycroft.weather
+    "namespace": "weather.mycroft"
     "property": "forecast"
     "from": 2
     "to": 5
@@ -154,48 +199,16 @@ Values is an ordered dict, for a shopping cart it would need multiple roles like
 }
 ```
 
-## Remove items from the list
+### Remove items from the list
 ```javascript
 {
     "type": "mycroft.session.list.remove",
-    "namespace": "mycroft.system.active_skills" // skill: mycroft.weather
-    "property": "forecast" //in the future this can become a path if we want lists of lists
+    "namespace": "weather.mycroft"
+    "property": "forecast"
     "position": 2
     "items_number": 5 //optional in case we want to get rid a big chunk of list at once
 }
 ```
 
-# GUI MODEL
-Each active skill is associated with a model with urls to the QML files of all gui items that are supposed to be visible.
 
-## Inserts new GUI items at position
-```javascript
-{
-    "type": "mycroft.gui.list.insert",
-    "namespace": "mycroft.weather"
-    "position": 2
-    "values": [{"url": "file://..../currentWeather.qml"}, ...] //values must always be in array form
-}
-```
-
-## Move items within the list
-```javascript
-{
-    "type": "mycroft.gui.list.move",
-    "namespace": "mycroft.weather"
-    "from": 2
-    "to": 5
-    "items_number": 2 //optional in case we want to move a big chunk of list at once
-}
-```
-
-## Remove items from the list
-```javascript
-{
-    "type": "mycroft.gui.list.remove",
-    "namespace": "mycroft.weather"
-    "position": 2
-    "items_number": 5 //optional in case we want to get rid a big chunk of list at once
-}
-```
 

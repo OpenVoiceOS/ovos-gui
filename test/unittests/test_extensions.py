@@ -3,6 +3,8 @@ from unittest.mock import patch, Mock
 
 import ovos_gui.extensions
 from ovos_utils.messagebus import FakeBus
+from ovos_gui.homescreen import HomescreenManager
+from ovos_gui.extensions import ExtensionsManager
 from .mocks import base_config
 
 PATCH_MODULE = "ovos_gui.extensions"
@@ -24,23 +26,17 @@ class TestExtensionManager(unittest.TestCase):
     name = "TestManager"
 
     @classmethod
-    @patch("ovos_gui.namespace.create_gui_service")
-    def setUpClass(cls, create_gui) -> None:
-        from ovos_gui.extensions import ExtensionsManager
-        from ovos_gui.namespace import NamespaceManager
+    def setUpClass(cls) -> None:
 
         ovos_gui.extensions.Configuration = Mock(return_value=_MOCK_CONFIG)
 
-        cls.extension_manager = ExtensionsManager(cls.name, cls.bus,
-                                                  NamespaceManager(cls.bus))
-        create_gui.assert_called_once_with(cls.extension_manager.gui)
+        cls.extension_manager = ExtensionsManager(cls.name, cls.bus)
 
     def test_00_extensions_manager_init(self):
-        from ovos_gui.namespace import NamespaceManager
         self.assertEqual(self.extension_manager.name, self.name)
         self.assertEqual(self.extension_manager.bus, self.bus)
-        self.assertIsInstance(self.extension_manager.gui, NamespaceManager)
-        self.assertEqual(self.extension_manager.gui.core_bus, self.bus)
+        self.assertIsInstance(self.extension_manager.homescreen_manager, HomescreenManager)
+        self.assertEqual(self.extension_manager.homescreen_manager.bus, self.bus)
         self.assertIsInstance(self.extension_manager.active_extension, str)
 
     @patch("ovos_gui.extensions.OVOSGuiFactory.create")

@@ -1,88 +1,77 @@
 # Changelog
 
-## [0.0.3a11](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.3a11) (2023-07-20)
+## [0.2.0](https://github.com/OpenVoiceOS/ovos-gui/tree/0.2.0) (2024-09-02)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.3a10...0.0.3a11)
-
-**Merged pull requests:**
-
-- Add description to setup.py to fix \#21 [\#22](https://github.com/OpenVoiceOS/ovos-gui/pull/22) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.0.3a10](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.3a10) (2023-07-20)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a9...0.0.3a10)
-
-**Merged pull requests:**
-
-- Update automation to current standards [\#21](https://github.com/OpenVoiceOS/ovos-gui/pull/21) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a9](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a9) (2023-07-19)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a8...V0.0.3a9)
-
-**Merged pull requests:**
-
-- Fix local system resource resolution [\#20](https://github.com/OpenVoiceOS/ovos-gui/pull/20) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a8](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a8) (2023-07-08)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a7...V0.0.3a8)
-
-**Implemented enhancements:**
-
-- GUI File Server and Alternate GUI Framework Support [\#9](https://github.com/OpenVoiceOS/ovos-gui/pull/9) ([JarbasAl](https://github.com/JarbasAl))
-
-## [V0.0.3a7](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a7) (2023-07-04)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a6...V0.0.3a7)
-
-**Merged pull requests:**
-
-- Update dependencies to stable versions [\#16](https://github.com/OpenVoiceOS/ovos-gui/pull/16) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a6](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a6) (2023-06-23)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a5...V0.0.3a6)
-
-**Merged pull requests:**
-
-- Unit Tests and Documentation [\#15](https://github.com/OpenVoiceOS/ovos-gui/pull/15) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a5](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a5) (2023-06-13)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a4...V0.0.3a5)
-
-**Merged pull requests:**
-
-- Remove unused ovos-backend-client dependency [\#14](https://github.com/OpenVoiceOS/ovos-gui/pull/14) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a4](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a4) (2023-06-09)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a3...V0.0.3a4)
-
-**Merged pull requests:**
-
-- Minor logging and method annotation changes [\#13](https://github.com/OpenVoiceOS/ovos-gui/pull/13) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [V0.0.3a3](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a3) (2023-06-09)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a2...V0.0.3a3)
-
-**Implemented enhancements:**
-
-- :tada: - GUI plugin [\#11](https://github.com/OpenVoiceOS/ovos-gui/pull/11) ([JarbasAl](https://github.com/JarbasAl))
-
-## [V0.0.3a2](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a2) (2023-05-01)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.3a1...V0.0.3a2)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.1.0a2...0.2.0)
 
 **Fixed bugs:**
 
-- interfaces/ folder not getting packaged [\#8](https://github.com/OpenVoiceOS/ovos-gui/issues/8)
+- Stuck on OVOS logo [\#42](https://github.com/OpenVoiceOS/ovos-gui/issues/42)
 
-## [V0.0.3a1](https://github.com/OpenVoiceOS/ovos-gui/tree/V0.0.3a1) (2023-04-30)
+**Closed issues:**
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/V0.0.2...V0.0.3a1)
+- Gui roadmap [\#2](https://github.com/OpenVoiceOS/ovos-gui/issues/2)
+
+## [0.1.0a2](https://github.com/OpenVoiceOS/ovos-gui/tree/0.1.0a2) (2024-02-08)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a5...0.1.0a2)
+
+**Implemented enhancements:**
+
+- house cleaning [\#39](https://github.com/OpenVoiceOS/ovos-gui/pull/39) ([NeonJarbas](https://github.com/NeonJarbas))
+
+## [0.0.4a5](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a5) (2023-12-29)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a4...0.0.4a5)
+
+**Closed issues:**
+
+- "OSError: \[Errno 98\] Address already in use" when restarted too fast [\#24](https://github.com/OpenVoiceOS/ovos-gui/issues/24)
+
+**Merged pull requests:**
+
+- Update requirements.txt [\#33](https://github.com/OpenVoiceOS/ovos-gui/pull/33) ([JarbasAl](https://github.com/JarbasAl))
+
+## [0.0.4a4](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a4) (2023-10-06)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a3...0.0.4a4)
+
+**Merged pull requests:**
+
+- Update protocol.md [\#32](https://github.com/OpenVoiceOS/ovos-gui/pull/32) ([JarbasAl](https://github.com/JarbasAl))
+
+## [0.0.4a3](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a3) (2023-09-29)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a2...0.0.4a3)
+
+**Fixed bugs:**
+
+- Refactor skills status check to resolve init bug [\#31](https://github.com/OpenVoiceOS/ovos-gui/pull/31) ([NeonDaniel](https://github.com/NeonDaniel))
+
+**Closed issues:**
+
+- You must execute run\_forever\(\) before emitting messages [\#30](https://github.com/OpenVoiceOS/ovos-gui/issues/30)
+
+## [0.0.4a2](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a2) (2023-09-29)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.4a1...0.0.4a2)
+
+**Implemented enhancements:**
+
+- Add option to use host paths in containers in addition to http URLs [\#25](https://github.com/OpenVoiceOS/ovos-gui/pull/25) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [0.0.4a1](https://github.com/OpenVoiceOS/ovos-gui/tree/0.0.4a1) (2023-09-28)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.0.3...0.0.4a1)
+
+**Fixed bugs:**
+
+- ovos-core must be restarted to re-upload QML files [\#28](https://github.com/OpenVoiceOS/ovos-gui/issues/28)
+- Check if Skills service is running on GUI service init [\#29](https://github.com/OpenVoiceOS/ovos-gui/pull/29) ([NeonDaniel](https://github.com/NeonDaniel))
+
+**Merged pull requests:**
+
+- add plugins to readme [\#27](https://github.com/OpenVoiceOS/ovos-gui/pull/27) ([JarbasAl](https://github.com/JarbasAl))
 
 
 

@@ -1,35 +1,26 @@
+from threading import Thread
 from typing import List, Optional
+
+from ovos_config.config import Configuration, update_mycroft_config
+from ovos_utils.log import LOG, log_deprecation
 
 from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.message import dig_for_message
-from ovos_config.config import Configuration, update_mycroft_config
-
-from ovos_utils.log import LOG, deprecated, log_deprecation
-
-from ovos_gui.namespace import NamespaceManager
-from threading import Thread
 
 
 class HomescreenManager(Thread):
-    def __init__(self, bus: MessageBusClient, gui: NamespaceManager):
+    def __init__(self, bus: MessageBusClient):
         super().__init__()
         self.bus = bus
-        self.gui = gui
         self.homescreens: List[dict] = []
         self.mycroft_ready = False
-        # TODO: If service starts after `mycroft_ready`,
-        #       homescreen is never shown
+
         self.bus.on('homescreen.manager.add', self.add_homescreen)
         self.bus.on('homescreen.manager.remove', self.remove_homescreen)
         self.bus.on('homescreen.manager.list', self.get_homescreens)
-        self.bus.on("homescreen.manager.get_active",
-                    self.handle_get_active_homescreen)
-        self.bus.on("homescreen.manager.set_active",
-                    self.handle_set_active_homescreen)
-        self.bus.on("homescreen.manager.disable_active",
-                    self.disable_active_homescreen)
-        self.bus.on("mycroft.mark2.register_idle",
-                    self.register_old_style_homescreen)
+        self.bus.on("homescreen.manager.get_active", self.handle_get_active_homescreen)
+        self.bus.on("homescreen.manager.set_active", self.handle_set_active_homescreen)
+        self.bus.on("homescreen.manager.disable_active", self.disable_active_homescreen)
         self.bus.on("homescreen.manager.show_active", self.show_homescreen)
         self.bus.on("mycroft.ready", self.set_mycroft_ready)
 
@@ -43,10 +34,9 @@ class HomescreenManager(Thread):
         """
         Handle `homescreen.manager.add` and add the requested homescreen if it
         has not yet been added.
-        @param message: Message containing homescreen id/class to add
+        @param message: Message containing homescreen id to add
         """
         homescreen_id = message.data["id"]
-        homescreen_class = message.data["class"]
 
         if any((homescreen['id'] == homescreen_id
                 for homescreen in self.homescreens)):
@@ -55,7 +45,7 @@ class HomescreenManager(Thread):
             LOG.info(f"Homescreen Manager: Adding Homescreen {homescreen_id}")
             self.homescreens.append(message.data)
 
-        self.show_homescreen_on_add(homescreen_id, homescreen_class)
+        self.show_homescreen_on_add(homescreen_id)
 
     def remove_homescreen(self, message: Message):
         """
@@ -103,10 +93,14 @@ class HomescreenManager(Thread):
         """
         gui_config = Configuration().get("gui") or {}
         active_homescreen = gui_config.get("idle_display_skill")
-        LOG.debug(f"Homescreen Manager: Active Homescreen {active_homescreen}")
+        if not active_homescreen:
+            LOG.info("No homescreen enabled in mycroft.conf")
+            return
+        LOG.info(f"Active Homescreen: {active_homescreen}")
         for h in self.homescreens:
             if h["id"] == active_homescreen:
                 return active_homescreen
+        LOG.error(f"{active_homescreen} not loaded!")
 
     def set_active_homescreen(self, homescreen_id: str):
         """
@@ -126,35 +120,24 @@ class HomescreenManager(Thread):
         Emit a request for homescreens to register via the Messagebus
         """
         LOG.info("Homescreen Manager: Reloading Homescreen List")
-        self.collect_old_style_homescreens()
         self.bus.emit(Message("homescreen.manager.reload.list"))
 
-    def show_homescreen_on_add(self, homescreen_id: str, homescreen_class: str):
+    def show_homescreen_on_add(self, homescreen_id: str):
         """
         Check if a homescreen should be displayed immediately upon addition
         @param homescreen_id: ID of added homescreen
-        @param homescreen_class: "class" (IdleDisplaySkill, MycroftSkill)
-            of homescreen
         """
         if not self.mycroft_ready:
-            LOG.debug("Not ready yet, don't display")
+            LOG.debug("Not ready yet, don't display homescreen")
             return
         LOG.debug(f"Checking {homescreen_id}")
         if self.get_active_homescreen() != homescreen_id:
             # Added homescreen isn't the configured one, do nothing
             return
 
-        if homescreen_class == "IdleDisplaySkill":
-            LOG.debug(f"Displaying Homescreen {homescreen_id}")
-            self.bus.emit(Message("homescreen.manager.activate.display",
-                                  {"homescreen_id": homescreen_id}))
-        elif homescreen_class == "MycroftSkill":
-            log_deprecation(f"Homescreen skills should register listeners for "
-                            f"`homescreen.manager.activate.display`. "
-                            f"`{homescreen_id}.idle` messages will be removed.",
-                            "0.1.0")
-            LOG.debug(f"Displaying Homescreen {homescreen_id}")
-            self.bus.emit(Message(f"{homescreen_id}.idle"))
+        LOG.info(f"Displaying Homescreen {homescreen_id}")
+        self.bus.emit(Message("homescreen.manager.activate.display",
+                              {"homescreen_id": homescreen_id}))
 
     def disable_active_homescreen(self, message: Message):
         """
@@ -162,7 +145,6 @@ class HomescreenManager(Thread):
         `idle_display_skill` as None.
         @param message: Message requesting homescreen disable
         """
-        # TODO: Is this valid behavior?
         if Configuration().get("gui", {}).get("idle_display_skill"):
             LOG.info(f"Disabling idle_display_skill!")
             new_config = {"gui": {"idle_display_skill": None}}
@@ -174,24 +156,22 @@ class HomescreenManager(Thread):
         @param message: Optional `homescreen.manager.show_active` Message
         """
         active_homescreen = self.get_active_homescreen()
-        LOG.debug(f"Requesting activation of {active_homescreen}")
+        if not active_homescreen:
+            LOG.info("No active homescreen to display")
+            return
+        LOG.info(f"Requesting activation of {active_homescreen}")
         for h in self.homescreens:
             if h.get("id") == active_homescreen:
                 LOG.debug(f"matched homescreen skill: {h}")
                 message = message or dig_for_message() or Message("")
-                if h["class"] == "IdleDisplaySkill":
-                    LOG.debug(f"Displaying Homescreen {active_homescreen}")
-                    self.bus.emit(message.forward(
-                        "homescreen.manager.activate.display",
-                        {"homescreen_id": active_homescreen}))
-                elif h["class"] == "MycroftSkill":
-                    LOG.debug(f"Displaying Homescreen {active_homescreen}")
-                    self.bus.emit(message.forward(f"{active_homescreen}.idle"))
-                else:
-                    LOG.error(f"Requested homescreen has an invalid class: {h}")
-                return
-        LOG.warning(f"Requested {active_homescreen} not found in: "
-                    f"{self.homescreens}")
+                LOG.debug(f"Displaying Homescreen {active_homescreen}")
+                self.bus.emit(message.forward(
+                    "homescreen.manager.activate.display",
+                    {"homescreen_id": active_homescreen}))
+                break
+        else:
+            LOG.warning(f"Requested {active_homescreen} not found in: "
+                        f"{self.homescreens}")
 
     def set_mycroft_ready(self, message: Message):
         """
@@ -199,26 +179,5 @@ class HomescreenManager(Thread):
         @param message: `mycroft.ready` Message
         """
         self.mycroft_ready = True
+        self.reload_homescreens_list()
         self.show_homescreen()
-
-    # Add compabitility with older versions of the Resting Screen Class
-
-    def collect_old_style_homescreens(self):
-        """Trigger collection of older resting screens."""
-        # TODO: Deprecate in 0.1.0
-        self.bus.emit(Message("mycroft.mark2.collect_idle"))
-
-    @deprecated("`mycroft.mark2.collect_idle` responses are deprecated",
-                "0.1.0")
-    def register_old_style_homescreen(self, message):
-        if "name" in message.data and "id" in message.data:
-            super_class_name = "MycroftSkill"
-            super_class_object = message.data["name"]
-            skill_id = message.data["id"]
-            _homescreen_entry = {"class": super_class_name,
-                                 "name": super_class_object, "id": skill_id}
-            LOG.debug(f"Homescreen Manager: Adding OLD Homescreen {skill_id}")
-            self.add_homescreen(
-                Message("homescreen.manager.add", _homescreen_entry))
-        else:
-            LOG.error("Malformed idle screen registration received")
