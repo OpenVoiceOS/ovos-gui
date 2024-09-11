@@ -1,11 +1,12 @@
 # Changelog
 
-## [0.1.0a2](https://github.com/OpenVoiceOS/ovos-gui/tree/0.1.0a2) (2024-09-10)
+## [0.2.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/0.2.0a1) (2024-09-11)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.1.0a1...0.1.0a2)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.1.0a1...0.2.0a1)
 
 **Merged pull requests:**
 
+- feat:extras\_requirements [\#49](https://github.com/OpenVoiceOS/ovos-gui/pull/49) ([JarbasAl](https://github.com/JarbasAl))
 - chore:semver\_automations [\#48](https://github.com/OpenVoiceOS/ovos-gui/pull/48) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [0.1.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/0.1.0a1) (2024-09-10)
