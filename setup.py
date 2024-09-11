@@ -80,7 +80,10 @@ setup(
     include_package_data=True,
     packages=["ovos_gui"],
     package_data={"": package_files('ovos_gui/res')},
-    install_requires=required('requirements.txt'),
+    install_requires=required('requirements/requirements.txt'),
+    extras_require={
+        "extras": required("requirements/extras.txt")
+    },
     entry_points={
         'console_scripts': [
             'ovos-gui-service=ovos_gui.__main__:main',
