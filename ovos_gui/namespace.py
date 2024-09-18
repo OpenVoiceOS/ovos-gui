@@ -778,6 +778,10 @@ class NamespaceManager:
         @param pages_to_show: list of pages to be loaded
         @param show_index: index to load pages at
         """
+        if not self.active_namespaces:
+            LOG.error("received 'load_pages' request but there are no active namespaces")
+            return
+
         if not len(pages_to_show) or show_index >= len(pages_to_show):
             LOG.error(f"requested invalid page index: {show_index}, defaulting to last page")
             show_index = len(pages_to_show) - 1
@@ -1011,6 +1015,10 @@ class NamespaceManager:
         Handles global back events from the GUI.
         @param message: the event sent by the GUI
         """
+        if not self.active_namespaces:
+            LOG.error("received 'back' signal but there are no active namespaces")
+            return
+
         namespace_name = self.active_namespaces[0].skill_id
         namespace = self.loaded_namespaces.get(namespace_name)
         if namespace in self.active_namespaces:
