@@ -131,13 +131,9 @@ class GUIWebsocketHandler(WebSocketHandler):
         @return: list of page URIs for this GUI Client
         """
         client_pages = []
-        server_url = self.ns_manager.gui_file_server.url if \
-            self.ns_manager.gui_file_server else \
-            self.ns_manager.gui_file_host_path
         for page in namespace.pages:
-            uri = page.get_uri(self.framework, server_url)
+            uri = page.get_uri(self.framework)
             client_pages.append(uri)
-
         return client_pages
 
     def synchronize(self):
@@ -260,16 +256,13 @@ class GUIWebsocketHandler(WebSocketHandler):
         @param namespace: namespace to put GuiPages in
         @param position: position to insert pages at
         """
-        server_url = self.ns_manager.gui_file_server.url if \
-            self.ns_manager.gui_file_server else \
-            self.ns_manager.gui_file_host_path
         framework = self.framework
 
         message = {
             "type": "mycroft.gui.list.insert",
             "namespace": namespace,
             "position": position,
-            "data": [{"url": page.get_uri(framework, server_url)}
+            "data": [{"url": page.get_uri(framework)}
                      for page in pages]
         }
         LOG.debug(f"Showing pages: {message['data']}")
