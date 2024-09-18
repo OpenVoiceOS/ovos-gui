@@ -40,13 +40,12 @@ code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
 import shutil
-from os import makedirs
 from os.path import join, dirname, isfile, exists
 from threading import Event, Lock, Timer
 from typing import List, Union, Optional, Dict
 
 from ovos_config.config import Configuration
-from ovos_utils.log import LOG, log_deprecation
+from ovos_utils.log import LOG
 
 from ovos_bus_client import Message, MessageBusClient
 from ovos_gui.bus import (
@@ -57,7 +56,7 @@ from ovos_gui.bus import (
 )
 from ovos_gui.gui_file_server import start_gui_http_server
 from ovos_gui.page import GuiPage
-
+from ovos_gui.constants import GUI_CACHE_PATH
 namespace_lock = Lock()
 
 RESERVED_KEYS = ['__from', '__idle']
@@ -72,9 +71,9 @@ def _validate_page_message(message: Message) -> bool:
     @returns: True if request is valid, else False
     """
     valid = (
-            "page" in message.data
+            "page_names" in message.data
             and "__from" in message.data
-            and isinstance(message.data["page"], list)
+            and isinstance(message.data["page_names"], list)
     )
     if not valid:
         if message.msg_type == "gui.page.show":
@@ -296,7 +295,7 @@ class Namespace:
         target_page = pages[show_index]
 
         for page in pages:
-            if page.id not in [p.id for p in self.pages]:
+            if page.name not in [p.name for p in self.pages]:
                 new_pages.append(page)
 
         self.pages.extend(new_pages)
@@ -335,7 +334,7 @@ class Namespace:
         # set the index of the page in the self.pages list
         page_index = None
         for i, p in enumerate(self.pages):
-            if p.id == page.id:
+            if p.name == page.name:
                 # save page index
                 page_index = i
                 break
@@ -433,9 +432,6 @@ class NamespaceManager:
         self._system_res_dir = join(dirname(__file__), "res", "gui")
         self._ready_event = Event()
         self.gui_file_server = None
-        self.gui_file_path = None  # HTTP Server local path
-        self.gui_file_host_path = None  # Docker host path
-        self._connected_frameworks: List[str] = list()
         self._init_gui_file_share()
         self._define_message_handlers()
 
@@ -450,20 +446,10 @@ class NamespaceManager:
         If `gui_file_server` is defined, resources will be served via HTTP
         """
         config = Configuration().get("gui", {})
-        self.gui_file_host_path = config.get("gui_file_host_path")
-
-        # Check for GUI file sharing via HTTP server or mounted host path
-        if config.get("gui_file_server") or self.gui_file_host_path:
-            from ovos_utils.xdg_utils import xdg_cache_home
-            if config.get("server_path"):
-                log_deprecation("`server_path` configuration is deprecated. "
-                                "Files will always be saved to "
-                                "XDG_CACHE_HOME/ovos_gui_file_server", "0.1.0")
-            self.gui_file_path = config.get("server_path") or \
-                                 join(xdg_cache_home(), "ovos_gui_file_server")
-            if config.get("gui_file_server"):
-                self.gui_file_server = start_gui_http_server(self.gui_file_path)
-            self._upload_system_resources()
+        # Check for GUI file sharing via HTTP server
+        if config.get("gui_file_server"):
+            self.gui_file_server = start_gui_http_server(GUI_CACHE_PATH)
+        self._cache_system_resources()
 
     def _define_message_handlers(self):
         """
@@ -474,7 +460,6 @@ class NamespaceManager:
         self.core_bus.on("gui.page.delete", self.handle_delete_page)
         self.core_bus.on("gui.page.delete.all", self.handle_delete_all_pages)
         self.core_bus.on("gui.page.show", self.handle_show_page)
-        self.core_bus.on("gui.page.upload", self.handle_receive_gui_pages)
         self.core_bus.on("gui.status.request", self.handle_status_request)
         self.core_bus.on("gui.value.set", self.handle_set_value)
         self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
@@ -496,66 +481,6 @@ class NamespaceManager:
 
     def handle_ready(self, message):
         self._ready_event.set()
-
-    def handle_gui_pages_available(self, message: Message):
-        """
-        Handle a skill or plugin advertising that it has GUI pages available to
-        upload. If there are connected clients, request pages for each connected
-        GUI framework.
-        @param message: `gui.volunteer_page_upload` message
-        """
-        if not any((self.gui_file_host_path, self.gui_file_server)):
-            LOG.debug("No GUI file server running or host path configured")
-            return
-
-        LOG.debug(f"Requesting resources for {self._connected_frameworks}")
-        for framework in self._connected_frameworks:
-            skill_id = message.data.get("skill_id")
-            self.core_bus.emit(message.reply("gui.request_page_upload",
-                                             {'skill_id': skill_id,
-                                              'framework': framework},
-                                             {"source": "gui",
-                                              "destination": ["skills",
-                                                              "PHAL"]}))
-
-    def handle_receive_gui_pages(self, message: Message):
-        """
-        Handle GUI resources from a skill or plugin. Pages are written to
-        `self.server_path` which is accessible via a lightweight HTTP server and
-        may additionally be mounted to a host path/volume in container setups.
-        @param message: Message containing UI resource file contents and meta
-            message.data:
-                pages: dict page_filename to encoded bytes content;
-                    paths are relative to the `framework` directory, so a page
-                    for framework `all` could be `qt5/subdir/file.qml` and the
-                    equivalent page for framework `qt5` would be
-                    `subdir/file.qml`
-                framework: `all` if all GUI resources are included, else the
-                    specific GUI framework (i.e. `qt5`, `qt6`)
-                __from: skill_id of module uploading GUI resources
-        """
-        for page, contents in message.data["pages"].items():
-            try:
-                if message.data.get("framework") == "all":
-                    # All GUI resources are uploaded
-                    resource_base_path = join(self.gui_file_path,
-                                              message.data['__from'])
-                else:
-                    resource_base_path = join(self.gui_file_path,
-                                              message.data['__from'],
-                                              message.data.get('framework') or
-                                              "qt5")
-                byte_contents = bytes.fromhex(contents)
-                file_path = join(resource_base_path, page)
-                LOG.debug(f"writing UI file: {file_path}")
-                makedirs(dirname(file_path), exist_ok=True)
-                with open(file_path, 'wb+') as f:
-                    f.write(byte_contents)
-            except Exception as e:
-                LOG.exception(f"Failed to write {page}: {e}")
-        if message.data["__from"] == self._active_homescreen:
-            # Configured home screen skill just uploaded pages, show it again
-            self.core_bus.emit(message.forward("homescreen.manager.show_active"))
 
     def handle_clear_namespace(self, message: Message):
         """
@@ -621,8 +546,7 @@ class NamespaceManager:
         message_is_valid = _validate_page_message(message)
         if message_is_valid:
             namespace_name = message.data["__from"]
-            pages_to_remove = message.data.get("page_names") or \
-                              message.data.get("page")  # backwards compat
+            pages_to_remove = message.data.get("page_names")
             LOG.debug(f"Got {namespace_name} request to delete: {pages_to_remove}")
             with namespace_lock:
                 self._remove_pages(namespace_name, pages_to_remove)
@@ -665,24 +589,6 @@ class NamespaceManager:
             # Defines default behavior as displaying for 30 seconds
             return False, 30
 
-    def _legacy_show_page(self, message: Message) -> List[GuiPage]:
-        """
-        Backwards-compat method to handle messages without ui_directories and
-        page_names.
-        @param message: message requesting to display pages
-        @return: list of GuiPage objects
-        """
-        pages_to_show = message.data["page"]
-        LOG.info(f"Handling legacy page show request. pages={pages_to_show}")
-
-        pages_to_load = list()
-        persist, duration = self._parse_persistence(message.data["__idle"])
-        for page in pages_to_show:
-            name = page.split('/')[-1]
-            # check if persistence is type of int or bool
-            pages_to_load.append(GuiPage(page, name, persist, duration))
-        return pages_to_load
-
     def handle_show_page(self, message: Message):
         """
         Handles a request to show one or more pages on the screen.
@@ -695,39 +601,19 @@ class NamespaceManager:
 
         namespace_name = message.data["__from"]
         page_ids_to_show = message.data.get('page_names')
-        page_resource_dirs = message.data.get('ui_directories')
         persistence = message.data["__idle"]
-        show_index = message.data.get("index", None)
+        show_index = message.data.get("index", 0)
 
         LOG.debug(f"Got {namespace_name} request to show: {page_ids_to_show} at index: {show_index}")
 
-        if not page_resource_dirs and page_ids_to_show and \
-                all((x.startswith("SYSTEM") for x in page_ids_to_show)):
-            page_resource_dirs = {"all": self._system_res_dir}
-
-        if not all((page_ids_to_show, page_resource_dirs)):
-            LOG.warning(f"GUI resources have not yet been uploaded for namespace: {namespace_name}")
-            pages = self._legacy_show_page(message)
-        else:
-            pages = list()
-            persist, duration = self._parse_persistence(message.data["__idle"])
-            for page in page_ids_to_show:
-                url = None
-                name = page
-                if isfile(page):
-                    LOG.warning(f"Expected resource name but got file: {url}")
-                    name = page.split('/')[-1]
-                    url = f"file://{page}"
-                elif "://" in page:
-                    LOG.warning(f"Expected resource name but got URI: {page}")
-                    name = page.split('/')[-1]
-                    url = page
-                pages.append(GuiPage(url, name, persist, duration,
-                                     page, namespace_name, page_resource_dirs))
+        pages = list()
+        persist, duration = self._parse_persistence(message.data["__idle"])
+        for page in page_ids_to_show:
+            pages.append(GuiPage(name=page, persistent=persist, duration=duration,
+                                 namespace=namespace_name))
 
         if not pages:
-            LOG.error(f"Activated namespace '{namespace_name}' has no pages! "
-                      f"Did you provide 'ui_directories' ?")
+            LOG.error(f"Activated namespace '{namespace_name}' has no pages!")
             LOG.error(f"Can't show page, bad message: {message.data}")
             return
 
@@ -961,22 +847,8 @@ class NamespaceManager:
         websocket_config = get_gui_websocket_config()
         port = websocket_config["base_port"]
         message = message.forward("mycroft.gui.port",
-                                  dict(port=port, gui_id=gui_id))
+                                  dict(port=port, gui_id=gui_id, framework=framework))
         self.core_bus.emit(message)
-
-        if self.gui_file_path or self.gui_file_host_path:
-            if not self._ready_event.wait(90):
-                LOG.warning("Not reported ready after 90s")
-            if framework not in self._connected_frameworks:
-                LOG.debug(f"Requesting page upload for {framework}")
-                self.core_bus.emit(Message("gui.request_page_upload",
-                                           {'framework': framework},
-                                           {"source": "gui",
-                                            "destination": ["skills", "PHAL"]}))
-
-        if framework not in self._connected_frameworks:
-            LOG.debug(f"Connecting framework: {framework}")
-            self._connected_frameworks.append(framework)
 
     def handle_page_interaction(self, message: Message):
         """
@@ -1046,13 +918,13 @@ class NamespaceManager:
         if namespace_name in self.remove_namespace_timers:
             del self.remove_namespace_timers[namespace_name]
 
-    def _upload_system_resources(self):
+    def _cache_system_resources(self):
         """
         Copy system GUI resources to the served file path
         """
-        output_path = join(self.gui_file_path, "system")
+        output_path = f"{GUI_CACHE_PATH}/system"
         if exists(output_path):
             LOG.info(f"Removing existing system resources before updating")
             shutil.rmtree(output_path)
         shutil.copytree(self._system_res_dir, output_path)
-        LOG.debug(f"Copied system resources to {self.gui_file_path}")
+        LOG.debug(f"Copied system resources from {self._system_res_dir} to {output_path}")

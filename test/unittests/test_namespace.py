@@ -458,12 +458,12 @@ class TestNamespaceManager(TestCase):
         test_dir = join(dirname(__file__), "upload_test")
         makedirs(test_dir, exist_ok=True)
         self.namespace_manager.gui_file_path = test_dir
-        self.namespace_manager._upload_system_resources()
+        self.namespace_manager._cache_system_resources()
         self.assertTrue(isdir(join(test_dir, "system", "qt5")))
         self.assertTrue(isfile(join(test_dir, "system", "qt5",
                                     "SYSTEM_TextFrame.qml")))
         # Test repeated copy doesn't raise any exception
-        self.namespace_manager._upload_system_resources()
+        self.namespace_manager._cache_system_resources()
         self.assertTrue(isdir(join(test_dir, "system", "qt5")))
         self.assertTrue(isfile(join(test_dir, "system", "qt5",
                                     "SYSTEM_TextFrame.qml")))

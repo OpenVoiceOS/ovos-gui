@@ -5,7 +5,6 @@ import socketserver
 from threading import Thread, Event
 
 from ovos_config import Configuration
-from ovos_utils.file_utils import get_temp_path
 from ovos_utils.log import LOG
 
 _HTTP_SERVER = None
