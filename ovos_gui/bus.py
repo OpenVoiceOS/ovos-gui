@@ -124,18 +124,6 @@ class GUIWebsocketHandler(WebSocketHandler):
         LOG.info('Closing {}'.format(id(self)))
         GUIWebsocketHandler.clients.remove(self)
 
-    def get_client_pages(self, namespace):
-        """
-        Get a list of client page URLs for the given namespace
-        @param namespace: Namespace to get pages for
-        @return: list of page URIs for this GUI Client
-        """
-        client_pages = []
-        for page in namespace.pages:
-            uri = page.get_uri(self.framework)
-            client_pages.append(uri)
-        return client_pages
-
     def synchronize(self):
         """
         Upload namespaces, pages and data to the last connected client.
@@ -151,11 +139,13 @@ class GUIWebsocketHandler(WebSocketHandler):
                        "data": [{"skill_id": namespace.skill_id}]
                        })
             # Insert pages
+            # if uri (path) can not be resolved, it might exist client side
+            # if path doesn't exist in client side, client is responsible for resolving page by namespace/name
             self.send({"type": "mycroft.gui.list.insert",
                        "namespace": namespace.skill_id,
                        "position": 0,
-                       "data": [{"url": url} for url in
-                                self.get_client_pages(namespace)]
+                       "data": [{"url": page.get_uri(self.framework), "page": page.name}
+                                for page in namespace.pages]
                        })
             # Insert data
             for key, value in namespace.data.items():
@@ -257,12 +247,13 @@ class GUIWebsocketHandler(WebSocketHandler):
         @param position: position to insert pages at
         """
         framework = self.framework
-
+        # if uri (path) can not be resolved, it might exist client side
+        # if path doesn't exist in client side, client is responsible for resolving page by namespace/name
         message = {
             "type": "mycroft.gui.list.insert",
             "namespace": namespace,
             "position": position,
-            "data": [{"url": page.get_uri(framework)}
+            "data": [{"url": page.get_uri(framework), "page": page.name}
                      for page in pages]
         }
         LOG.debug(f"Showing pages: {message['data']}")

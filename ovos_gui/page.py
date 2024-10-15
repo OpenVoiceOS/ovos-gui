@@ -37,7 +37,7 @@ class GuiPage:
     def res_namespace(self):
         return "system" if self.name.startswith("SYSTEM") else self.namespace
 
-    def get_uri(self, framework: str = "qt5") -> str:
+    def get_uri(self, framework: str = "qt5") -> Optional[str]:
         """
         Get a valid URI for this Page.
         @param framework: String GUI framework to get resources for (currently only 'qt5')
@@ -48,6 +48,7 @@ class GuiPage:
         LOG.debug(f"Resolved page URI: {path}")
         if isfile(path):
             return path
-        raise FileNotFoundError(f"Unable to resolve resource file for "
-                                f"resource {res_filename} for framework "
-                                f"{framework}")
+        LOG.warning(f"Unable to resolve resource file for "
+                    f"resource {res_filename} for framework "
+                    f"{framework}")
+        return None

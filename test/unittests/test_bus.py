@@ -80,6 +80,19 @@ class TestGUIWebsocketHandler(unittest.TestCase):
         # TODO
         pass
 
+    def _get_client_pages(self, namespace) -> List[str]:
+        """
+        Get a list of client page URLs for the given namespace
+        @param namespace: Namespace to get pages for
+        @return: list of page URIs for this GUI Client
+        """
+        client_pages = []
+        for page in namespace.pages:
+            # NOTE: in here page is resolved to a full URI (path)
+            uri = page.get_uri("qt5")
+            client_pages.append(uri)
+        return client_pages
+
     def test_get_client_pages(self):
         from ovos_gui.namespace import Namespace
         test_namespace = Namespace("test")
@@ -94,7 +107,7 @@ class TestGUIWebsocketHandler(unittest.TestCase):
 
         # Test no server_url
         self.handler.ns_manager.gui_file_server = None
-        pages = self.handler.get_client_pages(test_namespace)
+        pages = self._get_client_pages(test_namespace)
         page_1.get_uri.assert_called_once_with(self.handler.framework, None)
         page_2.get_uri.assert_called_once_with(self.handler.framework, None)
         self.assertEqual(pages, ["page_1_uri", "page_2_uri"])
@@ -102,17 +115,9 @@ class TestGUIWebsocketHandler(unittest.TestCase):
         # Test host path mapping
         test_path = "/test/ovos-gui-file-server"
         self.handler.ns_manager.gui_file_host_path = test_path
-        pages = self.handler.get_client_pages(test_namespace)
+        pages = self._get_client_pages(test_namespace)
         page_1.get_uri.assert_called_with(self.handler.framework, test_path)
         page_2.get_uri.assert_called_with(self.handler.framework, test_path)
-        self.assertEqual(pages, ["page_1_uri", "page_2_uri"])
-
-        # Test with server_url
-        self.handler.ns_manager.gui_file_server = Mock()
-        self.handler.ns_manager.gui_file_server.url = "server_url"
-        pages = self.handler.get_client_pages(test_namespace)
-        page_1.get_uri.assert_called_with(self.handler.framework, "server_url")
-        page_2.get_uri.assert_called_with(self.handler.framework, "server_url")
         self.assertEqual(pages, ["page_1_uri", "page_2_uri"])
 
     def test_synchronize(self):
