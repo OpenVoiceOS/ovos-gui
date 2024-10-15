@@ -36,11 +36,8 @@ under mycroft.conf
         "homescreen_supported": false
     },
     
-    // Optional file server support for remote clients
-    // "gui_file_server": true,
-    // "file_server_port": 8000,
-    
     // Optionally specify a default qt version for connected clients that don't report it
+    // NOTE: currently only QT5 clients exist
     "default_qt_version": 5
   },
   

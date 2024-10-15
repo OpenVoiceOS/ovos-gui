@@ -54,7 +54,6 @@ from ovos_gui.bus import (
     get_gui_websocket_config,
     send_message_to_gui, GUIWebsocketHandler
 )
-from ovos_gui.gui_file_server import start_gui_http_server
 from ovos_gui.page import GuiPage
 from ovos_gui.constants import GUI_CACHE_PATH
 namespace_lock = Lock()
@@ -431,7 +430,6 @@ class NamespaceManager:
         self.active_extension = _get_active_gui_extension()
         self._system_res_dir = join(dirname(__file__), "res", "gui")
         self._ready_event = Event()
-        self.gui_file_server = None
         self._init_gui_file_share()
         self._define_message_handlers()
 
@@ -443,12 +441,8 @@ class NamespaceManager:
         """
         Initialize optional GUI file collection. if `gui_file_path` is
         defined, resources are assumed to be referenced outside this container.
-        If `gui_file_server` is defined, resources will be served via HTTP
         """
         config = Configuration().get("gui", {})
-        # Check for GUI file sharing via HTTP server
-        if config.get("gui_file_server"):
-            self.gui_file_server = start_gui_http_server(GUI_CACHE_PATH)
         self._cache_system_resources()
 
     def _define_message_handlers(self):
