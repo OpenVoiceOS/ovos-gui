@@ -22,6 +22,7 @@ from unittest.mock import Mock
 from ovos_bus_client.message import Message
 from ovos_utils.messagebus import FakeBus
 
+from ovos_gui.constants import GUI_CACHE_PATH
 from ovos_gui.namespace import Namespace
 from ovos_gui.page import GuiPage
 
@@ -64,11 +65,11 @@ class TestNamespace(TestCase):
 
     def test_activate(self):
         self.namespace.load_pages([
-            GuiPage(name="foo", url="", persistent=False, duration=False),
-            GuiPage(name="bar", url="", persistent=False, duration=False),
-            GuiPage(name="foobar", url="", persistent=False, duration=False),
-            GuiPage(name="baz", url="", persistent=False, duration=False),
-            GuiPage(name="foobaz", url="", persistent=False, duration=False)
+            GuiPage(name="foo",  persistent=False, duration=False),
+            GuiPage(name="bar",persistent=False, duration=False),
+            GuiPage(name="foobar",  persistent=False, duration=False),
+            GuiPage(name="baz",  persistent=False, duration=False),
+            GuiPage(name="foobaz",  persistent=False, duration=False)
         ])
         activate_namespace_message = {
             "type": "mycroft.session.list.move",
@@ -129,9 +130,9 @@ class TestNamespace(TestCase):
         self.assertTrue(self.namespace.persistent)
 
     def test_load_pages_new(self):
-        self.namespace.pages = [GuiPage(name="foo", url="foo.qml", persistent=True, duration=0),
-                                GuiPage(name="bar", url="bar.qml", persistent=False, duration=30)]
-        new_pages = [GuiPage(name="foobar", url="foobar.qml", persistent=False, duration=30)]
+        self.namespace.pages = [GuiPage(name="foo",  persistent=True, duration=0),
+                                GuiPage(name="bar", persistent=False, duration=30)]
+        new_pages = [GuiPage(name="foobar",  persistent=False, duration=30)]
         load_page_message = dict(
             type="mycroft.events.triggered",
             namespace="foo",
@@ -146,9 +147,9 @@ class TestNamespace(TestCase):
         self.assertListEqual(self.namespace.pages, self.namespace.pages)
 
     def test_load_pages_existing(self):
-        self.namespace.pages = [GuiPage(name="foo", url="foo.qml", persistent=True, duration=0),
-                                GuiPage(name="bar", url="bar.qml", persistent=False, duration=30)]
-        new_pages = [GuiPage(name="foo", url="foo.qml", persistent=True, duration=0)]
+        self.namespace.pages = [GuiPage(name="foo", persistent=True, duration=0),
+                                GuiPage(name="bar", persistent=False, duration=30)]
+        new_pages = [GuiPage(name="foo", persistent=True, duration=0)]
         load_page_message = dict(
             type="mycroft.events.triggered",
             namespace="foo",
@@ -171,9 +172,9 @@ class TestNamespace(TestCase):
         pass
 
     def test_remove_pages(self):
-        self.namespace.pages = [GuiPage(name="foo", url="", persistent=False, duration=False),
-                                GuiPage(name="bar", url="", persistent=False, duration=False),
-                                GuiPage(name="foobar", url="", persistent=False, duration=False)]
+        self.namespace.pages = [GuiPage(name="foo", persistent=False, duration=False),
+                                GuiPage(name="bar",persistent=False, duration=False),
+                                GuiPage(name="foobar",persistent=False, duration=False)]
         remove_page_message = dict(
             type="mycroft.gui.list.remove",
             namespace="foo",
@@ -217,18 +218,6 @@ class TestNamespaceManager(TestCase):
         with mock.patch(PATCH_MODULE + ".create_gui_service"):
             self.namespace_manager = NamespaceManager(FakeBus())
 
-    def test_init_gui_file_share(self):
-        # TODO
-        pass
-
-    def test_handle_gui_pages_available(self):
-        # TODO
-        pass
-
-    def test_handle_receive_gui_pages(self):
-        # TODO
-        pass
-
     def test_handle_clear_namespace_active(self):
         namespace = Namespace("foo")
         namespace.remove = mock.Mock()
@@ -264,7 +253,7 @@ class TestNamespaceManager(TestCase):
 
     def test_handle_delete_page_active_namespace(self):
         namespace = Namespace("foo")
-        namespace.pages = [GuiPage(name="bar", url="bar.qml", persistent=True, duration=0)]
+        namespace.pages = [GuiPage(name="bar", persistent=True, duration=0)]
         namespace.remove_pages = mock.Mock()
         self.namespace_manager.loaded_namespaces = dict(foo=namespace)
         self.namespace_manager.active_namespaces = [namespace]
@@ -302,20 +291,10 @@ class TestNamespaceManager(TestCase):
         with self.assertRaises(ValueError):
             self.namespace_manager._parse_persistence(-10)
 
-    def test_legacy_show_page(self):
-        message = Message("gui.page.show", data={"__from": "foo",
-                                                 "__idle": 10,
-                                                 "page": ["bar", "test/baz"]})
-        pages = self.namespace_manager._legacy_show_page(message)
-        self.assertEqual(pages, [GuiPage('bar', 'bar', False, 10),
-                                 GuiPage('test/baz', 'baz', False, 10)])
-
     def test_handle_show_page(self):
-        real_legacy_show_page = self.namespace_manager._legacy_show_page
         real_activate_namespace = self.namespace_manager._activate_namespace
         real_load_pages = self.namespace_manager._load_pages
         real_update_persistence = self.namespace_manager._update_namespace_persistence
-        self.namespace_manager._legacy_show_page = Mock(return_value=["pages"])
         self.namespace_manager._activate_namespace = Mock()
         self.namespace_manager._load_pages = Mock()
         self.namespace_manager._update_namespace_persistence = Mock()
@@ -325,7 +304,6 @@ class TestNamespaceManager(TestCase):
                                                  "__idle": 10,
                                                  "page": ["bar", "test/baz"]})
         self.namespace_manager.handle_show_page(message)
-        self.namespace_manager._legacy_show_page.assert_called_once_with(message)
         self.namespace_manager._activate_namespace.assert_called_with("foo")
         self.namespace_manager._load_pages.assert_called_with(["pages"], None)
         self.namespace_manager._update_namespace_persistence. \
@@ -344,7 +322,6 @@ class TestNamespaceManager(TestCase):
                                  ui_directories)
         expected_page2 = GuiPage(None, "test/page_2", False, 0, "test/page_2",
                                  "skill", ui_directories)
-        self.namespace_manager._legacy_show_page.assert_called_once()
         self.namespace_manager._activate_namespace.assert_called_with("skill")
         self.namespace_manager._load_pages.assert_called_with([expected_page1,
                                                                expected_page2],
@@ -362,7 +339,6 @@ class TestNamespaceManager(TestCase):
         expected_page = GuiPage(None, "SYSTEM_TextFrame", True, 0,
                                 "SYSTEM_TextFrame", "skill_no_res",
                                 {"all": self.namespace_manager._system_res_dir})
-        self.namespace_manager._legacy_show_page.assert_called_once()
         self.namespace_manager._activate_namespace.assert_called_with(
             "skill_no_res")
         self.namespace_manager._load_pages.assert_called_with([expected_page],
@@ -371,7 +347,6 @@ class TestNamespaceManager(TestCase):
             assert_called_with(True)
         # TODO: Test page_names with files and URIs
 
-        self.namespace_manager._legacy_show_page = real_legacy_show_page
         self.namespace_manager._activate_namespace = real_activate_namespace
         self.namespace_manager._load_pages = real_load_pages
         self.namespace_manager._update_namespace_persistence = \
@@ -455,16 +430,15 @@ class TestNamespaceManager(TestCase):
         pass
 
     def test_upload_system_resources(self):
-        test_dir = join(dirname(__file__), "upload_test")
-        makedirs(test_dir, exist_ok=True)
-        self.namespace_manager.gui_file_path = test_dir
+        p = f"{GUI_CACHE_PATH}/system"
+        rmtree(p)
         self.namespace_manager._cache_system_resources()
-        self.assertTrue(isdir(join(test_dir, "system", "qt5")))
-        self.assertTrue(isfile(join(test_dir, "system", "qt5",
+        self.assertTrue(isdir(join(p, "qt5")))
+        self.assertTrue(isfile(join(p, "qt5",
                                     "SYSTEM_TextFrame.qml")))
         # Test repeated copy doesn't raise any exception
         self.namespace_manager._cache_system_resources()
-        self.assertTrue(isdir(join(test_dir, "system", "qt5")))
-        self.assertTrue(isfile(join(test_dir, "system", "qt5",
+        self.assertTrue(isdir(join(p, "qt5")))
+        self.assertTrue(isfile(join(p, "qt5",
                                     "SYSTEM_TextFrame.qml")))
-        rmtree(test_dir)
+        rmtree(p)
