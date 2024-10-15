@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, Mock
-
+from typing import List
 import ovos_gui.bus
 
 
@@ -80,6 +80,19 @@ class TestGUIWebsocketHandler(unittest.TestCase):
         # TODO
         pass
 
+    def _get_client_pages(self, namespace) -> List[str]:
+        """
+        Get a list of client page URLs for the given namespace
+        @param namespace: Namespace to get pages for
+        @return: list of page URIs for this GUI Client
+        """
+        client_pages = []
+        for page in namespace.pages:
+            # NOTE: in here page is resolved to a full URI (path)
+            uri = page.get_uri("qt5")
+            client_pages.append(uri)
+        return client_pages
+
     def test_get_client_pages(self):
         from ovos_gui.namespace import Namespace
         test_namespace = Namespace("test")
@@ -89,31 +102,11 @@ class TestGUIWebsocketHandler(unittest.TestCase):
         page_2.get_uri.return_value = "page_2_uri"
         test_namespace.pages = [page_1, page_2]
 
-        # Specify no host path mapping
-        self.handler.ns_manager.gui_file_host_path = None
-
-        # Test no server_url
-        self.handler.ns_manager.gui_file_server = None
-        pages = self.handler.get_client_pages(test_namespace)
-        page_1.get_uri.assert_called_once_with(self.handler.framework, None)
-        page_2.get_uri.assert_called_once_with(self.handler.framework, None)
+        pages = self._get_client_pages(test_namespace)
+        page_1.get_uri.assert_called_once_with(self.handler.framework)
+        page_2.get_uri.assert_called_once_with(self.handler.framework)
         self.assertEqual(pages, ["page_1_uri", "page_2_uri"])
 
-        # Test host path mapping
-        test_path = "/test/ovos-gui-file-server"
-        self.handler.ns_manager.gui_file_host_path = test_path
-        pages = self.handler.get_client_pages(test_namespace)
-        page_1.get_uri.assert_called_with(self.handler.framework, test_path)
-        page_2.get_uri.assert_called_with(self.handler.framework, test_path)
-        self.assertEqual(pages, ["page_1_uri", "page_2_uri"])
-
-        # Test with server_url
-        self.handler.ns_manager.gui_file_server = Mock()
-        self.handler.ns_manager.gui_file_server.url = "server_url"
-        pages = self.handler.get_client_pages(test_namespace)
-        page_1.get_uri.assert_called_with(self.handler.framework, "server_url")
-        page_2.get_uri.assert_called_with(self.handler.framework, "server_url")
-        self.assertEqual(pages, ["page_1_uri", "page_2_uri"])
 
     def test_synchronize(self):
         # TODO
@@ -134,47 +127,32 @@ class TestGUIWebsocketHandler(unittest.TestCase):
         test_pos = 0
 
         from ovos_gui.page import GuiPage
-        page_1 = GuiPage(None, "", False, False)
+        page_1 = GuiPage("p1", "", False, False)
         page_1.get_uri = Mock(return_value="page_1")
 
-        page_2 = GuiPage(None, "", False, False)
+        page_2 = GuiPage("p2", "", False, False)
         page_2.get_uri = Mock(return_value="page_2")
 
-        # Specify no host path mapping
-        self.handler.ns_manager.gui_file_host_path = None
-
-        # Test no server_url
-        self.handler.ns_manager.gui_file_server = None
         self.handler._framework = "qt5"
         self.handler.send_gui_pages([page_1, page_2], test_ns, test_pos)
-        page_1.get_uri.assert_called_once_with("qt5", None)
-        page_2.get_uri.assert_called_once_with("qt5", None)
+        page_1.get_uri.assert_called_once_with("qt5")
+        page_2.get_uri.assert_called_once_with("qt5")
         self.handler.send.assert_called_once_with(
             {"type": "mycroft.gui.list.insert",
              "namespace": test_ns,
              "position": test_pos,
-             "data": [{"url": "page_1"}, {"url": "page_2"}]})
+             "data": [{"url": "page_1", "page": "p1"}, {"url": "page_2", "page": "p2"}]})
 
-        # Test host path mapping
-        test_path = "/test/ovos-gui-file-server"
-        self.handler.ns_manager.gui_file_host_path = test_path
-        self.handler.send_gui_pages([page_1, page_2], test_ns, test_pos)
-        page_1.get_uri.assert_called_with(self.handler.framework, test_path)
-        page_2.get_uri.assert_called_with(self.handler.framework, test_path)
-
-        # Test with server_url
-        self.handler.ns_manager.gui_file_server = Mock()
-        self.handler.ns_manager.gui_file_server.url = "server_url"
         self.handler._framework = "qt6"
         test_pos = 3
         self.handler.send_gui_pages([page_2, page_1], test_ns, test_pos)
-        page_1.get_uri.assert_called_with("qt6", "server_url")
-        page_2.get_uri.assert_called_with("qt6", "server_url")
+        page_1.get_uri.assert_called_with("qt6")
+        page_2.get_uri.assert_called_with("qt6")
         self.handler.send.assert_called_with(
             {"type": "mycroft.gui.list.insert",
              "namespace": test_ns,
              "position": test_pos,
-             "data": [{"url": "page_2"}, {"url": "page_1"}]})
+             "data": [{"url": "page_2", "page": "p2"}, {"url": "page_1", "page": "p1"}]})
 
         self.handler.send = real_send
 
