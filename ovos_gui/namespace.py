@@ -480,13 +480,22 @@ class NamespaceManager:
         self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
-        self.core_bus.on("mycroft.skills.trained", self.handle_ready)
         self.core_bus.on("mycroft.gui.screen.close", self.handle_namespace_global_back)
+        self.core_bus.on("gui.volunteer_page_upload", self.handle_gui_pages_available)
+
+        # TODO - deprecate this, only needed for gui bus upload
+        # Bus is connected, check if the skills service is ready
+        resp = self.core_bus.wait_for_response(
+            Message("mycroft.skills.is_ready",
+                    context={"source": "gui", "destination": ["skills"]}))
+        if resp and resp.data.get("status"):
+            LOG.debug("Skills service already running")
+            self._ready_event.set()
+        else:
+            self.core_bus.on("mycroft.skills.trained", self.handle_ready)
 
     def handle_ready(self, message):
         self._ready_event.set()
-        self.core_bus.on("gui.volunteer_page_upload",
-                         self.handle_gui_pages_available)
 
     def handle_gui_pages_available(self, message: Message):
         """

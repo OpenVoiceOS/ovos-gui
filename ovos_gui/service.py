@@ -63,16 +63,6 @@ class GUIService:
 
         self.extension_manager = ExtensionsManager("EXTENSION_SERVICE", self.bus)
         self.namespace_manager = NamespaceManager(self.bus)
-
-        # Bus is connected, check if the skills service is ready
-        resp = self.bus.wait_for_response(
-            Message("mycroft.skills.is_ready",
-                    context={"source": "gui", "destination": ["skills"]}))
-        if resp and resp.data.get("status"):
-            LOG.debug("Skills service already running")
-            self.namespace_manager.handle_ready(resp)
-            self.extension_manager.homescreen_manager.set_mycroft_ready(resp)
-
         self.status.set_ready()
         LOG.info(f"GUI Service Ready")
 
