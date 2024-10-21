@@ -258,7 +258,7 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager.loaded_namespaces = dict(foo=namespace)
         self.namespace_manager.active_namespaces = [namespace]
 
-        message_data = {"__from": "foo", "page": ["bar"]}
+        message_data = {"__from": "foo", "page_names": ["bar"]}
         message = Message("gui.clear.namespace", data=message_data)
         self.namespace_manager.handle_delete_page(message)
         namespace.remove_pages.assert_called_with([0])
@@ -302,7 +302,7 @@ class TestNamespaceManager(TestCase):
         # Legacy message
         message = Message("gui.page.show", data={"__from": "foo",
                                                  "__idle": 10,
-                                                 "page": ["bar", "test/baz"]})
+                                                 "page_names": ["bar", "test/baz"]})
         self.namespace_manager.handle_show_page(message)
         self.namespace_manager._activate_namespace.assert_called_with("foo")
         self.namespace_manager._load_pages.assert_called_with(["pages"], None)
