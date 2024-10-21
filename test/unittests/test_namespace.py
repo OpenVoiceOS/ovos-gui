@@ -13,8 +13,7 @@
 # limitations under the License.
 #
 """Tests for the GUI namespace helper class."""
-from os import makedirs
-from os.path import join, dirname, isdir, isfile
+from os.path import join, isdir, isfile
 from shutil import rmtree
 from unittest import TestCase, mock
 from unittest.mock import Mock
@@ -65,11 +64,11 @@ class TestNamespace(TestCase):
 
     def test_activate(self):
         self.namespace.load_pages([
-            GuiPage(name="foo",  persistent=False, duration=False),
-            GuiPage(name="bar",persistent=False, duration=False),
-            GuiPage(name="foobar",  persistent=False, duration=False),
-            GuiPage(name="baz",  persistent=False, duration=False),
-            GuiPage(name="foobaz",  persistent=False, duration=False)
+            GuiPage(name="foo", persistent=False, duration=False),
+            GuiPage(name="bar", persistent=False, duration=False),
+            GuiPage(name="foobar", persistent=False, duration=False),
+            GuiPage(name="baz", persistent=False, duration=False),
+            GuiPage(name="foobaz", persistent=False, duration=False)
         ])
         activate_namespace_message = {
             "type": "mycroft.session.list.move",
@@ -130,9 +129,9 @@ class TestNamespace(TestCase):
         self.assertTrue(self.namespace.persistent)
 
     def test_load_pages_new(self):
-        self.namespace.pages = [GuiPage(name="foo",  persistent=True, duration=0),
+        self.namespace.pages = [GuiPage(name="foo", persistent=True, duration=0),
                                 GuiPage(name="bar", persistent=False, duration=30)]
-        new_pages = [GuiPage(name="foobar",  persistent=False, duration=30)]
+        new_pages = [GuiPage(name="foobar", persistent=False, duration=30)]
         load_page_message = dict(
             type="mycroft.events.triggered",
             namespace="foo",
@@ -173,8 +172,8 @@ class TestNamespace(TestCase):
 
     def test_remove_pages(self):
         self.namespace.pages = [GuiPage(name="foo", persistent=False, duration=False),
-                                GuiPage(name="bar",persistent=False, duration=False),
-                                GuiPage(name="foobar",persistent=False, duration=False)]
+                                GuiPage(name="bar", persistent=False, duration=False),
+                                GuiPage(name="foobar", persistent=False, duration=False)]
         remove_page_message = dict(
             type="mycroft.gui.list.remove",
             namespace="foo",
@@ -305,7 +304,9 @@ class TestNamespaceManager(TestCase):
                                                  "page_names": ["bar", "test/baz"]})
         self.namespace_manager.handle_show_page(message)
         self.namespace_manager._activate_namespace.assert_called_with("foo")
-        self.namespace_manager._load_pages.assert_called_with(["pages"], None)
+        self.namespace_manager._load_pages.assert_called_with(
+            [GuiPage(name='bar', persistent=False, duration=10, namespace='foo'),
+             GuiPage(name='test/baz', persistent=False, duration=10, namespace='foo')], 0)
         self.namespace_manager._update_namespace_persistence. \
             assert_called_with(10)
 
@@ -314,14 +315,11 @@ class TestNamespaceManager(TestCase):
         message = Message("test", {"__from": "skill",
                                    "__idle": False,
                                    "index": 1,
-                                   "page": ["/gui/page_1", "/gui/test/page_2"],
                                    "page_names": ["page_1", "test/page_2"],
                                    "ui_directories": ui_directories})
         self.namespace_manager.handle_show_page(message)
-        expected_page1 = GuiPage(None, "page_1", False, 0, "page_1", "skill",
-                                 ui_directories)
-        expected_page2 = GuiPage(None, "test/page_2", False, 0, "test/page_2",
-                                 "skill", ui_directories)
+        expected_page1 = GuiPage("page_1", False, 0, "skill")
+        expected_page2 = GuiPage("test/page_2", False, 0, "skill")
         self.namespace_manager._activate_namespace.assert_called_with("skill")
         self.namespace_manager._load_pages.assert_called_with([expected_page1,
                                                                expected_page2],
@@ -336,9 +334,7 @@ class TestNamespaceManager(TestCase):
                                    "page": ["/gui/SYSTEM_TextFrame.qml"],
                                    "page_names": ["SYSTEM_TextFrame"]})
         self.namespace_manager.handle_show_page(message)
-        expected_page = GuiPage(None, "SYSTEM_TextFrame", True, 0,
-                                "SYSTEM_TextFrame", "skill_no_res",
-                                {"all": self.namespace_manager._system_res_dir})
+        expected_page = GuiPage("SYSTEM_TextFrame", True, 0,  "skill_no_res")
         self.namespace_manager._activate_namespace.assert_called_with(
             "skill_no_res")
         self.namespace_manager._load_pages.assert_called_with([expected_page],

@@ -20,7 +20,6 @@ class GuiPage:
     persistent: bool
     duration: Union[int, bool]
     namespace: Optional[str] = None
-    resource_dirs: Optional[dict] = None
 
     @staticmethod
     def get_file_extension(framework: str) -> str:
