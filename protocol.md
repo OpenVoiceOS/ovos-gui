@@ -61,13 +61,17 @@ Each active skill is associated with a list of uris to the QML files of all gui 
 
 Non QT GUIS get sent other file extensions such as .jsx or .html using the same message format
 
+If a gui resource can not be resolved to a url (*url* may be `None`!), it might still exist client side, it is the clients responsibility to handle the namespace/page in that case
+
+> eg, a client could map namespaces/page to a remote http server url 
+
 ## Insert new page at position
 ```javascript
 {
     "type": "mycroft.gui.list.insert",
     "namespace": "mycroft.weather"
     "position": 2
-    "values": [{"url": "file://..../currentWeather.qml"}, ...] //values must always be in array form
+    "values": [{"url": "file://..../currentWeather.qml", "page": "currentWeather"}, ...] //values must always be in array form
 }
 ```
 
