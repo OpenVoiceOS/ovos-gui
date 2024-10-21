@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.2.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/0.2.1a1) (2024-09-18)
+## [0.2.3a1](https://github.com/OpenVoiceOS/ovos-gui/tree/0.2.3a1) (2024-10-21)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.2.0...0.2.1a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.2.2...0.2.3a1)
 
 **Merged pull requests:**
 
-- fix:handle unloaded namespaces [\#51](https://github.com/OpenVoiceOS/ovos-gui/pull/51) ([JarbasAl](https://github.com/JarbasAl))
+- fix:no wait for ready [\#56](https://github.com/OpenVoiceOS/ovos-gui/pull/56) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
