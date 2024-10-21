@@ -13,7 +13,6 @@ class TestHomescreenManager(unittest.TestCase):
 
     def test_00_homescreen_manager_init(self):
         self.assertEqual(self.homescreen_manager.bus, self.bus)
-        self.assertFalse(self.homescreen_manager.mycroft_ready)
         self.assertIsInstance(self.homescreen_manager.homescreens, list)
         # TODO: Test messagebus handlers
 
@@ -71,8 +70,3 @@ class TestHomescreenManager(unittest.TestCase):
     def test_show_homescreen(self):
         # TODO
         pass
-
-    def test_set_mycroft_ready(self):
-        self.homescreen_manager.mycroft_ready = False
-        self.homescreen_manager.set_mycroft_ready(Message("mycroft.ready"))
-        self.assertTrue(self.homescreen_manager.mycroft_ready)

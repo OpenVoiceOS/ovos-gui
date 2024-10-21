@@ -13,7 +13,6 @@ class HomescreenManager(Thread):
         super().__init__()
         self.bus = bus
         self.homescreens: List[dict] = []
-        self.mycroft_ready = False
 
         self.bus.on('homescreen.manager.add', self.add_homescreen)
         self.bus.on('homescreen.manager.remove', self.remove_homescreen)
@@ -22,13 +21,13 @@ class HomescreenManager(Thread):
         self.bus.on("homescreen.manager.set_active", self.handle_set_active_homescreen)
         self.bus.on("homescreen.manager.disable_active", self.disable_active_homescreen)
         self.bus.on("homescreen.manager.show_active", self.show_homescreen)
-        self.bus.on("mycroft.ready", self.set_mycroft_ready)
 
     def run(self):
         """
         Start the Manager after it has been constructed.
         """
         self.reload_homescreens_list()
+        self.show_homescreen()
 
     def add_homescreen(self, message: Message):
         """
@@ -127,9 +126,6 @@ class HomescreenManager(Thread):
         Check if a homescreen should be displayed immediately upon addition
         @param homescreen_id: ID of added homescreen
         """
-        if not self.mycroft_ready:
-            LOG.debug("Not ready yet, don't display homescreen")
-            return
         LOG.debug(f"Checking {homescreen_id}")
         if self.get_active_homescreen() != homescreen_id:
             # Added homescreen isn't the configured one, do nothing
@@ -172,12 +168,3 @@ class HomescreenManager(Thread):
         else:
             LOG.warning(f"Requested {active_homescreen} not found in: "
                         f"{self.homescreens}")
-
-    def set_mycroft_ready(self, message: Message):
-        """
-        Handle `mycroft.ready` and show the homescreen
-        @param message: `mycroft.ready` Message
-        """
-        self.mycroft_ready = True
-        self.reload_homescreens_list()
-        self.show_homescreen()
