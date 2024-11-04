@@ -429,13 +429,8 @@ class NamespaceManager:
         self.idle_display_skill = _get_idle_display_config()
         self.active_extension = _get_active_gui_extension()
         self._system_res_dir = join(dirname(__file__), "res", "gui")
-        self._ready_event = Event()
         self._init_gui_file_share()
         self._define_message_handlers()
-
-    @property
-    def _active_homescreen(self) -> str:
-        return Configuration().get('gui', {}).get('idle_display_skill')
 
     def _init_gui_file_share(self):
         """
@@ -460,20 +455,6 @@ class NamespaceManager:
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
         self.core_bus.on("mycroft.gui.screen.close", self.handle_namespace_global_back)
-
-        # TODO - deprecate this, only needed for gui bus upload
-        # Bus is connected, check if the skills service is ready
-        resp = self.core_bus.wait_for_response(
-            Message("mycroft.skills.is_ready",
-                    context={"source": "gui", "destination": ["skills"]}))
-        if resp and resp.data.get("status"):
-            LOG.debug("Skills service already running")
-            self._ready_event.set()
-        else:
-            self.core_bus.on("mycroft.skills.trained", self.handle_ready)
-
-    def handle_ready(self, message):
-        self._ready_event.set()
 
     def handle_clear_namespace(self, message: Message):
         """
@@ -890,7 +871,8 @@ class NamespaceManager:
         @param message: the event sent by the GUI
         """
         if not self.active_namespaces:
-            LOG.error("received 'back' signal but there are no active namespaces")
+            LOG.debug("received 'back' signal but there are no active namespaces, attempting to show homescreen")
+            self.core_bus.emit(Message("homescreen.manager.show_active"))
             return
 
         namespace_name = self.active_namespaces[0].skill_id
