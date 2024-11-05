@@ -1,12 +1,12 @@
 # Changelog
 
-## [0.2.3a1](https://github.com/OpenVoiceOS/ovos-gui/tree/0.2.3a1) (2024-10-21)
+## [1.0.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.0.0a1) (2024-11-05)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.2.2...0.2.3a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.2.3...1.0.0a1)
 
-**Merged pull requests:**
+**Breaking changes:**
 
-- fix:no wait for ready [\#56](https://github.com/OpenVoiceOS/ovos-gui/pull/56) ([JarbasAl](https://github.com/JarbasAl))
+- drop the gui bus upload of resources [\#53](https://github.com/OpenVoiceOS/ovos-gui/pull/53) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
