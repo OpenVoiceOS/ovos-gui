@@ -9,6 +9,7 @@ Mycroft.CardDelegate {
     id: systemTextFrame
     skillBackgroundColorOverlay: "#000000"
     cardBackgroundOverlayColor: "#000000"
+    fillWidth: true
 
     property bool hasTitle: sessionData.title.length > 0 ? true : false
     

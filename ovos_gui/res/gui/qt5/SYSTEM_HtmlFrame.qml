@@ -8,6 +8,7 @@ import Mycroft 1.0 as Mycroft
 Mycroft.Delegate {
     id: systemHtmlFrame
     skillBackgroundColorOverlay: "#000000"
+    fillWidth: true
         
     Loader {
         id: webViewHtmlLoader

@@ -8,6 +8,7 @@ import Mycroft 1.0 as Mycroft
 Mycroft.AbstractDelegate {
     id: systemUrlFrame
     property var pageUrl: sessionData.url
+    fillWidth: true
 
     onPageUrlChanged: {
         if(typeof pageUrl !== "undefined" || typeof pageUrl !== null){
