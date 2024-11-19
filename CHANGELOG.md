@@ -1,12 +1,12 @@
 # Changelog
 
-## [1.0.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.0.0a1) (2024-11-05)
+## [1.0.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.0.1a1) (2024-11-19)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/0.2.3...1.0.0a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.0.0...1.0.1a1)
 
-**Breaking changes:**
+**Merged pull requests:**
 
-- drop the gui bus upload of resources [\#53](https://github.com/OpenVoiceOS/ovos-gui/pull/53) ([JarbasAl](https://github.com/JarbasAl))
+- fix:full\_width\_pages [\#60](https://github.com/OpenVoiceOS/ovos-gui/pull/60) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
