@@ -19,7 +19,7 @@ from unittest import TestCase, mock
 from unittest.mock import Mock
 
 from ovos_bus_client.message import Message
-from ovos_utils.messagebus import FakeBus
+from ovos_utils.fakebus import FakeBus
 
 from ovos_gui.constants import GUI_CACHE_PATH
 from ovos_gui.namespace import Namespace
