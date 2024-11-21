@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, Mock
 
 import ovos_gui.extensions
-from ovos_utils.messagebus import FakeBus
+from ovos_utils.fakebus import FakeBus
 from ovos_gui.homescreen import HomescreenManager
 from ovos_gui.extensions import ExtensionsManager
 from .mocks import base_config
