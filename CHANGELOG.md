@@ -1,12 +1,12 @@
 # Changelog
 
-## [1.0.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.0.1a1) (2024-11-19)
+## [1.1.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.1.0a1) (2024-11-21)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.0.0...1.0.1a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.0.1...1.1.0a1)
 
 **Merged pull requests:**
 
-- fix:full\_width\_pages [\#60](https://github.com/OpenVoiceOS/ovos-gui/pull/60) ([JarbasAl](https://github.com/JarbasAl))
+- feat: forward some events to GUI clients [\#62](https://github.com/OpenVoiceOS/ovos-gui/pull/62) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
