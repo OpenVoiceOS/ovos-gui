@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from ovos_bus_client.message import Message
-from ovos_utils.messagebus import FakeBus
+from ovos_utils.fakebus import FakeBus
 from ovos_gui.namespace import NamespaceManager
 
 
