@@ -459,47 +459,50 @@ class NamespaceManager:
         self._define_messages_to_forward()
 
     def _define_messages_to_forward(self):
-        """messages from regular bus that should be wrapped under GUI protocol and sent to GUI clients"""
-        # Audio Service
-        self.core_bus.on("recognizer_loop:audio_output_start", self.forward_to_gui)
-        self.core_bus.on("recognizer_loop:audio_output_end", self.forward_to_gui)
-        # Speech Service
-        self.core_bus.on("recognizer_loop:sleep", self.forward_to_gui)
-        self.core_bus.on("recognizer_loop:wake_up", self.forward_to_gui)
-        self.core_bus.on("mycroft.awoken", self.forward_to_gui)
-        self.core_bus.on("recognizer_loop:wakeword", self.forward_to_gui)
-        self.core_bus.on("recognizer_loop:recognition_unknown", self.forward_to_gui)
-        self.core_bus.on("recognizer_loop:record_begin", self.forward_to_gui)
-        self.core_bus.on("recognizer_loop:record_end", self.forward_to_gui)
-        # enclosure commands for eyes
-        self.core_bus.on('enclosure.eyes.on', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.off', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.blink', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.narrow', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.look', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.color', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.level', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.volume', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.spin', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.timedspin', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.reset', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.setpixel', self.forward_to_gui)
-        self.core_bus.on('enclosure.eyes.fill', self.forward_to_gui)
-        # enclosure commands for mouth
-        self.core_bus.on("enclosure.mouth.events.activate", self.forward_to_gui)
-        self.core_bus.on("enclosure.mouth.events.deactivate", self.forward_to_gui)
-        self.core_bus.on("enclosure.mouth.talk", self.forward_to_gui)
-        self.core_bus.on("enclosure.mouth.think", self.forward_to_gui)
-        self.core_bus.on("enclosure.mouth.listen", self.forward_to_gui)
-        self.core_bus.on("enclosure.mouth.smile", self.forward_to_gui)
-        self.core_bus.on("enclosure.mouth.viseme", self.forward_to_gui)
-        self.core_bus.on("enclosure.mouth.viseme_list", self.forward_to_gui)
-        # mouth/matrix display
-        self.core_bus.on("enclosure.mouth.reset", self.forward_to_gui)
-        self.core_bus.on("enclosure.mouth.text", self.forward_to_gui)
-        self.core_bus.on("enclosure.mouth.display", self.forward_to_gui)
-        self.core_bus.on("enclosure.weather.display", self.forward_to_gui)
-
+        """Messages from the core bus to be forwarded to GUI clients."""
+        messages_to_forward = [
+            # Audio Service
+            "recognizer_loop:audio_output_start",
+            "recognizer_loop:audio_output_end",
+            # Speech Service
+            "recognizer_loop:sleep",
+            "recognizer_loop:wake_up",
+            "mycroft.awoken",
+            "recognizer_loop:wakeword",
+            "recognizer_loop:recognition_unknown",
+            "recognizer_loop:record_begin",
+            "recognizer_loop:record_end",
+            # Enclosure commands for eyes
+            "enclosure.eyes.on",
+            "enclosure.eyes.off",
+            "enclosure.eyes.blink",
+            "enclosure.eyes.narrow",
+            "enclosure.eyes.look",
+            "enclosure.eyes.color",
+            "enclosure.eyes.level",
+            "enclosure.eyes.volume",
+            "enclosure.eyes.spin",
+            "enclosure.eyes.timedspin",
+            "enclosure.eyes.reset",
+            "enclosure.eyes.setpixel",
+            "enclosure.eyes.fill",
+            # Enclosure commands for mouth
+            "enclosure.mouth.events.activate",
+            "enclosure.mouth.events.deactivate",
+            "enclosure.mouth.talk",
+            "enclosure.mouth.think",
+            "enclosure.mouth.listen",
+            "enclosure.mouth.smile",
+            "enclosure.mouth.viseme",
+            "enclosure.mouth.viseme_list",
+            # Mouth/matrix display
+            "enclosure.mouth.reset",
+            "enclosure.mouth.text",
+            "enclosure.mouth.display",
+            "enclosure.weather.display"
+        ]
+        for msg in messages_to_forward:
+            self.core_bus.on(msg, self.forward_to_gui)
     @staticmethod
     def forward_to_gui(message: Message):
         """
