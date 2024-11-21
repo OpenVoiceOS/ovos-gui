@@ -503,6 +503,7 @@ class NamespaceManager:
         ]
         for msg in messages_to_forward:
             self.core_bus.on(msg, self.forward_to_gui)
+
     @staticmethod
     def forward_to_gui(message: Message):
         """
