@@ -40,22 +40,23 @@ code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
 import shutil
-from os.path import join, dirname, isfile, exists
-from threading import Event, Lock, Timer
+from os.path import join, dirname, exists
+from threading import Lock, Timer
 from typing import List, Union, Optional, Dict
 
+from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration
 from ovos_utils.log import LOG
 
-from ovos_bus_client import Message, MessageBusClient
 from ovos_gui.bus import (
     create_gui_service,
     determine_if_gui_connected,
     get_gui_websocket_config,
     send_message_to_gui, GUIWebsocketHandler
 )
-from ovos_gui.page import GuiPage
 from ovos_gui.constants import GUI_CACHE_PATH
+from ovos_gui.page import GuiPage
+
 namespace_lock = Lock()
 
 RESERVED_KEYS = ['__from', '__idle']
@@ -455,6 +456,64 @@ class NamespaceManager:
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
         self.core_bus.on("mycroft.gui.screen.close", self.handle_namespace_global_back)
+        self._define_messages_to_forward()
+
+    def _define_messages_to_forward(self):
+        """messages from regular bus that should be wrapped under GUI protocol and sent to GUI clients"""
+        # Audio Service
+        self.core_bus.on("recognizer_loop:audio_output_start", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:audio_output_end", self.forward_to_gui)
+        # Speech Service
+        self.core_bus.on("recognizer_loop:sleep", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:wake_up", self.forward_to_gui)
+        self.core_bus.on("mycroft.awoken", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:wakeword", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:recognition_unknown", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:record_begin", self.forward_to_gui)
+        self.core_bus.on("recognizer_loop:record_end", self.forward_to_gui)
+        # enclosure commands for eyes
+        self.core_bus.on('enclosure.eyes.on', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.off', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.blink', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.narrow', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.look', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.color', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.level', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.volume', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.spin', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.timedspin', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.reset', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.setpixel', self.forward_to_gui)
+        self.core_bus.on('enclosure.eyes.fill', self.forward_to_gui)
+        # enclosure commands for mouth
+        self.core_bus.on("enclosure.mouth.events.activate", self.forward_to_gui)
+        self.core_bus.on("enclosure.mouth.events.deactivate", self.forward_to_gui)
+        self.core_bus.on("enclosure.mouth.talk", self.forward_to_gui)
+        self.core_bus.on("enclosure.mouth.think", self.forward_to_gui)
+        self.core_bus.on("enclosure.mouth.listen", self.forward_to_gui)
+        self.core_bus.on("enclosure.mouth.smile", self.forward_to_gui)
+        self.core_bus.on("enclosure.mouth.viseme", self.forward_to_gui)
+        self.core_bus.on("enclosure.mouth.viseme_list", self.forward_to_gui)
+        # mouth/matrix display
+        self.core_bus.on("enclosure.mouth.reset", self.forward_to_gui)
+        self.core_bus.on("enclosure.mouth.text", self.forward_to_gui)
+        self.core_bus.on("enclosure.mouth.display", self.forward_to_gui)
+        self.core_bus.on("enclosure.weather.display", self.forward_to_gui)
+
+    @staticmethod
+    def forward_to_gui(message: Message):
+        """
+        Forward a core Message to the GUI
+        @param message: Core message to forward
+        """
+        gui_message = dict(
+            type='mycroft.events.triggered',
+            namespace="system",
+            event_name=message.msg_type,
+            data=message.data
+        )
+        LOG.info(f"GUI PROTOCOL - Sending event '{message.msg_type}' for namespace: system")
+        send_message_to_gui(gui_message)
 
     def handle_clear_namespace(self, message: Message):
         """
