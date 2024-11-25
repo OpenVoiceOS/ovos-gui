@@ -1,12 +1,12 @@
 # Changelog
 
-## [1.1.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.1.0a1) (2024-11-21)
+## [1.1.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.1.1a1) (2024-11-25)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.0.1...1.1.0a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.1.0...1.1.1a1)
 
 **Merged pull requests:**
 
-- feat: forward some events to GUI clients [\#62](https://github.com/OpenVoiceOS/ovos-gui/pull/62) ([JarbasAl](https://github.com/JarbasAl))
+- Update ovos-config requirement from \<1.0.0,\>=0.0.12 to \>=0.0.12,\<2.0.0 [\#64](https://github.com/OpenVoiceOS/ovos-gui/pull/64) ([dependabot[bot]](https://github.com/apps/dependabot))
 
 
 
