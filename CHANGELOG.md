@@ -1,12 +1,24 @@
 # Changelog
 
-## [1.1.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.1.0a1) (2024-11-21)
+## [1.2.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.2.0a1) (2024-12-26)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.0.1...1.1.0a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.1.1a1...1.2.0a1)
+
+**Fixed bugs:**
+
+- Loading icon always stays on. [\#67](https://github.com/OpenVoiceOS/ovos-gui/issues/67)
 
 **Merged pull requests:**
 
-- feat: forward some events to GUI clients [\#62](https://github.com/OpenVoiceOS/ovos-gui/pull/62) ([JarbasAl](https://github.com/JarbasAl))
+- feat:loading\_status\_templates [\#68](https://github.com/OpenVoiceOS/ovos-gui/pull/68) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.1.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.1.1a1) (2024-11-25)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.1.0...1.1.1a1)
+
+**Merged pull requests:**
+
+- Update ovos-config requirement from \<1.0.0,\>=0.0.12 to \>=0.0.12,\<2.0.0 [\#64](https://github.com/OpenVoiceOS/ovos-gui/pull/64) ([dependabot[bot]](https://github.com/apps/dependabot))
 
 
 
