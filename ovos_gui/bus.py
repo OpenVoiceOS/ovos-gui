@@ -201,7 +201,7 @@ class GUIWebsocketHandler(WebSocketHandler):
             default_qt_version = \
                 Configuration().get('gui', {}).get('default_qt_version') or 5
             msg_type = parsed_message.msg_type
-            msg_data = parsed_message.data['data']
+            msg_data = parsed_message.data.get('data', {})
 
             framework = msg_data.get("framework")  # new api
             if framework is None:
