@@ -2,7 +2,7 @@ from threading import Thread
 from typing import List, Optional
 
 from ovos_config.config import Configuration, update_mycroft_config
-from ovos_utils.log import LOG, log_deprecation
+from ovos_utils.log import LOG
 
 from ovos_bus_client import Message, MessageBusClient
 from ovos_bus_client.message import dig_for_message
