@@ -461,13 +461,21 @@ class NamespaceManager:
     def _define_messages_to_forward(self):
         """Messages from the core bus to be forwarded to GUI clients."""
         messages_to_forward = [
+            # Core
+            "ovos.utterance.handled",
+            "ovos.utterance.cancelled",
+            "mycroft.skill.handler.start",
+            "mycroft.skill.handler.complete",
+            "complete_intent_failure",
             # Audio Service
+            "speak",
             "recognizer_loop:audio_output_start",
             "recognizer_loop:audio_output_end",
             # Speech Service
             "recognizer_loop:sleep",
             "recognizer_loop:wake_up",
             "mycroft.awoken",
+            "recognizer_loop:utterance",
             "recognizer_loop:wakeword",
             "recognizer_loop:recognition_unknown",
             "recognizer_loop:record_begin",
