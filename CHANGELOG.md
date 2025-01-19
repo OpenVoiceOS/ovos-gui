@@ -1,12 +1,20 @@
 # Changelog
 
-## [1.3.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.0a1) (2024-12-26)
+## [1.3.2a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.2a1) (2025-01-19)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.2.0...1.3.0a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.1a1...1.3.2a1)
 
 **Merged pull requests:**
 
-- feat:face\_template [\#70](https://github.com/OpenVoiceOS/ovos-gui/pull/70) ([JarbasAl](https://github.com/JarbasAl))
+- fix: remove deprecated PIDLock usage [\#76](https://github.com/OpenVoiceOS/ovos-gui/pull/76) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.3.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.1a1) (2025-01-07)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.0...1.3.1a1)
+
+**Merged pull requests:**
+
+- fix:missing messages to forward [\#74](https://github.com/OpenVoiceOS/ovos-gui/pull/74) ([JarbasAl](https://github.com/JarbasAl))
 
 
 
