@@ -70,7 +70,7 @@ def get_description():
 
 
 setup(
-    name='ovos-gui',
+    name='ovos_gui',
     version=get_version(),
     license='Apache-2.0',
     url='https://github.com/OpenVoiceOS/ovos-gui',
