@@ -1,12 +1,24 @@
 # Changelog
 
-## [1.3.3a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.3a1) (2025-06-08)
+## [1.3.4a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.4a2) (2025-11-05)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.2...1.3.3a1)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.4a1...1.3.4a2)
 
 **Merged pull requests:**
 
-- fix: opm 1.X.X [\#80](https://github.com/OpenVoiceOS/ovos-gui/pull/80) ([JarbasAl](https://github.com/JarbasAl))
+- Update requirements.txt [\#88](https://github.com/OpenVoiceOS/ovos-gui/pull/88) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.3.4a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.4a1) (2025-06-16)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.3...1.3.4a1)
+
+**Fixed bugs:**
+
+- Empty pages cause empty GUI [\#43](https://github.com/OpenVoiceOS/ovos-gui/issues/43)
+
+**Merged pull requests:**
+
+- Update ovos-config requirement from \<2.0.0,\>=0.0.12 to \>=0.0.12,\<3.0.0 [\#83](https://github.com/OpenVoiceOS/ovos-gui/pull/83) ([dependabot[bot]](https://github.com/apps/dependabot))
 
 
 
