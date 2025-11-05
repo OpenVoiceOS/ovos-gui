@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.4a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.4a2) (2025-11-05)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.4a1...1.3.4a2)
+
+**Merged pull requests:**
+
+- Update requirements.txt [\#88](https://github.com/OpenVoiceOS/ovos-gui/pull/88) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.3.4a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.4a1) (2025-06-16)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.3...1.3.4a1)
