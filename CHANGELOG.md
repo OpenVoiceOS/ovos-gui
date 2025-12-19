@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.5a3](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.5a3) (2025-12-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.5a2...1.3.5a3)
+
+**Merged pull requests:**
+
+- Update dependency python to 3.14 [\#92](https://github.com/OpenVoiceOS/ovos-gui/pull/92) ([renovate[bot]](https://github.com/apps/renovate))
+
 ## [1.3.5a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.5a2) (2025-12-19)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.5a1...1.3.5a2)
