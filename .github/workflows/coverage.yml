@@ -31,7 +31,7 @@ jobs:
       run: |
         pytest --cov=ovos_gui --cov-report xml test/unittests 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         directory: ./coverage/reports/
