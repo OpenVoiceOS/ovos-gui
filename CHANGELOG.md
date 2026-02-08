@@ -1,16 +1,28 @@
 # Changelog
 
-## [1.3.4a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.4a1) (2025-06-16)
+## [1.3.5a3](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.5a3) (2025-12-19)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.3...1.3.4a1)
-
-**Fixed bugs:**
-
-- Empty pages cause empty GUI [\#43](https://github.com/OpenVoiceOS/ovos-gui/issues/43)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.5a2...1.3.5a3)
 
 **Merged pull requests:**
 
-- Update ovos-config requirement from \<2.0.0,\>=0.0.12 to \>=0.0.12,\<3.0.0 [\#83](https://github.com/OpenVoiceOS/ovos-gui/pull/83) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Update dependency python to 3.14 [\#92](https://github.com/OpenVoiceOS/ovos-gui/pull/92) ([renovate[bot]](https://github.com/apps/renovate))
+
+## [1.3.5a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.5a2) (2025-12-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.5a1...1.3.5a2)
+
+**Merged pull requests:**
+
+- Update actions/setup-python action to v6 [\#96](https://github.com/OpenVoiceOS/ovos-gui/pull/96) ([renovate[bot]](https://github.com/apps/renovate))
+
+## [1.3.5a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.5a1) (2025-12-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.4...1.3.5a1)
+
+**Merged pull requests:**
+
+- chore: Configure Renovate [\#91](https://github.com/OpenVoiceOS/ovos-gui/pull/91) ([renovate[bot]](https://github.com/apps/renovate))
 
 
 
