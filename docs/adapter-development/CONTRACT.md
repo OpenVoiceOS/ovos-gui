@@ -199,28 +199,61 @@ def on_namespace_deactivated(self, skill_id, site_id):
 
 ---
 
-### State Query Methods (optional, for robustness)
+### State Query Methods (TECH-006: Available for Crash Recovery)
 
-Available on `NamespaceManager` via `self.bus` (see TECH-006 implementation):
+**TECH-006 Status**: ✅ IMPLEMENTED (2026-03-12)
+
+Available on `NamespaceManager` via `self.bus` or directly if injected into adapter:
 
 ```python
 def get_active_namespace(self, session_id: str = "default") -> Namespace | None:
-    """Get the currently active (top-of-stack) namespace for a session."""
+    """Get the currently active (top-of-stack) namespace for a session.
+
+    Use to recover after crashes or verify current state without relying
+    on callback parameters.
+    """
 
 def get_namespace_data(self, namespace_name: str, session_id: str = "default") -> dict | None:
-    """Get the full session data dict for a namespace (or None if not loaded)."""
+    """Get a copy of the full session data dict for a namespace.
+
+    Returns None if namespace doesn't exist. Returns a copy, so modifications
+    won't affect ovos-gui state.
+    """
 
 def get_all_sessions(self) -> list[str]:
-    """Get list of all active session IDs."""
+    """Get list of all active session IDs.
+
+    Useful for multi-room deployments to discover all connected locations.
+    """
 
 def is_namespace_active(self, namespace_name: str, session_id: str = "default") -> bool:
-    """Check if a namespace is currently active."""
+    """Check if a namespace is currently active (visible).
+
+    Quick boolean check without pulling full state.
+    """
 ```
 
 **Responsibility**:
-- Use these to recover from crashes or missed messages
-- Call sparingly (not in tight loops)
+- Use these to recover from crashes by re-syncing state
+- Call sparingly (not in tight loops) to avoid performance impact
 - Handle `None` returns gracefully (namespace may be unloaded)
+- Example: adapter crash → re-query → verify current namespace → resume rendering
+
+**Example: Crash Recovery**:
+```python
+class RobustAdapter(AbstractGUIPlugin):
+    def __init__(self, config, bus):
+        super().__init__(config, bus)
+        self._namespace_manager = None  # Injected by factory
+
+    def _recover_from_crash(self):
+        """Re-sync state after error."""
+        if self._namespace_manager:
+            active = self._namespace_manager.get_active_namespace()
+            if active:
+                data = self._namespace_manager.get_namespace_data(active.skill_id)
+                self._resume_rendering(active.skill_id, data)
+```
 
 ---
 

@@ -253,9 +253,9 @@
 
 ## PHASE 2: HIGH (Improves reliability & debuggability)
 
-### [ ] TECH-006: Add Adapter State Query API
+### [x] TECH-006: Add Adapter State Query API
 
-**Status**: Not Started
+**Status**: COMPLETED ✅ (2026-03-12)
 **Effort**: 1-2 days
 **Blocking**: Advanced adapter scenarios, crash recovery
 **Owner**: Maintainer
