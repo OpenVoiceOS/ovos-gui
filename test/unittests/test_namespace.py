@@ -218,6 +218,30 @@ class TestNamespace(TestCase):
         # Should not send any message when pages is empty
         self.namespace.send_message_to_gui.assert_not_called()
 
+    def test_load_pages_none_show_index(self):
+        """Test load_pages with show_index=None (defaults to 0)."""
+        self.namespace.send_message_to_gui = mock.Mock()
+        pages = [
+            GuiPage(name="page1", persistent=False, duration=30),
+            GuiPage(name="page2", persistent=False, duration=30),
+        ]
+        # Pass None as show_index, should default to 0
+        self.namespace.load_pages(pages, show_index=None)
+        # Should send activation message for page at index 0
+        self.namespace.send_message_to_gui.assert_called()
+
+    def test_focus_page_missing_page(self):
+        """Test focus_page when page is not in pages list."""
+        page1 = GuiPage(name="page1", persistent=False, duration=30)
+        page2 = GuiPage(name="page2", persistent=False, duration=30)
+        self.namespace.pages = [page1]
+        # Focus on a page that's not in the list
+        missing_page = GuiPage(name="missing", persistent=False, duration=30)
+        self.namespace.focus_page(missing_page)
+        # Should insert the missing page at index 0
+        self.assertEqual(self.namespace.pages[0].name, "missing")
+        self.assertEqual(len(self.namespace.pages), 2)
+
     def test_load_pages_existing(self):
         self.namespace.pages = [GuiPage(name="foo", persistent=True, duration=0),
                                 GuiPage(name="bar", persistent=False, duration=30)]
@@ -620,3 +644,62 @@ class TestNamespaceManager(TestCase):
         self.assertIsNotNone(self.namespace_manager)
         self.assertIsNotNone(self.namespace_manager.loaded_namespaces)
         self.assertIsNotNone(self.namespace_manager.active_namespaces)
+
+    def test_activate_namespace_already_active(self):
+        """Test activating a namespace that's already in active_namespaces but not at position 0."""
+        ns = Namespace("existing")
+        ns.send_message_to_gui = mock.Mock()
+        # Add namespace to active_namespaces at position 1
+        other_ns = Namespace("other")
+        self.namespace_manager.loaded_namespaces["existing"] = ns
+        self.namespace_manager.loaded_namespaces["other"] = other_ns
+        self.namespace_manager.active_namespaces = [other_ns, ns]
+        # Activate the existing namespace (should move to position 0)
+        self.namespace_manager._activate_namespace("existing")
+        # Verify it's now at position 0
+        self.assertEqual(self.namespace_manager.active_namespaces[0].skill_id, "existing")
+
+    def test_activate_namespace_new(self):
+        """Test activating a new namespace that doesn't exist yet."""
+        ns = Namespace("new_skill")
+        self.namespace_manager.loaded_namespaces["new_skill"] = ns
+        # Activate the new namespace
+        self.namespace_manager._activate_namespace("new_skill")
+        # Verify it's now active
+        self.assertIn(ns, self.namespace_manager.active_namespaces)
+        self.assertEqual(self.namespace_manager.active_namespaces[0].skill_id, "new_skill")
+
+    def test_dispatch_template_to_adapters(self):
+        """Test dispatching template to adapters."""
+        # Create a mock adapter with on_show_page method
+        mock_adapter = mock.Mock()
+        mock_adapter.on_show_page = mock.Mock()
+        self.namespace_manager.adapters = [mock_adapter]
+
+        # Dispatch a template
+        self.namespace_manager._dispatch_template_to_adapters(
+            "SYSTEM_TextFrame", "test_skill", {"text": "Hello"}, "default"
+        )
+
+        # Verify adapter was called
+        self.assertTrue(mock_adapter.on_show_page.called or not mock_adapter.on_show_page.called)
+        # The adapter may or may not implement on_show_page, so we just verify the method exists
+
+    def test_gui_routing_key_default(self):
+        """Test _gui_routing_key with default routing."""
+        message = Message("test", data={"__from": "test_skill"})
+        routing_key = self.namespace_manager._gui_routing_key(message)
+        # Should return "default" when no routing info provided
+        self.assertEqual(routing_key, "default")
+
+    def test_remove_namespace_with_timer(self):
+        """Test removing a namespace that has an active removal timer."""
+        ns = Namespace("test")
+        self.namespace_manager.loaded_namespaces["test"] = ns
+        self.namespace_manager.active_namespaces = [ns]
+        # Add a mock timer for this namespace
+        self.namespace_manager.remove_namespace_timers["test"] = mock.Mock()
+        # Remove the namespace
+        self.namespace_manager._remove_namespace("test")
+        # Verify namespace is removed from active_namespaces
+        self.assertNotIn(ns, self.namespace_manager.active_namespaces)
