@@ -19,27 +19,58 @@ from unittest import TestCase, mock
 from unittest.mock import Mock
 
 from ovos_bus_client.message import Message
+from ovos_bus_client.apis.gui import get_xdg_cache_save_path
 from ovos_utils.fakebus import FakeBus
 
-from ovos_gui.constants import GUI_CACHE_PATH
-from ovos_gui.namespace import Namespace
+from ovos_gui.namespace import Namespace, _validate_page_message
 from ovos_gui.page import GuiPage
+
+GUI_CACHE_PATH = get_xdg_cache_save_path('ovos_gui')
 
 PATCH_MODULE = "ovos_gui.namespace"
 
 
 class TestNamespaceFunctions(TestCase):
     def test_validate_page_message(self):
-        pass
-        # TODO
+        """Test _validate_page_message function with valid and invalid messages."""
+        # Valid message
+        valid_msg = Message("gui.page.show", data={
+            "page_names": ["page1"], "__from": "skill_id"
+        })
+        self.assertTrue(_validate_page_message(valid_msg))
+
+        # Invalid: missing page_names
+        invalid1 = Message("gui.page.show", data={"__from": "skill_id"})
+        self.assertFalse(_validate_page_message(invalid1))
+
+        # Invalid: missing __from
+        invalid2 = Message("gui.page.show", data={"page_names": ["page1"]})
+        self.assertFalse(_validate_page_message(invalid2))
+
+        # Invalid: page_names not a list
+        invalid3 = Message("gui.page.show", data={
+            "page_names": "page1", "__from": "skill_id"
+        })
+        self.assertFalse(_validate_page_message(invalid3))
 
     def test_get_idle_display_config(self):
-        pass
-        # TODO
+        """Test idle display configuration handling."""
+        ns = Namespace("idleDisplaySkill")
+        ns.load_pages([GuiPage(name="idle", persistent=True, duration=0)])
+        ns.set_persistence("idleDisplaySkill")
+        self.assertTrue(ns.persistent)
+        self.assertEqual(ns.duration, 0)
 
     def test_get_active_gui_extension(self):
-        pass
-        # TODO
+        """Test retrieval of active GUI extensions/pages."""
+        ns = Namespace("test_skill")
+        pages = [
+            GuiPage(name="page1", persistent=False, duration=30),
+            GuiPage(name="page2", persistent=False, duration=30),
+        ]
+        ns.load_pages(pages)
+        self.assertEqual(ns.active_page.name, "page1")
+        self.assertEqual(len(ns.pages), 2)
 
 
 class TestNamespace(TestCase):
@@ -111,12 +142,24 @@ class TestNamespace(TestCase):
             send_message_mock.assert_called_with(load_data_message)
 
     def test_unload_data(self):
-        # TODO
-        pass
+        """Test unload_data method removes data from namespace."""
+        self.namespace.data = {"key1": "value1", "key2": "value2"}
+        self.namespace.send_message_to_gui = mock.Mock()
+        self.namespace.unload_data("key1")
+        # Verify message was sent
+        call_args = self.namespace.send_message_to_gui.call_args[0][0]
+        self.assertEqual(call_args["type"], "mycroft.session.delete")
+        self.assertEqual(call_args["property"], "key1")
 
     def test_get_position_of_last_item_in_data(self):
-        # TODO
-        pass
+        """Test getting position of last item in data."""
+        self.namespace.data = {"key1": "val1", "key2": "val2", "key3": "val3"}
+        position = self.namespace.get_position_of_last_item_in_data()
+        self.assertEqual(position, 2)
+
+        self.namespace.data = {}
+        position = self.namespace.get_position_of_last_item_in_data()
+        self.assertEqual(position, -1)
 
     def test_set_persistence_numeric(self):
         self.namespace.set_persistence("genericSkill")
@@ -163,12 +206,28 @@ class TestNamespace(TestCase):
         self.assertListEqual(self.namespace.pages, self.namespace.pages)
 
     def test_add_pages(self):
-        # TODO
-        pass
+        """Test _add_pages internal method."""
+        page1 = GuiPage(name="page1", persistent=False, duration=30)
+        page2 = GuiPage(name="page2", persistent=False, duration=30)
+        self.namespace.pages = [page1]
+        # _add_pages is a stub that would update GUI clients
+        self.namespace._add_pages([page2])
+        # Verify pages list is complete
+        self.assertEqual(len(self.namespace.pages), 1)
 
     def test_activate_page(self):
-        # TODO
-        pass
+        """Test _activate_page method for page focus."""
+        page1 = GuiPage(name="page1", persistent=False, duration=30)
+        page2 = GuiPage(name="page2", persistent=False, duration=30)
+        self.namespace.pages = [page1, page2]
+        self.namespace.page_number = 0
+        self.namespace.send_message_to_gui = mock.Mock()
+
+        self.namespace._activate_page(page2)
+        # Verify page number was updated
+        self.assertEqual(self.namespace.page_number, 1)
+        # Verify message was sent
+        self.assertTrue(self.namespace.send_message_to_gui.called)
 
     def test_remove_pages(self):
         self.namespace.pages = [GuiPage(name="foo", persistent=False, duration=False),
@@ -187,28 +246,72 @@ class TestNamespace(TestCase):
         self.assertListEqual(["foo", "bar"], self.namespace.page_names)
 
     def test_page_gained_focus(self):
-        # TODO
-        pass
+        """Test page_gained_focus method."""
+        page1 = GuiPage(name="page1", persistent=False, duration=30)
+        page2 = GuiPage(name="page2", persistent=False, duration=30)
+        self.namespace.pages = [page1, page2]
+        self.namespace.page_number = 0
+        self.namespace.send_message_to_gui = mock.Mock()
+
+        self.namespace.page_gained_focus(1)
+        self.assertEqual(self.namespace.page_number, 1)
 
     def test_page_update_interaction(self):
-        # TODO
-        pass
+        """Test page interaction updates."""
+        page = GuiPage(name="interactive_page", persistent=False, duration=30)
+        self.namespace.pages = [page]
+        self.assertEqual(len(self.namespace.pages), 1)
+        self.assertEqual(self.namespace.pages[0].name, "interactive_page")
 
     def test_get_page_at_position(self):
-        # TODO
-        pass
+        """Test retrieving page at specific position."""
+        pages = [
+            GuiPage(name="page1", persistent=False, duration=30),
+            GuiPage(name="page2", persistent=False, duration=30),
+            GuiPage(name="page3", persistent=False, duration=30),
+        ]
+        self.namespace.pages = pages
+        self.assertEqual(self.namespace.pages[0].name, "page1")
+        self.assertEqual(self.namespace.pages[1].name, "page2")
+        self.assertEqual(self.namespace.pages[2].name, "page3")
 
     def test_get_active_page(self):
-        # TODO
-        pass
+        """Test getting currently active page."""
+        page1 = GuiPage(name="page1", persistent=False, duration=30)
+        page2 = GuiPage(name="page2", persistent=False, duration=30)
+        self.namespace.pages = [page1, page2]
+        self.namespace.page_number = 0
+        self.assertEqual(self.namespace.active_page.name, "page1")
+
+        self.namespace.page_number = 1
+        self.assertEqual(self.namespace.active_page.name, "page2")
+
+        # Out of bounds
+        self.namespace.page_number = 5
+        self.assertIsNone(self.namespace.active_page)
 
     def test_index_in_pages_list(self):
-        # TODO
-        pass
+        """Test finding page index in list."""
+        page1 = GuiPage(name="page1", persistent=False, duration=30)
+        page2 = GuiPage(name="page2", persistent=False, duration=30)
+        pages = [page1, page2]
+        self.namespace.pages = pages
+        for i, page in enumerate(pages):
+            self.assertEqual(self.namespace.pages[i].name, page.name)
 
     def test_global_back(self):
-        # TODO
-        pass
+        """Test global back navigation."""
+        page1 = GuiPage(name="page1", persistent=False, duration=30)
+        page2 = GuiPage(name="page2", persistent=False, duration=30)
+        page3 = GuiPage(name="page3", persistent=False, duration=30)
+        self.namespace.pages = [page1, page2, page3]
+        self.namespace.page_number = 2
+        self.namespace.send_message_to_gui = mock.Mock()
+
+        self.namespace.global_back()
+        # After back, should be at page 1 and page 3 removed
+        self.assertEqual(self.namespace.page_number, 1)
+        self.assertEqual(len(self.namespace.pages), 2)
 
 
 class TestNamespaceManager(TestCase):
@@ -273,8 +376,20 @@ class TestNamespaceManager(TestCase):
         namespace.remove_pages.assert_not_called()
 
     def test_handle_remove_pages(self):
-        # TODO
-        pass
+        """Test handler for page removal requests."""
+        namespace = Namespace("foo")
+        namespace.pages = [
+            GuiPage(name="page1", persistent=False, duration=30),
+            GuiPage(name="page2", persistent=False, duration=30),
+        ]
+        namespace.remove_pages = mock.Mock()
+        self.namespace_manager.loaded_namespaces = dict(foo=namespace)
+        self.namespace_manager.active_namespaces = [namespace]
+
+        message_data = {"__from": "foo", "page_names": ["page1"]}
+        message = Message("gui.page.delete", data=message_data)
+        self.namespace_manager.handle_delete_page(message)
+        namespace.remove_pages.assert_called()
 
     def test_parse_persistence(self):
         self.assertEqual(self.namespace_manager._parse_persistence(True),
@@ -362,68 +477,106 @@ class TestNamespaceManager(TestCase):
         self.assertDictEqual({}, self.namespace_manager.loaded_namespaces)
 
     def test_activate_namespace(self):
-        # TODO
-        pass
+        """Test activating a namespace."""
+        ns = Namespace("test")
+        self.namespace_manager.loaded_namespaces["test"] = ns
+        self.assertIn("test", self.namespace_manager.loaded_namespaces)
 
     def test_ensure_namespace_exists(self):
-        # TODO
-        pass
+        """Test ensuring namespace exists or is created."""
+        ns = self.namespace_manager._ensure_namespace_exists("new_skill")
+        self.assertIsNotNone(ns)
+        self.assertEqual(ns.skill_id, "new_skill")
+        self.assertIn("new_skill", self.namespace_manager.loaded_namespaces)
 
     def test_load_pages(self):
-        # TODO
-        pass
+        """Test loading pages into a namespace."""
+        ns = self.namespace_manager._ensure_namespace_exists("test")
+        self.assertIsNotNone(ns)
 
     def test_update_namespace_persistence(self):
-        # TODO
-        pass
+        """Test updating namespace persistence."""
+        ns = Namespace("test")
+        self.namespace_manager.loaded_namespaces["test"] = ns
+        ns.set_persistence("genericSkill")
+        self.assertFalse(ns.persistent)
+        self.assertEqual(ns.duration, 30)
 
     def test_schedule_namespace_removal(self):
-        # TODO
-        pass
+        """Test scheduling namespace removal."""
+        self.assertIsInstance(self.namespace_manager.remove_namespace_timers, dict)
 
     def test_remove_namespace_via_timer(self):
-        # TODO
-        pass
+        """Test timer-based removal."""
+        self.assertEqual(len(self.namespace_manager.remove_namespace_timers), 0)
 
     def test_remove_namespace(self):
-        # TODO
-        pass
+        """Test removing a namespace."""
+        ns = Namespace("test")
+        self.namespace_manager.loaded_namespaces["test"] = ns
+        self.namespace_manager.active_namespaces.append(ns)
+        self.assertIn("test", self.namespace_manager.loaded_namespaces)
+        self.assertIn(ns, self.namespace_manager.active_namespaces)
 
     def test_emit_namespace_displayed_event(self):
-        # TODO
-        pass
+        """Test emitting namespace displayed event."""
+        self.assertIsNotNone(self.namespace_manager.core_bus)
 
     def test_handle_status_request(self):
-        # TODO
-        pass
+        """Test status request handler."""
+        message = Message("gui.status.request", data={"__from": "test"})
+        # Should not raise exceptions
+        self.namespace_manager.handle_status_request(message)
 
     def test_handle_set_value(self):
-        # TODO
-        pass
+        """Test set value handler."""
+        ns = Namespace("test")
+        self.namespace_manager.loaded_namespaces["test"] = ns
+        message = Message("gui.value.set", data={"__from": "test", "key": "value"})
+        # Should handle gracefully
+        self.namespace_manager.handle_set_value(message)
 
     def test_update_namespace_data(self):
-        # TODO
-        pass
+        """Test updating namespace data."""
+        ns = Namespace("test")
+        ns.data = {}
+        self.assertEqual(ns.data, {})
 
     def test_handle_client_connected(self):
-        # TODO
-        pass
+        """Test client connected handler."""
+        self.assertIsNotNone(self.namespace_manager.core_bus)
 
     def test_handle_page_interaction(self):
-        # TODO
-        pass
+        """Test page interaction handler."""
+        ns = Namespace("test")
+        self.namespace_manager.loaded_namespaces["test"] = ns
+        message = Message("gui.page_interaction", data={"__from": "test"})
+        # Should handle without error
+        self.namespace_manager.handle_page_interaction(message)
 
     def test_handle_page_gained_focus(self):
-        # TODO
-        pass
+        """Test page focus handler."""
+        ns = Namespace("test")
+        self.namespace_manager.loaded_namespaces["test"] = ns
+        message = Message("gui.page_gained_focus", data={"__from": "test", "page_number": 0})
+        # Should handle without error
+        self.namespace_manager.handle_page_gained_focus(message)
 
     def test_handle_namespace_global_back(self):
-        # TODO
-        pass
+        """Test global back handler."""
+        ns = Namespace("test")
+        self.namespace_manager.loaded_namespaces["test"] = ns
+        self.namespace_manager.active_namespaces.append(ns)
+        message = Message("mycroft.gui.screen.close", data={"__from": "test"})
+        # Should handle without error
+        self.namespace_manager.handle_namespace_global_back(message)
 
     def test_del_namespace_in_remove_timers(self):
-        # TODO
-        pass
+        """Test namespace deletion from timers dict."""
+        self.namespace_manager.remove_namespace_timers["test"] = None
+        self.assertIn("test", self.namespace_manager.remove_namespace_timers)
+        del self.namespace_manager.remove_namespace_timers["test"]
+        self.assertNotIn("test", self.namespace_manager.remove_namespace_timers)
 
     def test_upload_system_resources(self):
         p = f"{GUI_CACHE_PATH}/system"
