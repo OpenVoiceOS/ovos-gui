@@ -10,6 +10,23 @@ The OVOS GUI layer enables skills to display information on any device — deskt
 
 ---
 
+## Terminology: Templates and Pages
+
+### **Template**
+A **template** is a pre-defined, standardized **data contract** between skills and adapters.
+- Identified by names like `SYSTEM_weather`, `SYSTEM_text`, `SYSTEM_list`
+- Defined in code: `PageTemplates` enum from `ovos-gui-api-client`
+- Skills use them via methods: `gui.show_weather()`, `gui.show_text()`, etc.
+- All skill display goes through templates — no custom QML
+
+### **Page** (rendering)
+A **page** is a rendering artifact — the QML file or HTML that displays a template.
+- Example: `Weather.qml` renders `SYSTEM_weather`
+- Example: `Text.qml` renders `SYSTEM_text`
+- Adapters implement handler methods: `handle_show_weather()`, `handle_show_text()`, etc.
+
+---
+
 ## 1. Templates
 
 A **template** is a standardized data structure for a type of content.
@@ -102,55 +119,42 @@ gui.page_show {
 
 ---
 
-## 3. Pages
+## 3. The Template Rendering Flow
 
-A **page** is a single screen or view within a namespace.
-
-### Page Properties
-
-- **Name**: Identifier within the namespace (e.g., "current", "forecast")
-- **Template**: The data schema it uses (e.g., "weather", "music")
-- **Data**: The actual content (values for the template)
-- **Persistent**: Whether it survives a skill restart (default: false)
-- **Duration**: How long to display before returning to idle (optional)
-
-### Page Lifecycle
+When a skill displays a template, the flow is:
 
 ```
-Skill → show_weather()
+Skill → gui.show_weather(temp=22, condition="Sunny")
      ↓
-GUI Service → Create/update namespace "skill-weather"
+GUI Service → Emit "gui.value.set" + "gui.page.show"
            ↓
-           → Create page "current" with template "weather"
-           ↓
-Adapter → Receives gui.page_show message
-       ↓
-       → Renders the page
-       ↓
+All Adapters → Receive dispatch_template("SYSTEM_weather", skill_id, data)
+            ↓
+            → Call handler: handle_show_weather(skill_id, data)
+            ↓
+Each Adapter → Renders in its own way (Qt page, web HTML, TUI, etc.)
+            ↓
 User → Interacts with display
     ↓
-    → Sends gui.user_input message back
+    → Adapter sends back user interaction events
     ↓
-Skill → Receives message, handles interaction
+Skill → Receives and handles the interaction
 ```
 
-### Persistent Pages
+### Display Duration
 
-Some pages should survive skill restarts:
+Templates can specify how long to display before returning to idle:
 
 ```python
-self.gui.show_page(
-    "mypage.qml",
-    {
-        "title": "Persistent Data",
-        "value": 42
-    },
-    persistent=True,
-    duration=3600  # 1 hour
+self.gui.show_weather(
+    current_temp=22,
+    min_temp=18,
+    max_temp=26,
+    condition="Sunny",
+    location="Berlin",
+    duration=30  # Display for 30 seconds, then return to idle
 )
 ```
-
-The page remains displayed even if the skill crashes and restarts.
 
 ---
 
