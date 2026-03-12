@@ -427,6 +427,23 @@ class NamespaceManager:
         for msg in messages_to_forward:
             self.core_bus.on(msg, self.forward_to_gui)
 
+    def _safe_call(self, adapter, method_name, *args, **kwargs):
+        """Invoke an adapter hook safely.
+
+        Handles missing methods and legacy signatures.
+        """
+        method = getattr(adapter, method_name, None)
+        if method:
+            try:
+                method(*args, **kwargs)
+            except TypeError:  # Handle legacy one-arg signatures if needed
+                if method_name == "on_namespace_deactivated" and len(args) > 0:
+                    method(args[0])
+                else:
+                    LOG.exception(f"Error in {adapter.__class__.__name__}.{method_name}")
+            except Exception:
+                LOG.exception(f"Error in {adapter.__class__.__name__}.{method_name}")
+
     def forward_to_gui(self, message: Message):
         """
         Forward a core Message status event to registered adapters.
@@ -436,12 +453,8 @@ class NamespaceManager:
         LOG.info(f"GUI PROTOCOL - Forwarding status event '{message.msg_type}'")
         site_id = self._gui_routing_key(message)
         for adapter in self.adapters:
-            try:
-                adapter.on_status_event(message.msg_type, message.data, site_id)
-            except Exception:
-                LOG.exception(
-                    f"Error in {adapter.__class__.__name__}.on_status_event"
-                )
+            self._safe_call(adapter, "on_status_event", message.msg_type,
+                           message.data, site_id)
 
     def handle_clear_namespace(self, message: Message):
         """
@@ -455,9 +468,11 @@ class NamespaceManager:
                 "Request to delete namespace failed: no namespace specified"
             )
         else:
-            if self.loaded_namespaces.get(namespace_name):
+            site_id = self._gui_routing_key(message)
+            session = self.get_session(site_id)
+            if session.loaded_namespaces.get(namespace_name):
                 with namespace_lock:
-                    self._remove_namespace(namespace_name)
+                    self._remove_namespace(namespace_name, session)
 
     def handle_delete_all_pages(self, message: Message):
         """
@@ -472,11 +487,13 @@ class NamespaceManager:
         else:
             LOG.info(f"Got {namespace_name} request to delete all pages")
 
+        site_id = self._gui_routing_key(message)
+        session = self.get_session(site_id)
         with namespace_lock:
-            namespace = self.loaded_namespaces.get(namespace_name)
+            namespace = session.loaded_namespaces.get(namespace_name)
             if namespace:
                 to_rm = [p.name for p in namespace.pages if p.name not in except_pages]
-                self._remove_pages(namespace_name, to_rm)
+                self._remove_pages(namespace_name, to_rm, session)
 
     def handle_delete_page(self, message: Message):
         """
@@ -488,18 +505,21 @@ class NamespaceManager:
             namespace_name = message.data["__from"]
             pages_to_remove = message.data.get("page_names")
             LOG.debug(f"Got {namespace_name} request to delete: {pages_to_remove}")
+            site_id = self._gui_routing_key(message)
+            session = self.get_session(site_id)
             with namespace_lock:
-                self._remove_pages(namespace_name, pages_to_remove)
+                self._remove_pages(namespace_name, pages_to_remove, session)
 
-    def _remove_pages(self, namespace_name: str, pages_to_remove: List[str]):
+    def _remove_pages(self, namespace_name: str, pages_to_remove: List[str], session: GUISession):
         """
         Removes one or more pages from a namespace. Pages are removed from the
         bottom of the stack.
         @param namespace_name: the affected namespace
         @param pages_to_remove: names of pages to delete
+        @param session: the session affected
         """
-        namespace = self.loaded_namespaces.get(namespace_name)
-        if namespace is not None and namespace in self.active_namespaces:
+        namespace = session.loaded_namespaces.get(namespace_name)
+        if namespace is not None and namespace in session.active_namespaces:
             page_positions = []
             for index, page in enumerate(namespace.pages):
                 if page.name in pages_to_remove:
@@ -602,22 +622,25 @@ class NamespaceManager:
 
         LOG.debug(f"Got {namespace_name} request to show: {page_ids_to_show} at index: {show_index}")
 
+        site_id = self._gui_routing_key(message)
+        session = self.get_session(site_id)
+
         # --- Template-based routing (new adapter plugin system) ---
         # PageTemplates enum values all start with "SYSTEM_".  When any page
         # in the list uses this convention, route the first one to all adapters
         # with the current namespace session data.
         if page_ids_to_show and page_ids_to_show[0].startswith("SYSTEM_"):
-            namespace = self._ensure_namespace_exists(namespace_name)
+            namespace = self._ensure_namespace_exists(namespace_name, session)
             data = {k: v for k, v in namespace.data.items()}
-            site_id = self._gui_routing_key(message)
             for template in page_ids_to_show:
                 self._dispatch_template_to_adapters(template, namespace_name, data, site_id)
             # Notify lifecycle: activate namespace (updates internal stack state)
             with namespace_lock:
-                if not self.active_namespaces or self.active_namespaces[0].skill_id != namespace_name:
-                    self._activate_namespace(namespace_name, site_id)
+                if not session.active_namespaces or session.active_namespaces[0].skill_id != namespace_name:
+                    self._activate_namespace(namespace_name, session, site_id)
             return
 
+        # --- Legacy path ---
         pages = list()
         persist, duration = self._parse_persistence(message.data["__idle"])
         for page in page_ids_to_show:
@@ -630,101 +653,97 @@ class NamespaceManager:
             return
 
         with namespace_lock:
-            if not self.active_namespaces:
-                self._activate_namespace(namespace_name)
+            if not session.active_namespaces:
+                self._activate_namespace(namespace_name, session, site_id)
             else:
-                active_namespace = self.active_namespaces[0]
+                active_namespace = session.active_namespaces[0]
                 if active_namespace.skill_id != namespace_name:
-                    self._activate_namespace(namespace_name)
-            self._load_pages(pages, show_index)
-            self._update_namespace_persistence(persistence)
+                    self._activate_namespace(namespace_name, session, site_id)
+            self._load_pages(pages, show_index, session)
+            self._update_namespace_persistence(persistence, session)
 
-    def _activate_namespace(self, namespace_name: str, site_id: str = "default"):
+        # Notify adapters of the page load (legacy path)
+        for adapter in self.adapters:
+            self._safe_call(adapter, "on_pages_show", namespace_name, page_ids_to_show, site_id)
+
+    def _activate_namespace(self, namespace_name: str, session: GUISession, site_id: str = "default"):
         """
         Instructs the GUI to load a namespace and its associated data.
 
         @param namespace_name: the name of the namespace to load
+        @param session: the session affected
         @param site_id: physical site/screen identifier
         """
-        namespace = self._ensure_namespace_exists(namespace_name)
+        namespace = self._ensure_namespace_exists(namespace_name, session)
 
-        if namespace in self.active_namespaces:
-            namespace_position = self.active_namespaces.index(namespace)
+        if namespace in session.active_namespaces:
+            namespace_position = session.active_namespaces.index(namespace)
             namespace.activate(namespace_position)
             if namespace_position != 0:
-                LOG.info(f"Activating namespace: {namespace_name}")
-                self.active_namespaces.insert(
-                    0, self.active_namespaces.pop(namespace_position)
+                LOG.info(f"Activating namespace: {namespace_name} for session {session.session_id}")
+                session.active_namespaces.insert(
+                    0, session.active_namespaces.pop(namespace_position)
                 )
         else:
-            LOG.info(f"New namespace: {namespace_name}")
+            LOG.info(f"New namespace: {namespace_name} for session {session.session_id}")
             namespace.add()
-            self.active_namespaces.insert(0, namespace)
+            session.active_namespaces.insert(0, namespace)
             # sync initial state
             for key, value in namespace.data.items():
                 namespace.load_data(key, value)
 
-        self._emit_namespace_displayed_event()
+        self._emit_namespace_displayed_event(session)
         for adapter in self.adapters:
-            try:
-                adapter.on_namespace_activated(namespace_name, site_id)
-            except Exception:
-                LOG.exception(
-                    f"Error in {adapter.__class__.__name__}.on_namespace_activated"
-                )
+            self._safe_call(adapter, "on_namespace_activated", namespace_name, site_id)
 
-    def _ensure_namespace_exists(self, namespace_name: str) -> Namespace:
+    def _ensure_namespace_exists(self, namespace_name: str, session: GUISession) -> Namespace:
         """
         Retrieves the requested namespace, creating one if it doesn't exist.
         @param namespace_name: the name of the namespace being retrieved
+        @param session: the session affected
         @returns: requested namespace
         """
-        # TODO: - Update sync to match.
-        namespace = self.loaded_namespaces.get(namespace_name)
+        namespace = session.loaded_namespaces.get(namespace_name)
         if namespace is None:
             namespace = Namespace(namespace_name)
-            self.loaded_namespaces[namespace_name] = namespace
+            session.loaded_namespaces[namespace_name] = namespace
 
         return namespace
 
-    def _load_pages(self, pages_to_show: List[GuiPage], show_index: int):
+    def _load_pages(self, pages_to_show: List[GuiPage], show_index: int, session: GUISession):
         """
         Loads the requested pages in the namespace.
         @param pages_to_show: list of pages to be loaded
         @param show_index: index to load pages at
+        @param session: the session affected
         """
-        if not self.active_namespaces:
-            LOG.error("received 'load_pages' request but there are no active namespaces")
+        if not session.active_namespaces:
+            LOG.error(f"received 'load_pages' request for session {session.session_id} but there are no active namespaces")
             return
 
         if not len(pages_to_show) or show_index >= len(pages_to_show):
             LOG.error(f"requested invalid page index: {show_index}, defaulting to last page")
             show_index = len(pages_to_show) - 1
 
-        active_namespace = self.active_namespaces[0]
+        active_namespace = session.active_namespaces[0]
         oldp = [p.name for p in active_namespace.pages]
         active_namespace.load_pages(pages_to_show, show_index)
         # LOG only on change
         if oldp != [p.name for p in active_namespace.pages]:
             pn = active_namespace.page_number
-            LOG.info(f"Loaded {active_namespace.skill_id} at index: {pn} "
+            LOG.info(f"Loaded {active_namespace.skill_id} in session {session.session_id} at index: {pn} "
                      f"pages: {[p.name for p in active_namespace.pages]}")
 
-    def _update_namespace_persistence(self, persistence: Union[bool, int]):
+    def _update_namespace_persistence(self, persistence: Union[bool, int], session: GUISession):
         """
         Sets the persistence of the namespace being activated.
-        A namespace's persistence is the same as the persistence of the
-        most recent pages added to a namespace.  For example, a multi-page
-        namespace could show the first set of pages with a persistence of
-        True (show until removed) and the last page with a persistence of
-        15 seconds.  This would ensure that the namespace isn't removed while
-        the skill is showing the pages.
         @param persistence: length of time the namespace should be displayed
+        @param session: the session affected
         """
-        for idx, namespace in enumerate(self.active_namespaces):
+        for idx, namespace in enumerate(session.active_namespaces):
             if idx:
                 if not namespace.persistent:
-                    self._remove_namespace(namespace.skill_id)
+                    self._remove_namespace(namespace.skill_id, session)
             else:
                 if namespace.persistent != persistence:
                     LOG.info(f"Setting namespace '{namespace.skill_id}' persistence to: {persistence}")
@@ -734,82 +753,80 @@ class NamespaceManager:
                 # check if there is a scheduled remove_namespace_timer
                 # and cancel it
                 if namespace.persistent and namespace.skill_id in \
-                        self.remove_namespace_timers:
-                    self.remove_namespace_timers[namespace.skill_id].cancel()
-                    self._del_namespace_in_remove_timers(namespace.skill_id)
+                        session.remove_namespace_timers:
+                    session.remove_namespace_timers[namespace.skill_id].cancel()
+                    self._del_namespace_in_remove_timers(namespace.skill_id, session)
 
                 if not namespace.persistent:
-                    self._schedule_namespace_removal(namespace)
+                    self._schedule_namespace_removal(namespace, session)
 
-                self.active_namespaces[idx] = namespace
+                session.active_namespaces[idx] = namespace
 
-    def _schedule_namespace_removal(self, namespace: Namespace):
+    def _schedule_namespace_removal(self, namespace: Namespace, session: GUISession):
         """
         Uses a timer thread to remove the namespace.
         @param namespace: the namespace to be removed
+        @param session: the session affected
         """
         # Before removing check if there isn't already a timer for this namespace
-        if namespace.skill_id in self.remove_namespace_timers:
+        if namespace.skill_id in session.remove_namespace_timers:
             return
 
         remove_namespace_timer = Timer(
             namespace.duration,
             self._remove_namespace_via_timer,
-            args=(namespace.skill_id,)
+            args=(namespace.skill_id, session.session_id)
         )
-        LOG.info(f"Removal of namespace {namespace.skill_id} in "
+        LOG.info(f"Removal of namespace {namespace.skill_id} in session {session.session_id} in "
                  f"{namespace.duration} seconds")
         remove_namespace_timer.start()
-        self.remove_namespace_timers[namespace.skill_id] = remove_namespace_timer
+        session.remove_namespace_timers[namespace.skill_id] = remove_namespace_timer
 
-    def _remove_namespace_via_timer(self, namespace_name: str):
+    def _remove_namespace_via_timer(self, namespace_name: str, session_id: str):
         """
         Removes a namespace and the corresponding timer instance.
         @param namespace_name: name of namespace to remove
+        @param session_id: ID of the session
         """
-        self._remove_namespace(namespace_name)
-        self._del_namespace_in_remove_timers(namespace_name)
+        session = self.get_session(session_id)
+        self._remove_namespace(namespace_name, session)
+        self._del_namespace_in_remove_timers(namespace_name, session)
 
-    def _remove_namespace(self, namespace_name: str):
+    def _remove_namespace(self, namespace_name: str, session: GUISession):
         """
         Removes a namespace from the active namespace stack.
         @param namespace_name: name of namespace to remove
+        @param session: the session affected
         """
         # Remove all timers associated with the namespace
-        if namespace_name in self.remove_namespace_timers:
-            self.remove_namespace_timers[namespace_name].cancel()
-            self._del_namespace_in_remove_timers(namespace_name)
+        if namespace_name in session.remove_namespace_timers:
+            session.remove_namespace_timers[namespace_name].cancel()
+            self._del_namespace_in_remove_timers(namespace_name, session)
 
-        namespace: Namespace = self.loaded_namespaces.get(namespace_name)
-        if namespace is not None and namespace in self.active_namespaces:
-            LOG.info(f"Removing namespace {namespace_name}")
+        namespace: Namespace = session.loaded_namespaces.get(namespace_name)
+        if namespace is not None and namespace in session.active_namespaces:
+            LOG.info(f"Removing namespace {namespace_name} from session {session.session_id}")
             self.core_bus.emit(Message("gui.namespace.removed",
-                                       data={"skill_id": namespace.skill_id}))
-            namespace_position = self.active_namespaces.index(namespace)
+                                       data={"skill_id": namespace.skill_id},
+                                       context={"session": {"site_id": session.session_id}}))
+            namespace_position = session.active_namespaces.index(namespace)
             namespace.remove(namespace_position)
-            self.active_namespaces.remove(namespace)
+            session.active_namespaces.remove(namespace)
             for adapter in self.adapters:
-                try:
-                    adapter.on_namespace_deactivated(namespace_name)
-                except Exception:
-                    LOG.exception(
-                        f"Error in {adapter.__class__.__name__}.on_namespace_deactivated"
-                    )
-            # Note: on_namespace_deactivated broadcasts to all sites by design
-            # (a skill cleared from any session should clear from all displays)
+                self._safe_call(adapter, "on_namespace_deactivated", namespace_name, session.session_id)
 
-        self._emit_namespace_displayed_event()
+        self._emit_namespace_displayed_event(session)
 
-    def _emit_namespace_displayed_event(self):
+    def _emit_namespace_displayed_event(self, session: GUISession):
         """
         Emit a `gui.namespace.displayed` Message to notify core of changes.
         """
-        if self.active_namespaces:
-            displaying_namespace = self.active_namespaces[0]
+        if session.active_namespaces:
+            displaying_namespace = session.active_namespaces[0]
             message_data = dict(skill_id=displaying_namespace.skill_id)
-            # TODO - no known listeners ?
             self.core_bus.emit(
-                Message("gui.namespace.displayed", data=message_data)
+                Message("gui.namespace.displayed", data=message_data,
+                        context={"session": {"site_id": session.session_id}})
             )
 
     def handle_status_request(self, message: Message):
@@ -840,28 +857,27 @@ class NamespaceManager:
                 "namespace specified"
             )
         else:
+            site_id = self._gui_routing_key(message)
+            session = self.get_session(site_id)
             with namespace_lock:
-                self._update_namespace_data(namespace_name, message.data)
+                self._update_namespace_data(namespace_name, message.data, session)
             # Notify adapters of the session data update
             filtered = {k: v for k, v in message.data.items() if k not in RESERVED_KEYS}
-            site_id = self._gui_routing_key(message)
             for adapter in self.adapters:
-                try:
-                    adapter.on_session_update(namespace_name, filtered, site_id)
-                except Exception:
-                    LOG.exception(f"Error in {adapter.__class__.__name__}.on_session_update")
+                self._safe_call(adapter, "on_session_update", namespace_name, filtered, site_id)
 
-    def _update_namespace_data(self, namespace_name: str, data: dict):
+    def _update_namespace_data(self, namespace_name: str, data: dict, session: GUISession):
         """
         Updates the values of namespace data attributes, unless unchanged.
         @param namespace_name: the name of the namespace to update
         @param data: the name and new value of one or more data attributes
+        @param session: the session affected
         """
-        namespace = self._ensure_namespace_exists(namespace_name)
+        namespace = self._ensure_namespace_exists(namespace_name, session)
         for key, value in data.items():
             if key not in RESERVED_KEYS and namespace.data.get(key) != value:
                 namespace.data[key] = value
-                if namespace in self.active_namespaces:
+                if namespace in session.active_namespaces:
                     namespace.load_data(key, value)
 
     def handle_page_interaction(self, message: Message):
@@ -874,18 +890,21 @@ class NamespaceManager:
         namespace_name = message.data.get("skill_id")
         pidx = message.data.get('page_number')
         LOG.info(f"GUI interacted with page in namespace {namespace_name}")
-        namespace = self.loaded_namespaces.get(namespace_name)
+
+        site_id = self._gui_routing_key(message)
+        session = self.get_session(site_id)
+        namespace = session.loaded_namespaces.get(namespace_name)
 
         if namespace and pidx is not None and pidx != namespace.page_number:
             # update focused page
             namespace.page_gained_focus(pidx)
 
         # reschedule namespace timeout
-        if not namespace.persistent and \
-                self.remove_namespace_timers[namespace.skill_id]:
-            self.remove_namespace_timers[namespace.skill_id].cancel()
-            self._del_namespace_in_remove_timers(namespace.skill_id)
-            self._schedule_namespace_removal(namespace)
+        if namespace and not namespace.persistent and \
+                session.remove_namespace_timers.get(namespace.skill_id):
+            session.remove_namespace_timers[namespace.skill_id].cancel()
+            self._del_namespace_in_remove_timers(namespace.skill_id, session)
+            self._schedule_namespace_removal(namespace, session)
 
     def handle_page_gained_focus(self, message: Message):
         """
@@ -895,10 +914,13 @@ class NamespaceManager:
         namespace_name = message.data.get("skill_id")
         namespace_page_number = message.data.get("page_number")
         LOG.debug(f"Page in namespace {namespace_name} gained focus")
-        namespace = self.loaded_namespaces.get(namespace_name)
+
+        site_id = self._gui_routing_key(message)
+        session = self.get_session(site_id)
+        namespace = session.loaded_namespaces.get(namespace_name)
 
         # first check if the namespace is already active
-        if namespace in self.active_namespaces:
+        if namespace in session.active_namespaces:
             # if the namespace is already active,
             # check if the page number has changed
             if namespace_page_number != namespace.page_number:
@@ -909,25 +931,31 @@ class NamespaceManager:
         Handles global back events from the GUI.
         @param message: the event sent by the GUI
         """
-        if not self.active_namespaces:
+        site_id = self._gui_routing_key(message)
+        session = self.get_session(site_id)
+
+        if not session.active_namespaces:
             LOG.debug("received 'back' signal but there are no active namespaces, attempting to show homescreen")
-            self.core_bus.emit(Message("mycroft.device.show.idle"))
+            self.core_bus.emit(Message("mycroft.device.show.idle",
+                                       context={"session": {"site_id": site_id}}))
             return
 
-        namespace_name = self.active_namespaces[0].skill_id
-        namespace = self.loaded_namespaces.get(namespace_name)
-        if namespace in self.active_namespaces:
+        namespace_name = session.active_namespaces[0].skill_id
+        namespace = session.loaded_namespaces.get(namespace_name)
+        if namespace in session.active_namespaces:
             # prev page
             if namespace.page_number > 0:
                 namespace.global_back()
             # homescreen
             else:
-                self.core_bus.emit(Message("mycroft.device.show.idle"))
+                self.core_bus.emit(Message("mycroft.device.show.idle",
+                                           context={"session": {"site_id": site_id}}))
 
-    def _del_namespace_in_remove_timers(self, namespace_name: str):
+    def _del_namespace_in_remove_timers(self, namespace_name: str, session: GUISession):
         """
         Delete namespace from remove_namespace_timers dict.
         @param namespace_name: name of namespace to be deleted
+        @param session: the session affected
         """
-        if namespace_name in self.remove_namespace_timers:
-            del self.remove_namespace_timers[namespace_name]
+        if namespace_name in session.remove_namespace_timers:
+            del session.remove_namespace_timers[namespace_name]

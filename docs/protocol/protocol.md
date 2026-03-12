@@ -4,10 +4,20 @@ Complete specification for GUI communication between ovos-gui and connected clie
 
 This document covers both **core GUI rendering** and **shell feature extensions** in a unified protocol.
 
+**See also:** [SESSION_AND_SITE_ID_DESIGN.md](../SESSION_AND_SITE_ID_DESIGN.md) for comprehensive multi-session architecture.
+
+## Quick Reference: Sessions and Routing
+
+- **`session_id`** — Unique identifier for a GUI client or screen. Defaults to `"default"` for on-device.
+- **`site_id`** — Unique identifier for a physical location. Groups multiple screens that share state.
+- **Message routing:** Include `__session_id` or `__site_id` in message data to target specific client(s).
+- **Filtering rule:** GUI clients only receive messages for their own `session_id` (or matching `site_id`).
+
 ## Table of Contents
 
 ### Core GUI Protocol
 - [CONNECTION - mycroft.gui.connected](#connection---mycroftguiconnected)
+- [SESSION AND ROUTING](#session-and-routing)
 - [NAMESPACES](#namespaces)
   * [Active Skills - mycroft.system.active_skills](#active-skills---mycroftsystemactive-skills)
 - [PAGES - mycroft.gui.list.xxx](#pages---mycroftguilistxxx)
@@ -36,10 +46,11 @@ This document covers both **core GUI rendering** and **shell feature extensions*
 
 # CONNECTION - mycroft.gui.connected
 
-on connection gui clients announce themselves
+On connection, GUI clients announce themselves with session and site information.
 
 This is an extension by OVOS to the [original mycroft protocol](https://github.com/MycroftAI/mycroft-gui/blob/master/transportProtocol.md)
 
+## Basic Connection (Backward Compatible)
 
 ```javascript
 {
@@ -47,6 +58,160 @@ This is an extension by OVOS to the [original mycroft protocol](https://github.c
     "gui_id": "unique_identifier_provided_by_client"
 }
 ```
+
+When `session_id` and `site_id` are omitted, client defaults to `session_id="default"` (on-device).
+
+## Connection with Session and Site Information
+
+```javascript
+{
+    "type": "mycroft.gui.connected",
+    "gui_id": "unique_identifier_provided_by_client",
+    "session_id": "living_room_tablet",  // Optional: custom session ID
+    "site_id": "kitchen"                 // Optional: location/site identifier
+}
+```
+
+**Fields:**
+- `gui_id` (string, required) — Unique identifier for this client (UUID or MAC address)
+- `session_id` (string, optional) — Session identifier. Defaults to `"default"` if omitted.
+- `site_id` (string, optional) — Site/location identifier for multi-location deployments.
+
+---
+
+# SESSION AND ROUTING
+
+## Message Routing Overview
+
+ovos-gui routes GUI state messages to specific `session_id` or `site_id` based on message content.
+
+| Target Type | How Specified | Recipients |
+|---|---|---|
+| **Specific Session** | `__session_id` in message data | Only clients with matching `session_id` |
+| **Specific Site (Sync Mode)** | `__site_id` in message data | All clients with matching `site_id` (if enabled) |
+| **Default (Legacy)** | Neither specified | Clients with `session_id="default"` only |
+
+## Routing Rules
+
+**Rule 1: Session-Targeted Messages**
+
+When message includes `__session_id`, deliver only to that session:
+
+```javascript
+{
+    "type": "gui.page.show",
+    "data": {
+        "page_names": ["weather"],
+        "__from": "weather_skill",
+        "__session_id": "living_room_tablet"  // ← Only this session receives
+    }
+}
+```
+
+**Rule 2: Site-Targeted Messages (Site-ID Sync Mode)**
+
+When site-ID sync mode is enabled and message includes `__site_id`, deliver to all sessions at that site:
+
+```javascript
+{
+    "type": "gui.page.show",
+    "data": {
+        "page_names": ["music"],
+        "__from": "music_skill",
+        "__site_id": "kitchen"  // ← All GUIs with site_id="kitchen" receive
+    }
+}
+```
+
+**Rule 3: Default Routing (Backward Compatible)**
+
+If neither `__session_id` nor `__site_id` is specified, default to `session_id="default"`:
+
+```javascript
+{
+    "type": "gui.page.show",
+    "data": {
+        "page_names": ["weather"],
+        "__from": "weather_skill"
+        // No __session_id or __site_id → routes to session="default"
+    }
+}
+```
+
+## Message Filtering
+
+GUI clients **must filter incoming messages** to only process those intended for their session:
+
+**Pseudocode:**
+```
+On message received:
+  if message has __session_id:
+    if this_client.session_id != message.__session_id:
+      ignore message  // Not for this session
+  else if message has __site_id:
+    if site_id_sync_enabled and this_client.site_id != message.__site_id:
+      ignore message  // Not for this site
+  // Process message
+```
+
+---
+
+# Multi-Session Examples
+
+## Example 1: On-Device Only (Default Behavior)
+
+```javascript
+// Skill sends normal message (no session info)
+{
+    "type": "gui.page.show",
+    "data": {
+        "page_names": ["weather"],
+        "__from": "weather_skill"
+    }
+}
+
+// ovos-gui routes to: session_id="default"
+// Clients with session_id="default" → show weather
+// All other clients → ignore message
+```
+
+## Example 2: Remote GUI Gets Dedicated Update
+
+```javascript
+// Desktop app skill targets specific session
+{
+    "type": "gui.page.show",
+    "data": {
+        "page_names": ["launcher"],
+        "__from": "app_launcher",
+        "__session_id": "desktop_app"
+    }
+}
+
+// ovos-gui routes to: session_id="desktop_app"
+// Clients with session_id="desktop_app" → show launcher
+// All other clients (including on-device) → ignore
+```
+
+## Example 3: Multi-Location (Site-ID Sync Mode)
+
+```javascript
+// Message targets entire kitchen (site_id_sync_mode=true)
+{
+    "type": "gui.page.show",
+    "data": {
+        "page_names": ["music"],
+        "__from": "music_skill",
+        "__site_id": "kitchen"
+    }
+}
+
+// ovos-gui routes to: all sessions with site_id="kitchen"
+// Clients with site_id="kitchen" → all show music identically
+// Clients at other sites → ignore message
+```
+
+---
 
 # NAMESPACES
 

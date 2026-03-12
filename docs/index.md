@@ -76,8 +76,9 @@ If building a Qt adapter:
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | **[DESIGN_PHILOSOPHY.md](DESIGN_PHILOSOPHY.md)** | Template design, voice-first principles, cross-platform requirements | **All developers** |
+| **[SESSION_AND_SITE_ID_DESIGN.md](SESSION_AND_SITE_ID_DESIGN.md)** | Multi-session/multi-device GUI state partitioning and routing | **System integrators, adapter developers** |
 | **[adapter-development/architecture.md](adapter-development/architecture.md)** | System components and data flow | **Adapter developers** |
-| **[protocol/protocol.md](protocol/protocol.md)** | Wire protocol and message formats | **Adapter developers** |
+| **[protocol/protocol.md](protocol/protocol.md)** | Wire protocol and message formats (includes session routing) | **Adapter developers** |
 
 ### 🏆 Reference Implementation
 
