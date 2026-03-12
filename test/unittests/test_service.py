@@ -52,7 +52,6 @@ class TestGuiService(unittest.TestCase):
             self.assertIsNotNone(service.bus)
             self.assertIsNone(service.extension_manager)
             self.assertIsNone(service.namespace_manager)
-            self.assertIsNone(service.pip_installer)
             self.assertIsNotNone(service.status)
 
     def test_init_with_callbacks(self):
@@ -107,22 +106,10 @@ class TestGuiService(unittest.TestCase):
             # Should wait for connection
             self.mock_bus.connected_event.wait.assert_called_once()
 
-    def test_stop_with_pip_installer(self):
-        """Test stop with pip_installer."""
+    def test_stop(self):
+        """Test stop method."""
         with mock.patch('ovos_gui.service.MessageBusClient', return_value=self.mock_bus):
             service = GUIService()
-            service.pip_installer = mock.Mock()
-
-            service.stop()
-
-            service.pip_installer.shutdown.assert_called_once()
-
-    def test_stop_without_pip_installer(self):
-        """Test stop without pip_installer."""
-        with mock.patch('ovos_gui.service.MessageBusClient', return_value=self.mock_bus):
-            service = GUIService()
-            service.pip_installer = None
-
             # Should not raise
             service.stop()
 
