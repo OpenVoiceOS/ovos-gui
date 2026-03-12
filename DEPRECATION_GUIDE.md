@@ -36,7 +36,6 @@ Understanding the GUI ecosystem requires knowing its history:
 - **The mycroft gui protocol** (WebSocket port 18181): Implemented by the legacy adapter. Both mycroft-gui-qt5 AND mycroft-gui-qt6 connect through the SAME adapter.
 - **"Legacy" naming**: Refers to the protocol's Mycroft AI origins, NOT its current status.
 - **Incompatibility warning**: Pre-OVOS `mycroft-gui` binaries will NOT work. You must recompile from current source and use the latest ovos-gui service.
-- **Legacy QML example**: `ovos-media` still ships QML files in `ovos_media/qt5/` using the old `show_pages` pattern. The Qt clients already have bundled system templates (SYSTEM_ocp_now_playing, etc.) as the replacement. This is a concrete example of the Mycroft→OVOS transition still in progress.
 
 ---
 

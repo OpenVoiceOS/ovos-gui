@@ -12,11 +12,9 @@ The word "legacy" refers to the protocol's **Mycroft AI origins**, not its curre
 
 No. Pre-OVOS `mycroft-gui` binaries are **incompatible**. You must recompile from current source (mycroft-gui-qt5 or mycroft-gui-qt6) and use the latest ovos-gui service.
 
-## What is the legacy QML pattern and where is it still used?
+## What is the legacy QML pattern?
 
 The original Mycroft AI approach had skills ship arbitrary QML files over the wire at runtime using `show_pages`. OVOS replaced this with bundled system templates (SYSTEM_text, SYSTEM_weather, SYSTEM_ocp_now_playing, etc.) where skills send structured data instead of UI code.
-
-`ovos-media` still ships QML files in `ovos_media/qt5/` using the old `show_pages` pattern. The Qt clients already bundle the replacement system templates (e.g., SYSTEM_ocp_now_playing). This is a concrete example of the Mycroft-to-OVOS transition still in progress.
 
 ## How do skills display GUI content in OVOS?
 
