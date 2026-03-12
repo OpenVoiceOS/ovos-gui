@@ -134,6 +134,7 @@ Skills **must not** call `show_page()` directly. Use the typed methods below.
 | `show_table(columns, rows, title)` | `SYSTEM_table` | `title`, `columns`, `rows` |
 | `show_audio_player(title, artist, album, image, playing, position, duration)` | `SYSTEM_audio_player` | all of the above |
 | `show_video_player(uri, title, playing)` | `SYSTEM_video_player` | `uri`, `title`, `playing` |
+| `show_media_player(now_playing, playlist, search_results, state)` | `SYSTEM_media_player` | see §4.3a |
 | `show_clock()` | `SYSTEM_clock` | — (JS-driven) |
 | `show_timer(end_time, label, count_up)` | `SYSTEM_timer` | `end_time`, `label`, `count_up` |
 | `show_weather(current_temp, min_temp, max_temp, condition, icon, location)` | `SYSTEM_weather` | all of the above |
@@ -141,6 +142,128 @@ Skills **must not** call `show_page()` directly. Use the typed methods below.
 | `show_confirm(question)` | `SYSTEM_confirm` | `question` |
 | `show_select(items, prompt)` | `SYSTEM_select` | `prompt`, `items` |
 | `show_face(awake)` | `SYSTEM_face` | `sleeping` |
+
+### 4.3a `show_media_player` — OCP Media Player Template
+
+**Caller:** `ovos-media` (`OCPMediaPlayer._update_gui()`) — the only component that calls this template.
+Individual media backend plugins (`AudioService`, `VideoService`, `WebService`) do **not** call any GUI template directly; they handle audio/video/web rendering only.
+
+**Purpose:** Render the full OCP media player UI: currently-playing metadata, playback controls, playlist queue, and search results — equivalent to the historical OCP QML player screen. Adapters implement this as a single multi-view surface (tabs, panels, or pages).
+
+**Signature:**
+
+```python
+def show_media_player(
+    self,
+    now_playing: dict | None = None,
+    playlist: list[dict] | None = None,
+    search_results: list[dict] | None = None,
+    state: str = "playing",  # "playing" | "paused" | "stopped" | "loading" | "error"
+) -> None:
+```
+
+**Session data keys written by `show_media_player`:**
+
+| Key | Type | Description |
+|---|---|---|
+| `ocp_title` | `str` | Track title |
+| `ocp_artist` | `str` | Artist name |
+| `ocp_album` | `str` | Album name |
+| `ocp_image` | `str` | Album art URL or `data:` URI |
+| `ocp_uri` | `str` | Currently playing URI (for deep-link or progress reporting) |
+| `ocp_position` | `int` | Playback position in milliseconds |
+| `ocp_duration` | `int` | Track duration in milliseconds; `-1` if unknown/live |
+| `ocp_playback_state` | `str` | `"playing"` / `"paused"` / `"stopped"` / `"loading"` / `"error"` |
+| `ocp_playlist` | `list[dict]` | Ordered queue; each item: `{title, artist, image, uri, duration}` |
+| `ocp_search_results` | `list[dict]` | Search result entries; each: `{title, artist, image, uri, skill_id, match_confidence}` |
+| `ocp_playlist_position` | `int` | Index of the currently playing track in `ocp_playlist` |
+
+**`now_playing` dict keys** (subset of `NowPlaying` serialisation):
+
+```python
+{
+    "title": str,
+    "artist": str,
+    "album": str,
+    "image": str,           # URL or data: URI
+    "uri": str,
+    "position": int,        # milliseconds
+    "duration": int,        # milliseconds; -1 for live streams
+}
+```
+
+**Playlist / search result item dict:**
+
+```python
+# playlist item
+{"title": str, "artist": str, "image": str, "uri": str, "duration": int}
+
+# search result item
+{"title": str, "artist": str, "image": str, "uri": str,
+ "skill_id": str, "match_confidence": float}
+```
+
+**`state` values and their UI meaning:**
+
+| State | Adapter behaviour |
+|---|---|
+| `"playing"` | Show play controls; scrubbar advancing |
+| `"paused"` | Show play controls; scrubbar frozen |
+| `"stopped"` | Show idle/empty player with playlist visible |
+| `"loading"` | Show spinner over artwork; disable seek/skip |
+| `"error"` | Show error indicator; keep last metadata visible |
+
+**How adapters should render the three views:**
+
+Adapters receive all three data sets in every call. They should provide navigation between:
+1. **Now Playing** — large artwork, title/artist, scrubbar, prev/play-pause/next, shuffle/repeat controls
+2. **Queue** — ordered list of `ocp_playlist` items; tap to jump; current item highlighted
+3. **Search Results** — grid or list of `ocp_search_results`; tap to enqueue or play immediately
+
+The adapter decides the UX (tabs, swipe panels, separate pages). `ovos-media` only pushes data.
+
+**Interaction events (GUI → OCP bus):**
+
+Adapters emit these bus messages in response to user touch:
+
+| User action | Bus message emitted | Data |
+|---|---|---|
+| Play/Pause button | `ovos.common_play.play_pause` | `{}` |
+| Next button | `ovos.common_play.next` | `{}` |
+| Previous button | `ovos.common_play.prev` | `{}` |
+| Seek scrubbar | `ovos.common_play.seek` | `{"position": ms}` |
+| Tap playlist item | `ovos.common_play.playlist.play_index` | `{"index": int}` |
+| Tap search result | `ovos.common_play.search.play` | `{"uri": str, "skill_id": str}` |
+| Shuffle toggle | `ovos.common_play.shuffle.toggle` | `{}` |
+| Repeat toggle | `ovos.common_play.repeat.toggle` | `{}` |
+
+**Example call from `ovos-media`:**
+
+```python
+self.gui.show_media_player(
+    now_playing={
+        "title": "Bohemian Rhapsody",
+        "artist": "Queen",
+        "album": "A Night at the Opera",
+        "image": "https://…/cover.jpg",
+        "uri": "spotify:track:xyz",
+        "position": 42000,
+        "duration": 354000,
+    },
+    playlist=[
+        {"title": "Don't Stop Me Now", "artist": "Queen",
+         "image": "…", "uri": "spotify:track:abc", "duration": 209000},
+    ],
+    search_results=[],
+    state="playing",
+)
+```
+
+**Responsibility boundary:**
+
+- `ovos-media` calls `show_media_player()` to push metadata and state. It never calls `show_video_player()` or `show_url()`.
+- Individual backend plugins (`VideoService`, `WebService` subclasses) may call `show_video_player()` or `show_url()` on their own `GUIInterface` namespace when they take over rendering (e.g., a full-screen video overlay). This is separate from the OCP player chrome.
+- `show_audio_player()` is now **deprecated for OCP use** — `show_media_player()` supersedes it for all media service callers. `show_audio_player()` remains valid for simple skills that play a single audio track without playlist/search UI needs.
 
 ### 4.4 Image Delivery
 
@@ -392,6 +515,7 @@ _TEMPLATE_HANDLERS = {
     "SYSTEM_url":            "handle_show_url",
     "SYSTEM_audio_player":   "handle_show_audio_player",
     "SYSTEM_video_player":   "handle_show_video_player",
+    "SYSTEM_media_player":   "handle_show_media_player",
     "SYSTEM_clock":          "handle_show_clock",
     "SYSTEM_timer":          "handle_show_timer",
     "SYSTEM_weather":        "handle_show_weather",
@@ -612,8 +736,9 @@ Use this checklist to confirm the implementation matches this spec:
 ### ovos-plugin-manager
 
 - [ ] `PluginTypes.GUI_ADAPTER = "opm.gui_adapter"` exists in `ovos_plugin_manager/utils/__init__.py`
-- [ ] `AbstractGUIPlugin` in `templates/gui.py` has all 21 `handle_show_*` methods (defaulting to no-op)
-- [ ] `AbstractGUIPlugin._TEMPLATE_HANDLERS` maps all 21 `SYSTEM_*` strings to handler names
+- [ ] `AbstractGUIPlugin` in `templates/gui.py` has all 22 `handle_show_*` methods (defaulting to no-op)
+- [ ] `AbstractGUIPlugin._TEMPLATE_HANDLERS` maps all 22 `SYSTEM_*` strings to handler names
+- [ ] `handle_show_media_player(self, skill_id, data, site_id="default")` exists (default no-op)
 - [ ] `dispatch_template()` catches and logs exceptions without re-raising
 - [ ] `on_namespace_activated`, `on_namespace_deactivated`, `on_idle`, `on_session_update`, `on_status_event` all exist (defaulting to no-op)
 - [ ] `OVOSGUIAdapterFactory.create_all()` in `gui_adapter.py` loads all installed plugins
@@ -636,7 +761,9 @@ Use this checklist to confirm the implementation matches this spec:
 ### ovos-gui-api-client
 
 - [ ] `GUIInterface` is the class exported from `ovos_gui_api_client`
-- [ ] All 21 `show_*()` methods exist and set the correct session data keys before calling `_show_page(PageTemplates.SYSTEM_*)`
+- [ ] All 22 `show_*()` methods exist and set the correct session data keys before calling `_show_page(PageTemplates.SYSTEM_*)`
+- [ ] `show_media_player(now_playing, playlist, search_results, state)` exists and writes all `ocp_*` session keys (see §4.3a)
+- [ ] `PageTemplates.SYSTEM_media_player` constant exists
 - [ ] `show_image()` and `show_animated_image()` base64-encode local file paths into `data:` URIs
 - [ ] `show_image()` with a non-existent local path logs an error and returns without emitting
 - [ ] `PageTemplates`, `FillMode`, `ListItem`, `GridItem`, `SelectItem` are all exported
