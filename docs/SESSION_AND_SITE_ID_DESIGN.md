@@ -50,9 +50,26 @@ A **site** is a physical location containing one or more screens. The `site_id` 
 
 ## Message Routing and Filtering
 
-### Rule 1: Session-Based Message Delivery
+### Rule 1: Session Established at Connection
 
-GUI clients **only receive messages for their own `session_id`**.
+When a GUI client connects, it announces its `session_id` and `site_id` **once**:
+
+```
+GUI Client connects to ovos-gui:
+  {
+    "type": "mycroft.gui.connected",
+    "gui_id": "unique_id",
+    "session_id": "living_room_tablet",
+    "site_id": "kitchen"
+  }
+         ↓
+ovos-gui registers this client with those identifiers
+From this point, the session is fixed for this connection
+```
+
+### Rule 2: Message Routing by Session
+
+After connection, ovos-gui routes **all messages** based on the client's registered `session_id`:
 
 ```
 Core Bus (ovos-core) sends:
@@ -60,43 +77,75 @@ Core Bus (ovos-core) sends:
     "type": "gui.page.show",
     "data": {
       "page_names": [...],
-      "__from": "skill_id",
-      "__session_id": "living_room_tablet"  // ← target session
+      "__from": "skill_id"
+      // No __session_id needed - route by registered session
     }
   }
          ↓
-ovos-gui receives message
-         ↓
-Only GUI client with session_id="living_room_tablet" receives the message
-All other connected GUIs see nothing
+ovos-gui delivers to:
+  1. Clients with session_id="default" (backward compatible)
+  2. If __session_id in message, route to that specific session only
+  3. If __site_id in message (sync mode), route to all at that site
+
+Result: Each GUI client sees only messages for its session
 ```
 
-### Rule 2: Site-ID Grouping (Optional)
+### Rule 3: Optional Message Targeting
 
-When **site_id sync mode** is enabled:
-- Messages target `site_id`, not `session_id`
-- All GUIs reporting the same `site_id` receive identical state updates
+Messages **can** include `__session_id` or `__site_id` to target **specific** sessions:
 
 ```
-ovos-gui (site_id sync mode):
+When a skill needs to target a specific session:
   {
     "type": "gui.page.show",
     "data": {
       "page_names": [...],
       "__from": "skill_id",
-      "__site_id": "kitchen"  // ← target site
+      "__session_id": "desktop_app"  // ← Target ONLY this session
     }
   }
          ↓
-All GUI clients with site_id="kitchen" receive update
-All other sites see nothing
+Only the client with session_id="desktop_app" receives
+All other sessions (including default) ignore this message
 ```
 
-### Rule 3: Default Behavior (No Session/Site Specified)
+### Rule 4: Site-ID Grouping (Sync Mode)
 
-If neither `__session_id` nor `__site_id` is present in a message:
-- Default to `session_id="default"` (on-device screen)
-- Ensures backward compatibility with legacy skills
+When **site_id sync mode** is enabled, messages can target by site:
+
+```
+With site_id_sync_mode=true:
+  {
+    "type": "gui.page.show",
+    "data": {
+      "page_names": [...],
+      "__from": "skill_id",
+      "__site_id": "kitchen"  // ← Target all at this site
+    }
+  }
+         ↓
+All clients with site_id="kitchen" receive and update identically
+Clients at other sites ignore this message
+```
+
+### Rule 5: Default Routing (No Explicit Target)
+
+If message has **no** `__session_id` or `__site_id`, route to session `"default"`:
+
+```
+Standard skill message (no targeting):
+  {
+    "type": "gui.page.show",
+    "data": {
+      "page_names": [...],
+      "__from": "skill_id"
+      // No __session_id or __site_id
+    }
+  }
+         ↓
+Routes to: All clients with session_id="default"
+This ensures backward compatibility with existing skills
+```
 
 ---
 
@@ -281,9 +330,9 @@ Bedroom (site_id="bedroom"):
 - `session_id` — Session identifier (if omitted, uses `"default"`)
 - `site_id` — Site identifier for multi-location deployments (optional)
 
-### Message Routing Fields
+### Optional Message Routing Fields
 
-All messages from core bus should include:
+Messages **can** include targeting fields to override default routing:
 
 ```javascript
 {
@@ -291,18 +340,18 @@ All messages from core bus should include:
   "data": {
     "page_names": [...],
     "__from": "skill_id",
-    "__session_id": "specific_session",  // Send to this session only
+    "__session_id": "specific_session",  // (Optional) Route ONLY to this session
     // OR
-    "__site_id": "kitchen",              // Send to all sessions at this site
+    "__site_id": "kitchen",              // (Optional) Route to all at this site
     "__idle": 10                         // Auto-remove after 10 seconds
   }
 }
 ```
 
-**Routing Priority:**
-1. If `__session_id` present → route to that specific session
-2. Else if `__site_id` present → route to all sessions at that site (if sync mode enabled)
-3. Else → route to `session_id="default"` (backward compatible)
+**Routing Decision Tree:**
+1. If `__session_id` present → route to that session only
+2. Else if `__site_id` present and sync mode enabled → route to all sessions at that site
+3. Else → route to all clients with `session_id="default"` (backward compatible)
 
 ---
 
@@ -408,10 +457,29 @@ gui:
 
 ## Message Examples
 
-### Example 1: On-Device Skill Show Page
+### Example 1: Connection Establishes Session
 
 ```javascript
-// Skill sends to core bus (normal scenario, no session specified)
+// GUI Client connects (once, on startup)
+{
+  "type": "mycroft.gui.connected",
+  "gui_id": "qt6-kitchen-primary",
+  "session_id": "kitchen_screen",
+  "site_id": "kitchen"
+}
+
+// ovos-gui registers:
+// clients["qt6-kitchen-primary"] = {
+//   session_id: "kitchen_screen",
+//   site_id: "kitchen",
+//   adapter: <reference to adapter instance>
+// }
+```
+
+### Example 2: On-Device Skill Show Page
+
+```javascript
+// Skill sends to core bus (normal scenario, no targeting)
 {
   "type": "gui.page.show",
   "data": {
@@ -420,19 +488,18 @@ gui:
   }
 }
 
-// ovos-gui:
-//   1. No __session_id, no __site_id → default to "default"
-//   2. Update session["default"].active_namespaces
-//   3. Call adapters.on_namespace_activated(..., session_id="default")
-//   4. On-device screen shows weather
+// ovos-gui routes to:
+//   1. All clients with session_id="default" (on-device screens)
+//   2. Ignores clients with other session_ids
 
 // Result: Only the on-device screen (session="default") shows weather
+//         Desktop app, tablet, etc. are unaffected
 ```
 
-### Example 2: Remote GUI Gets Exclusive Update
+### Example 3: Remote GUI Gets Exclusive Update
 
 ```javascript
-// Desktop app skill sends with explicit session
+// Desktop app skill targets specific session
 {
   "type": "gui.page.show",
   "data": {
@@ -442,17 +509,22 @@ gui:
   }
 }
 
-// ovos-gui:
-//   1. Route to session["desktop_app"]
-//   2. Call adapters.on_namespace_activated(..., session_id="desktop_app")
+// ovos-gui routes to:
+//   1. Only clients registered with session_id="desktop_app"
+//   2. All other sessions (including default) ignore this
 
-// Result: Only the desktop app GUI shows launcher, on-device screen unaffected
+// Result: Only the desktop app GUI shows launcher
+//         On-device screen continues showing weather (from Example 2)
 ```
 
-### Example 3: Site-ID Sync (Multi-Location)
+### Example 4: Site-ID Sync (Multi-Location)
 
 ```javascript
-// With site_id_sync_mode=true
+// Two GUIs connected to same site:
+// GUI1: session_id="kitchen_screen1", site_id="kitchen"
+// GUI2: session_id="kitchen_tablet", site_id="kitchen"
+
+// Skill sends with site targeting (only if site_id_sync_mode=true)
 {
   "type": "gui.page.show",
   "data": {
@@ -462,14 +534,12 @@ gui:
   }
 }
 
-// ovos-gui:
-//   1. Find all sessions where site_id="kitchen"
-//   2. Update each: session[s].active_namespaces
-//   3. Call adapters for each session
-//      on_namespace_activated(..., session_id="kitchen_screen1")
-//      on_namespace_activated(..., session_id="kitchen_tablet")
+// ovos-gui routes to:
+//   1. All clients with site_id="kitchen"
+//   2. Updates both kitchen_screen1 AND kitchen_tablet identically
 
-// Result: Both kitchen screens show music identically
+// Result: Both kitchen screens show music in perfect sync
+//         Bedroom screens (site_id="bedroom") see nothing
 ```
 
 ---

@@ -83,34 +83,93 @@ When `session_id` and `site_id` are omitted, client defaults to `session_id="def
 
 ## Message Routing Overview
 
-ovos-gui routes GUI state messages to specific `session_id` or `site_id` based on message content.
+**Session ID is established ONCE at connection.** ovos-gui then routes messages based on:
 
-| Target Type | How Specified | Recipients |
-|---|---|---|
-| **Specific Session** | `__session_id` in message data | Only clients with matching `session_id` |
-| **Specific Site (Sync Mode)** | `__site_id` in message data | All clients with matching `site_id` (if enabled) |
-| **Default (Legacy)** | Neither specified | Clients with `session_id="default"` only |
+1. **Client's registered `session_id`** (from connection)
+2. **Optional message targeting** via `__session_id` or `__site_id`
 
-## Routing Rules
+| Scenario | Routing | Recipients |
+|----------|---------|-----------|
+| **No targeting** | Use client's registered `session_id` | All clients with same `session_id` |
+| **Message has `__session_id`** | Override: route to that session only | Only specified `session_id` |
+| **Message has `__site_id`** (sync mode) | Override: route to all at site | All clients with matching `site_id` |
 
-**Rule 1: Session-Targeted Messages**
+## Routing Decision Process
 
-When message includes `__session_id`, deliver only to that session:
+**Step 1: Client Connects (One-Time)**
+
+```javascript
+{
+    "type": "mycroft.gui.connected",
+    "gui_id": "client_id",
+    "session_id": "living_room_tablet",  // ← Established once
+    "site_id": "kitchen"                 // ← Established once
+}
+
+// ovos-gui registers and remembers:
+// "client_id" → session_id="living_room_tablet", site_id="kitchen"
+```
+
+**Step 2: Message Arrives (With or Without Targeting)**
 
 ```javascript
 {
     "type": "gui.page.show",
     "data": {
         "page_names": ["weather"],
-        "__from": "weather_skill",
-        "__session_id": "living_room_tablet"  // ← Only this session receives
+        "__from": "weather_skill"
+        // session_id/site_id NOT in message - use client's registered values
     }
 }
+
+// ovos-gui decision tree:
+// 1. Check message for __session_id or __site_id
+// 2. If found, route to that target
+// 3. If not found, route to client's registered session_id
 ```
 
-**Rule 2: Site-Targeted Messages (Site-ID Sync Mode)**
+## Routing Rules
 
-When site-ID sync mode is enabled and message includes `__site_id`, deliver to all sessions at that site:
+**Rule 1: Default Routing (Most Common)**
+
+No `__session_id` or `__site_id` in message → route to client's registered session:
+
+```javascript
+{
+    "type": "gui.page.show",
+    "data": {
+        "page_names": ["weather"],
+        "__from": "weather_skill"
+        // No __session_id or __site_id
+    }
+}
+
+// Clients with session_id="default" → receive message
+// Clients with session_id="desktop_app" → ignore message
+// Clients with session_id="kitchen_screen" → ignore message
+```
+
+**Rule 2: Session-Targeted Messages**
+
+Message includes `__session_id` → route ONLY to that session, override client registration:
+
+```javascript
+{
+    "type": "gui.page.show",
+    "data": {
+        "page_names": ["launcher"],
+        "__from": "app_launcher",
+        "__session_id": "desktop_app"  // ← Override, route ONLY here
+    }
+}
+
+// Only client registered with session_id="desktop_app" receives
+// All other clients ignore, even if their session is "default"
+```
+
+**Rule 3: Site-Targeted Messages (Sync Mode)**
+
+When enabled, message with `__site_id` routes to all clients at that site:
 
 ```javascript
 {
@@ -118,50 +177,65 @@ When site-ID sync mode is enabled and message includes `__site_id`, deliver to a
     "data": {
         "page_names": ["music"],
         "__from": "music_skill",
-        "__site_id": "kitchen"  // ← All GUIs with site_id="kitchen" receive
+        "__site_id": "kitchen"  // ← Route to all at this site
     }
 }
+
+// All clients with site_id="kitchen" receive
+// All other sites ignore
 ```
 
-**Rule 3: Default Routing (Backward Compatible)**
+## Message Filtering by Clients
 
-If neither `__session_id` nor `__site_id` is specified, default to `session_id="default"`:
-
-```javascript
-{
-    "type": "gui.page.show",
-    "data": {
-        "page_names": ["weather"],
-        "__from": "weather_skill"
-        // No __session_id or __site_id → routes to session="default"
-    }
-}
-```
-
-## Message Filtering
-
-GUI clients **must filter incoming messages** to only process those intended for their session:
+GUI clients **must respect routing** and ignore messages not for their session:
 
 **Pseudocode:**
 ```
 On message received:
-  if message has __session_id:
-    if this_client.session_id != message.__session_id:
-      ignore message  // Not for this session
-  else if message has __site_id:
-    if site_id_sync_enabled and this_client.site_id != message.__site_id:
-      ignore message  // Not for this site
-  // Process message
+  target_session = message.__session_id ?? my_session_id
+  target_site = message.__site_id ?? my_site_id
+
+  if target_session and target_session != my_session_id:
+    ignore  // Not for this session
+
+  if target_site and target_site != my_site_id:
+    ignore  // Not for this site
+
+  process_message()
 ```
 
 ---
 
 # Multi-Session Examples
 
-## Example 1: On-Device Only (Default Behavior)
+## Example 1: Connection Establishes Sessions
 
 ```javascript
-// Skill sends normal message (no session info)
+// On-Device GUI connects
+{
+    "type": "mycroft.gui.connected",
+    "gui_id": "qt6-default",
+    "session_id": "default",
+    "site_id": "default"
+}
+
+// Desktop App GUI connects (same device, different session)
+{
+    "type": "mycroft.gui.connected",
+    "gui_id": "qt6-desktop",
+    "session_id": "desktop_app",
+    "site_id": "default"
+}
+
+// ovos-gui now knows:
+// "qt6-default" → session="default"
+// "qt6-desktop" → session="desktop_app"
+```
+
+## Example 2: Default Routing (No Explicit Targeting)
+
+```javascript
+// Skill sends normal message (no __session_id or __site_id)
 {
     "type": "gui.page.show",
     "data": {
@@ -170,15 +244,15 @@ On message received:
     }
 }
 
-// ovos-gui routes to: session_id="default"
+// ovos-gui routes to:
 // Clients with session_id="default" → show weather
-// All other clients → ignore message
+// Clients with session_id="desktop_app" → ignore (different session)
 ```
 
-## Example 2: Remote GUI Gets Dedicated Update
+## Example 3: Remote GUI Gets Exclusive Update
 
 ```javascript
-// Desktop app skill targets specific session
+// Desktop app skill explicitly targets its own session
 {
     "type": "gui.page.show",
     "data": {
@@ -188,15 +262,38 @@ On message received:
     }
 }
 
-// ovos-gui routes to: session_id="desktop_app"
+// ovos-gui routes to: ONLY session_id="desktop_app"
 // Clients with session_id="desktop_app" → show launcher
-// All other clients (including on-device) → ignore
+// Clients with session_id="default" → ignore (targeted to other session)
 ```
 
-## Example 3: Multi-Location (Site-ID Sync Mode)
+## Example 4: Multi-Location (Site-ID Sync Mode)
 
 ```javascript
-// Message targets entire kitchen (site_id_sync_mode=true)
+// Kitchen GUIs connect (same site, different sessions)
+{
+    "type": "mycroft.gui.connected",
+    "gui_id": "qt6-kitchen-screen",
+    "session_id": "kitchen_screen1",
+    "site_id": "kitchen"
+}
+
+{
+    "type": "mycroft.gui.connected",
+    "gui_id": "qt6-kitchen-tablet",
+    "session_id": "kitchen_tablet",
+    "site_id": "kitchen"
+}
+
+// Bedroom GUI connects (different site)
+{
+    "type": "mycroft.gui.connected",
+    "gui_id": "qt6-bedroom",
+    "session_id": "bedroom_screen",
+    "site_id": "bedroom"
+}
+
+// Message with site targeting (requires site_id_sync_mode=true)
 {
     "type": "gui.page.show",
     "data": {
@@ -206,9 +303,9 @@ On message received:
     }
 }
 
-// ovos-gui routes to: all sessions with site_id="kitchen"
-// Clients with site_id="kitchen" → all show music identically
-// Clients at other sites → ignore message
+// ovos-gui routes to: all clients with site_id="kitchen"
+// Clients at site="kitchen" → both show music identically
+// Clients at site="bedroom" → ignore (different site)
 ```
 
 ---
