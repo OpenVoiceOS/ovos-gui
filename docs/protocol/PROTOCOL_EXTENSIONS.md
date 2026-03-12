@@ -4,20 +4,22 @@
 **Source**: `ovos-legacy-mycroft-gui-plugin/docs/PROTOCOL_EXTENSIONS.md`
 **Status**: ✅ Implemented in adapter and Qt client
 
-## ⚠️ Important: Two-Bus Architecture
+## ⚠️ Important: Client Connection Architecture
 
-This document describes **WebSocket protocol messages** (port 18181). Before reading this, you should understand the **two separate buses** that Qt GUI clients use:
+This document describes **WebSocket protocol messages sent on port 18181**. Qt GUI clients connect **ONLY** to this port.
 
-| Bus | Port | Route | Purpose |
-|-----|------|-------|---------|
-| **Main OVOS MessageBus** | 8181 | `/core` | System events (skills, recognition, TTS) |
-| **GUI WebSocket** | 18181 | `/gui` | Templates + shell features (brightness, colors, notifications, widgets) |
+| Component | Port | Route | Access | Purpose |
+|-----------|------|-------|--------|---------|
+| **OVOS Core** | 8181 | `/core` | **INTERNAL ONLY** | System events (skills, recognition, TTS) |
+| **GUI WebSocket** | 18181 | `/gui` | **Qt clients** | Templates + shell features |
+
+**Critical**: Qt clients do **NOT** connect to port 8181. That port is internal to OVOS.
 
 **Read first**: [`ovos-legacy-mycroft-gui-plugin/docs/TWO_BUS_ARCHITECTURE.md`](../../ovos-legacy-mycroft-gui-plugin/docs/TWO_BUS_ARCHITECTURE.md) to understand:
-- How Qt clients connect to both buses
+- Qt clients connect **ONLY** to port 18181/gui
+- Port 8181 is internal (not for client use)
+- How the adapter bridges between the buses (internal detail)
 - Configuration for port 18181 and route `/gui`
-- Message flow between OVOS MessageBus and GUI WebSocket
-- Troubleshooting connection issues
 
 ---
 
