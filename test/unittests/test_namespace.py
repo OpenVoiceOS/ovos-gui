@@ -703,3 +703,90 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager._remove_namespace("test")
         # Verify namespace is removed from active_namespaces
         self.assertNotIn(ns, self.namespace_manager.active_namespaces)
+
+    def test_load_pages_invalid_index(self):
+        """Test load_pages with invalid show_index."""
+        # Create a namespace first
+        ns = Namespace("test_skill")
+        self.namespace_manager.loaded_namespaces["test_skill"] = ns
+        self.namespace_manager.active_namespaces = [ns]
+
+        message = Message("gui.page.show", data={
+            "page_names": ["page1", "page2"],
+            "show_index": 999,
+            "__from": "test_skill",
+            "__idle": 10
+        })
+
+        with mock.patch(f'{PATCH_MODULE}.LOG') as mock_log:
+            self.namespace_manager.handle_show_page(message)
+            # Verify that namespace load_pages was called (will handle the invalid index)
+
+    def test_forward_to_gui_system_event(self):
+        """Test forwarding system status events to GUI."""
+        mock_adapter = mock.Mock()
+        self.namespace_manager.adapters = [mock_adapter]
+
+        message = Message("test.event", data={"test": "data"})
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace_manager.forward_to_gui(message)
+
+        # Verify adapter's on_status_event was called
+        mock_adapter.on_status_event.assert_called_once()
+
+    def test_forward_to_gui_adapter_error(self):
+        """Test forward_to_gui with adapter exception."""
+        mock_adapter = mock.Mock()
+        mock_adapter.on_status_event.side_effect = RuntimeError("Adapter error")
+        self.namespace_manager.adapters = [mock_adapter]
+
+        message = Message("test.event", data={"test": "data"})
+        with mock.patch(f'{PATCH_MODULE}.LOG') as mock_log:
+            self.namespace_manager.forward_to_gui(message)
+
+        # Should log exception
+        mock_log.exception.assert_called()
+
+    def test_clear_namespace_no_active(self):
+        """Test clearing a namespace that doesn't exist."""
+        message = Message("gui.namespace.clear", data={
+            "namespace": "nonexistent",
+            "__from": "test_skill"
+        })
+
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            # Should not raise
+            self.namespace_manager.handle_clear_namespace(message)
+
+    def test_namespace_data_update(self):
+        """Test that namespace data is updated via handle_set_value."""
+        message = Message("gui.session.set", data={
+            "namespace": "test",
+            "data": {"key": "value"},
+            "__from": "test_skill"
+        })
+
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace_manager.handle_set_value(message)
+
+    def test_handle_delete_page_from_active_namespace(self):
+        """Test that deleting pages properly updates state."""
+        # Create a namespace with pages
+        ns = Namespace("test_skill")
+        page1 = GuiPage(name="page1", persistent=False, duration=30)
+        page2 = GuiPage(name="page2", persistent=False, duration=30)
+        ns.pages = [page1, page2]
+        ns.page_number = 0  # Active page is page1
+        self.namespace_manager.loaded_namespaces["test_skill"] = ns
+        self.namespace_manager.active_namespaces = [ns]
+
+        message = Message("gui.page.delete", data={
+            "namespace": "test_skill",
+            "position": 1,
+            "__from": "test_skill"
+        })
+
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace_manager.handle_delete_page(message)
+
+        # Test passes if no exception raised

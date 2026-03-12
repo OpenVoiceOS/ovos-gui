@@ -125,3 +125,35 @@ class TestGuiService(unittest.TestCase):
 
             # Should not raise
             service.stop()
+
+    def test_run(self):
+        """Test run method initialization sequence."""
+        with mock.patch('ovos_gui.service.MessageBusClient', return_value=self.mock_bus), \
+             mock.patch('ovos_gui.service.ServiceInstaller') as mock_installer_class, \
+             mock.patch('ovos_gui.service.NamespaceManager') as mock_ns_mgr_class:
+            mock_installer = mock.MagicMock()
+            mock_installer_class.return_value = mock_installer
+            mock_ns_mgr = mock.MagicMock()
+            mock_ns_mgr_class.return_value = mock_ns_mgr
+
+            service = GUIService()
+            service.status = mock.MagicMock()
+            service.run()
+
+            # Verify status methods were called in sequence
+            service.status.set_alive.assert_called_once()
+            service.status.set_ready.assert_called_once()
+            # Verify namespace manager was created
+            mock_ns_mgr_class.assert_called_once()
+
+    def test_run_full_flow(self):
+        """Test run method full flow with real status object."""
+        with mock.patch('ovos_gui.service.MessageBusClient', return_value=self.mock_bus), \
+             mock.patch('ovos_gui.service.ServiceInstaller'), \
+             mock.patch('ovos_gui.service.NamespaceManager'):
+            service = GUIService()
+            service.run()
+
+            # Verify service initialized properly
+            self.assertIsNotNone(service.namespace_manager)
+            self.assertIsNotNone(service.pip_installer)
