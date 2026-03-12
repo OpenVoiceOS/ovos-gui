@@ -8,28 +8,26 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    env:
-      PYTHON: '3.9'
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v4
     - name: Setup Python
-      uses: actions/setup-python@master
+      uses: actions/setup-python@v5
       with:
-        python-version: 3.14
+        python-version: '3.11'
     - name: Install System Dependencies
       run: |
         sudo apt-get update
         sudo apt install python3-dev libssl-dev
-        python -m pip install build wheel
+        pip install uv
     - name: Install test dependencies
       run: |
-          pip install -r test/requirements.txt
+        uv pip install -r test/requirements.txt
     - name: Install core repo
       run: |
-        pip install -e .
+        uv pip install -e .
     - name: Generate coverage report
       run: |
-        pytest --cov=ovos_gui --cov-report xml test/unittests 
+        uv run pytest --cov=ovos_gui --cov-report xml test/unittests
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
