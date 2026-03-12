@@ -1,9 +1,9 @@
 from ovos_bus_client import MessageBusClient, Message
+from ovos_config.config import Configuration
+from ovos_gui.namespace import NamespaceManager
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
-from ovos_config.config import Configuration
-from ovos_gui.extensions import ExtensionsManager
-from ovos_gui.namespace import NamespaceManager
+from ovos_utils.skill_installer import ServiceInstaller
 
 
 def on_started():
@@ -33,6 +33,7 @@ class GUIService:
         self.bus = MessageBusClient()
         self.extension_manager = None
         self.namespace_manager = None
+        self.pip_installer: ServiceInstaller = None  # initialised after bus connects
         callbacks = StatusCallbackMap(on_started=started_hook,
                                       on_alive=alive_hook,
                                       on_ready=ready_hook,
@@ -52,6 +53,18 @@ class GUIService:
         self.bus.connected_event.wait()
         LOG.info('Connected to messagebus')
 
+    def _load_adapter_plugins(self):
+        """Load all installed ``opm.gui_adapter`` plugins and return instances."""
+        try:
+            from ovos_plugin_manager.gui_adapter import OVOSGUIAdapterFactory
+            adapter_config = Configuration().get("gui", {}).get("adapters", {})
+            adapters = OVOSGUIAdapterFactory.create_all(config=adapter_config, bus=self.bus)
+            LOG.info(f"Loaded {len(adapters)} GUI adapter plugin(s)")
+            return adapters
+        except Exception:
+            LOG.exception("Failed to load GUI adapter plugins")
+            return []
+
     def run(self):
         """
         Start the GUI after it has been constructed.
@@ -60,9 +73,9 @@ class GUIService:
         # if they may cause the Service to fail.
         self.status.set_alive()
         self._init_bus_client()
-
-        self.extension_manager = ExtensionsManager("EXTENSION_SERVICE", self.bus)
-        self.namespace_manager = NamespaceManager(self.bus)
+        self.pip_installer = ServiceInstaller(self.bus, service_name="ovos_gui")
+        adapters = self._load_adapter_plugins()
+        self.namespace_manager = NamespaceManager(self.bus, adapters=adapters)
         self.status.set_ready()
         LOG.info(f"GUI Service Ready")
 
@@ -77,3 +90,5 @@ class GUIService:
         Perform any GUI shutdown processes.
         """
         self.status.set_stopping()
+        if self.pip_installer:
+            self.pip_installer.shutdown()
