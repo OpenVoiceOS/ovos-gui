@@ -1,13 +1,39 @@
 # OVOS GUI MessageBus
 
-GUI messagebus service, manages GUI state and implements the [gui protocol](./protocol.md)
+**Template-based GUI system for OpenVoiceOS**
 
-GUI clients (the application that actually draws the GUI) connect to this service
+The GUI messagebus service manages GUI state and implements the standardized template protocol. GUI clients (Qt, web, etc.) connect to this service to receive data and display it.
 
+---
 
-# Configuration
+## 📚 Documentation
 
-under mycroft.conf
+**All documentation is in the [docs/](docs/) folder. Start here:**
+
+- **[docs/index.md](docs/index.md)** — 📍 Complete documentation hub with navigation by role
+- **[docs/getting-started/quick-start.md](docs/getting-started/quick-start.md)** — ⚡ 5-minute example (any developer)
+- **[docs/getting-started/installation.md](docs/getting-started/installation.md)** — 📦 Installation & setup
+- **[docs/skill-development/](docs/skill-development/)** — 🐍 For Python skill developers
+- **[docs/adapter-development/](docs/adapter-development/)** — 🎨 For GUI adapter developers (Qt, web, etc.)
+- **[docs/operations/](docs/operations/)** — 🔧 For system integrators & operators
+- **[docs/development/](docs/development/)** — 🤝 For contributors
+
+---
+
+## Quick Links
+
+- **Skill developer?** → [docs/skill-development/skill-gui-development.md](docs/skill-development/skill-gui-development.md)
+- **Adapter developer?** → [docs/adapter-development/architecture.md](docs/adapter-development/architecture.md)
+- **Want to contribute?** → [docs/development/contributing.md](docs/development/contributing.md)
+- **Need help?** → [docs/faq.md](docs/faq.md) or [docs/operations/monitoring.md](docs/operations/monitoring.md)
+
+---
+
+## Configuration
+
+**[Full configuration reference](docs/getting-started/installation.md)** — See docs for complete setup guide
+
+Basic configuration in `mycroft.conf`:
 
 ```javascript
 {

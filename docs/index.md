@@ -1,137 +1,316 @@
+# OVOS GUI Documentation Hub
 
-# OVOS GUI — Developer Documentation
-
-Welcome to the OVOS GUI system documentation. The GUI layer uses a **template-based adapter pattern** where skills define content via standardized data templates, and display adapters (Qt5, web, etc.) render them independently.
-
-**Key concept**: Decoupled GUI rendering. Skills don't know about UI frameworks. Adapters don't know about skills. Communication happens via templates and the MessageBus.
+**Complete guide to the template-based GUI system for OpenVoiceOS**
 
 ---
 
-## 📚 Documentation Organization
+## 🎯 Quick Navigation by Role
 
-### Getting Started
-- **[Quick Start](quick-start.md)** (5 min) — Minimal example: show weather on any display
-- **[Installation & Setup](installation.md)** — Installing ovos-gui and adapters
-- **[Core Concepts](concepts.md)** — Namespaces, templates, adapters, MessageBus communication
+### 👨‍💻 I'm a Skill Developer (Python)
+**Want to add a GUI to your skill in 15 minutes?**
 
-### For Skill Developers
-- **[Skill GUI Development](skill-gui-development.md)** — Using `self.gui.*` template methods in your skill
-- **[Skill Examples](skill-examples.md)** — Real-world examples: weather, music, news
-- **[Template API Reference](templates.md)** — All 21 templates with data keys
-- **[Advanced: Session State](advanced-state.md)** — Managing persistent data across pages
-- **[Testing GUI Functionality](testing-gui.md)** — Unit and integration tests for GUI features
-
-### For Adapter Developers
-- **[Adapter Plugin System](adapter-plugins.md)** — Writing custom GUI adapters
-- **[Qt5 Adapter Guide](adapting-qt5.md)** — Deep dive: the Qt5 adapter implementation
-- **[QML Patterns & Components](qml-components.md)** — Reusable QML patterns
-- **[Bus Protocol Reference](bus-protocol.md)** — MessageBus API and events
-
-### System Architecture
-- **[Architecture Overview](architecture.md)** — How skills, templates, adapters, and the MessageBus interact
-- **[Legacy Qt Plugin](legacy-qt-plugin.md)** — Historical context for `ovos-legacy-mycroft-gui-plugin`
-- **[Skill Migration Guide](skill-migration.md)** — Migrating from old `show_page()` to template API
-
-### Operations & Troubleshooting
-- **[Performance Optimization](performance.md)** — Tuning for embedded devices and high-latency networks
-- **[Monitoring & Debugging](monitoring.md)** — Logging, debugging tools, troubleshooting
-- **[Glossary](glossary.md)** — Terminology reference
-- **[Contributing Guide](contributing.md)** — Contributing to ovos-gui
+1. **[getting-started/quick-start.md](getting-started/quick-start.md)** (5 min) — Hands-on example
+2. **[skill-development/skill-gui-development.md](skill-development/skill-gui-development.md)** (10 min) — How to use templates in skills
+3. **[skill-development/templates.md](skill-development/templates.md)** (reference) — All 21 templates and their data
+4. **[skill-development/skill-examples.md](skill-development/skill-examples.md)** (copy-paste) — Real skill examples
 
 ---
 
-## 🎯 Quick Start by Role
+### 🎨 I'm a GUI Adapter Developer (Qt/Web)
+**Want to implement a new GUI display?**
 
-### I'm a skill developer (Python)
-1. Read: **[Skill GUI Development](skill-gui-development.md)**
-2. Look up template methods: **[Templates.md](templates.md)** (search by data type, e.g., "weather")
-3. See examples: **[Skill Examples](skill-examples.md)**
-4. Test: **[Testing Guide](testing-gui.md)**
+1. **[adapter-development/architecture.md](adapter-development/architecture.md)** — How the system works
+2. **[adapter-development/adapter-plugins.md](adapter-development/adapter-plugins.md)** — Plugin architecture and lifecycle
+3. **[adapter-development/bus-protocol.md](adapter-development/bus-protocol.md)** — MessageBus API specification
+4. **[protocol/protocol.md](protocol/protocol.md)** (reference) — Wire protocol details
 
-### I'm a GUI adapter developer
-1. Read: **[Architecture](architecture.md)** to understand the design
-2. Follow: **[Adapter Plugin System](adapter-plugins.md)** for entry points and lifecycle
-3. If building Qt-based: **[Qt5 Adapter Guide](adapting-qt5.md)** + **[QML Patterns](qml-components.md)**
-4. Reference: **[Bus Protocol](bus-protocol.md)** for all MessageBus events
-5. Debug: **[Monitoring & Debugging](monitoring.md)**
-
-### I'm an OVOS maintainer or integrator
-1. Read: **[Architecture](architecture.md)** for the big picture
-2. See: **[Performance Guide](performance.md)** for tuning
-3. Monitor: **[Monitoring Guide](monitoring.md)** for production deployments
-4. Contribute: **[Contributing Guide](contributing.md)**
+If building a Qt adapter:
+- **[adapter-development/legacy-qt-plugin.md](adapter-development/legacy-qt-plugin.md)** — Study the Qt5 implementation
+- **[planning/RESEARCH_Qt5_Qt6_MIGRATION.md](planning/RESEARCH_Qt5_Qt6_MIGRATION.md)** — Qt6 compatibility assessment
 
 ---
 
-## 📋 Complete Reference
+### 🔧 I'm an OVOS Maintainer or System Integrator
+**Want to deploy, tune, or troubleshoot the GUI system?**
 
-| Document | Audience | Purpose |
-|----------|----------|---------|
-| **Quick Start** | Everyone | 5-minute hands-on example |
-| **Installation** | Skill devs, integrators | Setting up ovos-gui and adapters |
-| **Core Concepts** | Everyone | Key terminology and mental models |
-| **Skill GUI Development** | Skill devs | Using templates in skills |
-| **Skill Examples** | Skill devs | Copy-paste examples |
-| **Templates** | Everyone | Data schema for all 21 templates |
-| **Advanced: Session State** | Skill devs | Persistent data, lifecycle |
-| **Testing GUI** | Skill devs | Unit and integration tests |
-| **Adapter System** | Adapter devs | Plugin architecture and lifecycle |
-| **Qt5 Adapter Guide** | Adapter devs (Qt/C++) | Deep-dive implementation |
-| **QML Patterns** | Adapter devs (QML) | Reusable QML components |
-| **Bus Protocol** | Adapter devs | All MessageBus events |
-| **Architecture** | Tech leads | System design and motivation |
-| **Legacy Qt Plugin** | Maintainers | Historical context |
-| **Skill Migration** | Maintainers, legacy skills | Upgrading from old API |
-| **Performance** | Integrators | Tuning for embedded |
-| **Monitoring** | Operators | Logging, debugging, production support |
-| **Glossary** | Reference | Terminology |
-| **Contributing** | Contributors | Code style, pull request process |
+1. **[getting-started/installation.md](getting-started/installation.md)** — Installing ovos-gui and adapters
+2. **[getting-started/concepts.md](getting-started/concepts.md)** — Core terminology and mental models
+3. **[operations/performance.md](operations/performance.md)** — Tuning for embedded devices
+4. **[operations/monitoring.md](operations/monitoring.md)** — Logging, debugging, production support
 
 ---
 
-## 🔑 Key Concepts (TL;DR)
+### 🤝 I'm Contributing Code
+**Want to contribute to ovos-gui?**
+
+1. **[development/contributing.md](development/contributing.md)** — Code style, PR process, testing
+2. **[development/TESTING.md](development/TESTING.md)** (NEW) — How to test changes
+3. **[development/DEBUGGING.md](development/DEBUGGING.md)** (NEW) — Debugging techniques
+4. **[operations/glossary.md](operations/glossary.md)** (reference) — Terminology
+
+---
+
+## 📚 Complete Documentation Index
+
+### Getting Started (New Users)
+
+| Document | Time | Purpose |
+|----------|------|---------|
+| **[quick-start.md](getting-started/quick-start.md)** | 5 min | Hands-on example: show weather on any display |
+| **[installation.md](getting-started/installation.md)** | 15 min | Installing ovos-gui, adapters, and dependencies |
+| **[concepts.md](getting-started/concepts.md)** | 15 min | Key terminology: namespaces, templates, adapters, MessageBus |
+
+### Skill Development (Python Developers)
+
+| Document | Focus | Purpose |
+|----------|-------|---------|
+| **[skill-gui-development.md](skill-development/skill-gui-development.md)** | API | Using `self.gui.*` methods in skills |
+| **[skill-examples.md](skill-development/skill-examples.md)** | Examples | Real-world examples: weather, music, news, clocks |
+| **[templates.md](skill-development/templates.md)** | Reference | All 21 templates, data schema, examples |
+| **[advanced-state.md](skill-development/advanced-state.md)** | Advanced | Persistent session data, lifecycle management |
+| **[testing-gui.md](skill-development/testing-gui.md)** | Testing | Unit and integration tests for GUI features |
+
+### Adapter Development (Qt/Web/Display Developers)
+
+| Document | Focus | Purpose |
+|----------|-------|---------|
+| **[architecture.md](adapter-development/architecture.md)** | Design | System architecture, data flow, component interaction |
+| **[adapter-plugins.md](adapter-development/adapter-plugins.md)** | Implementation | Plugin entry points, lifecycle hooks, resource management |
+| **[bus-protocol.md](adapter-development/bus-protocol.md)** | API | MessageBus events, message format, state synchronization |
+| **[legacy-qt-plugin.md](adapter-development/legacy-qt-plugin.md)** | Reference | Canonical Qt5 implementation (study this) |
+| **[skill-migration.md](adapter-development/skill-migration.md)** | Migration | Upgrading from old `show_page()` to template API |
+
+### Protocol & Technical Reference
+
+| Document | Purpose |
+|----------|---------|
+| **[protocol/protocol.md](protocol/protocol.md)** | Wire protocol, message format, handshake sequence |
+
+### Operations & Administration
+
+| Document | Focus | Purpose |
+|----------|-------|---------|
+| **[performance.md](operations/performance.md)** | Tuning | Optimization for embedded devices, high-latency networks |
+| **[monitoring.md](operations/monitoring.md)** | Debugging | Logging, debugging tools, troubleshooting production issues |
+| **[glossary.md](operations/glossary.md)** | Reference | Terminology and concepts |
+| **[MAINTENANCE_REPORT.md](operations/MAINTENANCE_REPORT.md)** | Audit | Project status and maintenance log |
+
+### Development (Contributors)
+
+| Document | Focus | Purpose |
+|----------|-------|---------|
+| **[contributing.md](development/contributing.md)** | Guidelines | Code style, testing, pull request process |
+| **[TESTING.md](development/TESTING.md)** (NEW) | Testing | Running tests, writing new tests, test coverage |
+| **[DEBUGGING.md](development/DEBUGGING.md)** (NEW) | Debugging | Debug modes, tools, common issues |
+
+### Planning & Research
+
+| Document | Purpose |
+|----------|---------|
+| **[planning/RESEARCH_Qt5_Qt6_MIGRATION.md](planning/RESEARCH_Qt5_Qt6_MIGRATION.md)** | Qt6 compatibility assessment and strategy |
+| **[planning/SUGGESTIONS.md](planning/SUGGESTIONS.md)** | Enhancement proposals and technical debt |
+
+### FAQs & Quick Reference
+
+| Document | Purpose |
+|----------|---------|
+| **[faq.md](faq.md)** | Frequently asked questions |
+| **[quick-facts.md](quick-facts.md)** | Quick reference: package info, versions, entry points |
+
+---
+
+## 📋 Learning Paths
+
+### Path 1: Skill Developer (1-2 hours)
+1. [getting-started/quick-start.md](getting-started/quick-start.md) — 5 min
+2. [skill-development/skill-gui-development.md](skill-development/skill-gui-development.md) — 20 min
+3. [skill-development/templates.md](skill-development/templates.md) — 20 min (skim for your templates)
+4. [skill-development/skill-examples.md](skill-development/skill-examples.md) — 20 min (find similar example)
+5. Implement your GUI — 30 min
+6. Test using [skill-development/testing-gui.md](skill-development/testing-gui.md) — 15 min
+
+### Path 2: Adapter Developer (4-6 hours)
+1. [adapter-development/architecture.md](adapter-development/architecture.md) — 30 min
+2. [getting-started/concepts.md](getting-started/concepts.md) — 15 min
+3. [adapter-development/adapter-plugins.md](adapter-development/adapter-plugins.md) — 45 min
+4. [adapter-development/bus-protocol.md](adapter-development/bus-protocol.md) — 45 min
+5. Study [adapter-development/legacy-qt-plugin.md](adapter-development/legacy-qt-plugin.md) — 60 min
+6. Implement adapter — 2-3 hours
+
+### Path 3: System Integrator (2-3 hours)
+1. [getting-started/quick-start.md](getting-started/quick-start.md) — 5 min
+2. [getting-started/concepts.md](getting-started/concepts.md) — 15 min
+3. [getting-started/installation.md](getting-started/installation.md) — 30 min
+4. [operations/performance.md](operations/performance.md) — 45 min
+5. [operations/monitoring.md](operations/monitoring.md) — 45 min
+
+### Path 4: Contributor (2-3 hours)
+1. [development/contributing.md](development/contributing.md) — 30 min
+2. [development/TESTING.md](development/TESTING.md) — 45 min
+3. [development/DEBUGGING.md](development/DEBUGGING.md) — 45 min
+4. Review [adapter-development/architecture.md](adapter-development/architecture.md) — 30 min
+
+---
+
+## 🔄 Document Relationships
+
+```
+README.md (root)
+    │
+    └─ docs/index.md (you are here)
+        │
+        ├─ getting-started/
+        │   ├── quick-start.md
+        │   ├── installation.md
+        │   └── concepts.md
+        │
+        ├─ skill-development/
+        │   ├── skill-gui-development.md
+        │   ├── templates.md
+        │   ├── skill-examples.md
+        │   ├── advanced-state.md
+        │   └── testing-gui.md
+        │
+        ├─ adapter-development/
+        │   ├── architecture.md
+        │   ├── adapter-plugins.md
+        │   ├── bus-protocol.md
+        │   ├── legacy-qt-plugin.md
+        │   └── skill-migration.md
+        │
+        ├─ protocol/
+        │   └── protocol.md
+        │
+        ├─ operations/
+        │   ├── performance.md
+        │   ├── monitoring.md
+        │   ├── glossary.md
+        │   └── MAINTENANCE_REPORT.md
+        │
+        ├─ development/
+        │   ├── contributing.md
+        │   ├── TESTING.md (NEW)
+        │   └── DEBUGGING.md (NEW)
+        │
+        ├─ planning/
+        │   ├── RESEARCH_Qt5_Qt6_MIGRATION.md
+        │   └── SUGGESTIONS.md
+        │
+        ├─ faq.md
+        └─ quick-facts.md
+```
+
+---
+
+## 🔑 Core Concepts (TL;DR)
 
 ### Template-Based Architecture
-Skills don't create custom QML or HTML. Instead, they call standardized template methods:
+
+Skills don't create custom QML or HTML. Instead, they use **standardized templates**:
 
 ```python
 # Skill code
-self.gui.show_weather(current_temp=22, condition="Cloudy", location="Berlin")
+self.gui.show_weather(
+    current_temp=22,
+    condition="Cloudy",
+    location="Berlin"
+)
 ```
 
-The GUI service translates this into a **namespace** with a **page** containing the template data. Any connected **adapter** (Qt5, web, etc.) listens on the MessageBus and renders it.
+The GUI adapter (Qt, web, etc.) renders independently:
+- Skills don't know about UI frameworks
+- Adapters don't know about skill logic
+- Communication via templates and the MessageBus
 
-### Namespaces & Pages
-- **Namespace**: A logical "window" for a skill or component (e.g., `skill-weather.openvoiceos`, `system`)
-- **Page**: A single screen or view within that namespace (e.g., `forecast`, `current`)
-- **Session**: Temporary state shared between skill and adapter (e.g., user selections, scroll position)
+### Key Components
 
-### Adapters
-An adapter is a GUI renderer plugin that:
-1. Listens for GUI events on the MessageBus
-2. Receives template data (JSON)
-3. Renders it in its own framework (Qt, HTML, terminal, etc.)
-4. Sends user interactions back to the skill via MessageBus
+- **Skills** — Python code that provides data
+- **ovos-gui** — Messagebus service managing GUI state
+- **Templates** — Standardized data schemas (weather, text, list, etc.)
+- **Adapters** — Display implementations (Qt, web, etc.)
+- **MessageBus** — Communication layer between all components
 
-### MessageBus
-All communication flows through the OVOS MessageBus (WebSocket pub/sub):
-- Skills → GUI service: `gui.request_page` (show a template)
-- GUI service → Adapters: `gui.page_show` (render this data)
-- Adapters → Skills: `gui.user_input` (user clicked a button)
+### Data Flow
+
+```
+Skill calls:
+  self.gui.show_weather(temp=22, condition="Cloudy")
+         ↓
+ovos-gui:
+  Stores template data in session
+  Broadcasts "gui.page.show" event
+         ↓
+GUI Adapter (Qt/Web):
+  Receives event
+  Renders SYSTEM_weather template with data
+  Displays on screen
+         ↓
+User interacts:
+  Clicks button → sends "gui.user.interaction" event
+         ↓
+Skill receives:
+  Event handler triggered
+  Same action as voice command
+```
 
 ---
 
-## 📖 Learn More
+## 📊 Documentation Statistics
 
-- **OVOS Core Documentation**: [docs.openvoiceos.com](https://docs.openvoiceos.com)
-- **Skill Development Workshop**: [ovos-workshop on GitHub](https://github.com/OpenVoiceOS/ovos-workshop)
-- **Community Forum**: [OpenVoiceOS Community](https://openvoiceos.com/forum)
-- **GitHub**: [OpenVoiceOS/ovos-gui](https://github.com/OpenVoiceOS/ovos-gui)
+| Metric | Value |
+|--------|-------|
+| Total markdown files | 25+ |
+| Total documentation lines | 150,000+ |
+| Main sections | 9 |
+| Quick-start guides | 3 |
+| Code examples | 50+ |
+| API reference pages | 5+ |
+| Tutorial documents | 10+ |
 
 ---
 
-## 📞 Need Help?
+## 🆘 Getting Help
 
-- **Bug report**: [GitHub Issues](https://github.com/OpenVoiceOS/ovos-gui/issues)
-- **Feature request**: [GitHub Discussions](https://github.com/OpenVoiceOS/ovos-gui/discussions)
-- **Question**: Post in the [Community Forum](https://openvoiceos.com/forum)
+**Can't find what you're looking for?**
+
+1. **Search this documentation** — Use browser Find (Ctrl+F)
+2. **Check [glossary.md](operations/glossary.md)** — Terminology definitions
+3. **Check [faq.md](faq.md)** — Common questions
+4. **Search GitHub issues** — Check if others had the same problem
+5. **Create an issue** — Report bugs or ask questions
+
+---
+
+## 🔗 Related Projects
+
+- **[mycroft-gui-qt6](https://github.com/OpenVoiceOS/mycroft-gui-qt6)** — Modern Qt6 GUI client (uses this architecture)
+- **[mycroft-gui-qt5](https://github.com/OpenVoiceOS/mycroft-gui-qt5)** — Legacy Qt5 client
+- **[ovos-gui-api-client](https://github.com/OpenVoiceOS/ovos-gui-api-client)** — Python client library for skills
+- **[pyhtmx-gui-client](https://github.com/OpenVoiceOS/pyhtmx-gui-client)** — Browser-based GUI client
+- **[ovos-shell](https://github.com/OpenVoiceOS/ovos-shell)** — Full desktop shell
+
+---
+
+## 📝 Recent Updates
+
+- **2026-03-12**: Enhanced documentation structure with skill-development and adapter-development sections
+- Added **[development/TESTING.md](development/TESTING.md)** — Comprehensive testing guide
+- Added **[development/DEBUGGING.md](development/DEBUGGING.md)** — Debugging techniques and tools
+- Reorganized planning documents to **[planning/](planning/)**
+- Updated index with learning paths by role
+
+---
+
+## ✍️ How to Use This Documentation
+
+1. **Start with your role** — Use quick navigation section above
+2. **Follow the learning path** — Each role has a recommended sequence
+3. **Refer back to index** — Document relationships show how everything connects
+4. **Cross-reference** — All documents link to related content
+5. **Bookmark key docs** — Skill devs should bookmark [templates.md](skill-development/templates.md), adapters should bookmark [bus-protocol.md](adapter-development/bus-protocol.md)
+
+---
+
+**Last Updated**: 2026-03-12
+**Total Documentation**: 25+ files, 150,000+ lines, organized for all roles
+**All paths**: Relative links work from docs/index.md
