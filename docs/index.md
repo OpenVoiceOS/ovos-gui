@@ -52,33 +52,44 @@ If building a Qt adapter:
 
 ## 📚 Complete Documentation Index
 
-### Getting Started (New Users)
+### 🚀 Getting Started (New Users)
 
-| Document | Time | Purpose |
-|----------|------|---------|
-| **[quick-start.md](getting-started/quick-start.md)** | 5 min | Hands-on example: show weather on any display |
-| **[installation.md](getting-started/installation.md)** | 15 min | Installing ovos-gui, adapters, and dependencies |
-| **[concepts.md](getting-started/concepts.md)** | 15 min | Key terminology: namespaces, templates, adapters, MessageBus |
+**Follow these in order:**
 
-### Design & Architecture (Core Reference)
+1. **[DOCUMENTATION_ROADMAP.md](DOCUMENTATION_ROADMAP.md)** 📍 Start here! Role-based navigation guide
+2. **[getting-started/quick-start.md](getting-started/quick-start.md)** ⚡ 5-minute hands-on example
+3. **[getting-started/concepts.md](getting-started/concepts.md)** 📚 Key terminology and mental models
+4. **[getting-started/installation.md](getting-started/installation.md)** 📦 Step-by-step setup guide
 
-| Document | Purpose |
-|----------|---------|
-| **[DESIGN_PHILOSOPHY.md](DESIGN_PHILOSOPHY.md)** | ✅ **Central source of truth** — Template design principles, voice-first patterns, cross-platform requirements |
-| **[adapter-development/architecture.md](adapter-development/architecture.md)** | System architecture and component interactions |
-| **[protocol/protocol.md](protocol/protocol.md)** | Wire protocol and message format specifications |
+**Time estimate**: 30-60 minutes for complete onboarding
 
-### Reference Implementation (ovos-legacy-mycroft-gui-plugin)
+### 📚 Core Documentation (Start Here)
 
-**The canonical reference implementation of the OVOS GUI adapter interface:**
+| Document | Purpose | Role |
+|----------|---------|------|
+| **[DESIGN_PHILOSOPHY.md](DESIGN_PHILOSOPHY.md)** | ✅ **Single source of truth** — All design principles, template specs, architecture decisions | **All roles** |
+| **[DOCUMENTATION_ROADMAP.md](DOCUMENTATION_ROADMAP.md)** | 📍 **Navigation guide** — Role-based paths through all documentation | **New users** |
+| **[index.md](index.md)** | 📋 **This document** — Complete documentation hub with cross-references | **All roles** |
 
-| Document | Purpose |
-|----------|---------|
-| [ovos-legacy-mycroft-gui-plugin: index.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/index.md) | Complete adapter documentation hub |
-| [ovos-legacy-mycroft-gui-plugin: bus-api-reference.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/bus-api-reference.md) | All bus messages with examples |
-| [ovos-legacy-mycroft-gui-plugin: ARCHITECTURE_REVIEW.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/ARCHITECTURE_REVIEW.md) | Architecture decisions and solutions |
-| [ovos-legacy-mycroft-gui-plugin: PROTOCOL_EXTENSIONS.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/PROTOCOL_EXTENSIONS.md) | WebSocket protocol extensions |
-| [ovos-legacy-mycroft-gui-plugin: OVOS_GUI_COMPATIBILITY.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/OVOS_GUI_COMPATIBILITY.md) | ✅ Verified compatible with ovos-gui |
+### 🎨 Design & Architecture
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| **[DESIGN_PHILOSOPHY.md](DESIGN_PHILOSOPHY.md)** | Template design, voice-first principles, cross-platform requirements | **All developers** |
+| **[adapter-development/architecture.md](adapter-development/architecture.md)** | System components and data flow | **Adapter developers** |
+| **[protocol/protocol.md](protocol/protocol.md)** | Wire protocol and message formats | **Adapter developers** |
+
+### 🏆 Reference Implementation
+
+**ovos-legacy-mycroft-gui-plugin — The canonical adapter reference:**
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| [index.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/index.md) | Complete adapter documentation hub | **Adapter developers** |
+| [bus-api-reference.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/bus-api-reference.md) | All bus messages with examples | **All developers** |
+| [ARCHITECTURE_REVIEW.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/ARCHITECTURE_REVIEW.md) | 📋 Architecture decisions (ADRs) | **Contributors** |
+| [PROTOCOL_EXTENSIONS.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/PROTOCOL_EXTENSIONS.md) | WebSocket protocol extensions | **Adapter developers** |
+| [OVOS_GUI_COMPATIBILITY.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/OVOS_GUI_COMPATIBILITY.md) | ✅ Verified compatibility audit | **System integrators** |
 
 ### Skill Development (Python Developers)
 
@@ -293,11 +304,24 @@ Skill receives:
 
 **Can't find what you're looking for?**
 
-1. **Search this documentation** — Use browser Find (Ctrl+F)
+1. **Start with [DOCUMENTATION_ROADMAP.md](DOCUMENTATION_ROADMAP.md)** — Follow the path for your role
 2. **Check [glossary.md](operations/glossary.md)** — Terminology definitions
-3. **Check [faq.md](faq.md)** — Common questions
-4. **Search GitHub issues** — Check if others had the same problem
-5. **Create an issue** — Report bugs or ask questions
+3. **Read [faq.md](faq.md)** — Common questions and answers
+4. **Search this documentation** — Use browser Find (Ctrl+F)
+5. **Ask in community** — Provide link to relevant documentation
+
+**Found outdated information?**
+
+1. **Check [MAINTENANCE_REPORT.md](operations/MAINTENANCE_REPORT.md)** — See current status
+2. **Create an issue** — Report in the relevant repository
+3. **Submit a PR** — Follow [contributing guidelines](development/contributing.md)
+
+**Need to navigate between repos?**
+
+Use the cross-reference tables in each document to jump between:
+- `ovos-gui` → Design specifications
+- `ovos-gui-api-client` → Skill API reference  
+- `ovos-legacy-mycroft-gui-plugin` → Reference implementation
 
 ---
 

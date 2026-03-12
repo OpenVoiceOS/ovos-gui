@@ -87,7 +87,7 @@ Extend the WebSocket protocol with new message types prefixed with `gui.*` to ha
 
 **Server action**:
 - Update BrightnessManager
-- Emit `phal.brightness.control.auto.dim.update` to OVOS services
+- Emit `ovos.shell.brightness.set` to OVOS services
 
 ---
 
@@ -135,7 +135,7 @@ Extend the WebSocket protocol with new message types prefixed with `gui.*` to ha
 
 **Server action**:
 - Update BrightnessManager
-- Emit `speaker.extension.display.set.auto.dim` bus message
+- Emit `ovos.shell.brightness.auto_dim.set` bus message
 
 ---
 
@@ -164,7 +164,7 @@ Extend the WebSocket protocol with new message types prefixed with `gui.*` to ha
 
 **Server action**:
 - Update BrightnessManager
-- Emit `speaker.extension.display.set.auto.nightmode` bus message
+- Emit `ovos.shell.brightness.night_mode.set` bus message
 
 ---
 
@@ -194,7 +194,7 @@ Extend the WebSocket protocol with new message types prefixed with `gui.*` to ha
 
 **Server action**:
 - Save to `~/.local/share/OVOS/ColorSchemes/{theme_name}.json`
-- Emit `ovos.shell.gui.color.scheme.generated` bus message
+- Emit `ovos.shell.color_scheme.generated` bus message
 
 ---
 
@@ -276,7 +276,7 @@ Extend the WebSocket protocol with new message types prefixed with `gui.*` to ha
 
 **Server action**:
 - Remove notification from WidgetManager queue
-- Emit `ovos.notification.api.pop.clear` bus message
+- Emit `ovos.shell.notification.clear` bus message
 
 ---
 
@@ -411,7 +411,7 @@ Extend the WebSocket protocol with new message types prefixed with `gui.*` to ha
 
 **Server action**:
 - Update mycroft.conf via ConfigUIManager
-- Emit `ovos.phal.configuration.provider.set` bus message
+- Emit `ovos.shell.configuration.set` bus message
 
 ---
 
