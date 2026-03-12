@@ -4,11 +4,28 @@
 **Source**: `ovos-legacy-mycroft-gui-plugin/docs/PROTOCOL_EXTENSIONS.md`
 **Status**: ✅ Implemented in adapter and Qt client
 
+## ⚠️ Important: Two-Bus Architecture
+
+This document describes **WebSocket protocol messages** (port 18181). Before reading this, you should understand the **two separate buses** that Qt GUI clients use:
+
+| Bus | Port | Route | Purpose |
+|-----|------|-------|---------|
+| **Main OVOS MessageBus** | 8181 | `/core` | System events (skills, recognition, TTS) |
+| **GUI WebSocket** | 18181 | `/gui` | Templates + shell features (brightness, colors, notifications, widgets) |
+
+**Read first**: [`ovos-legacy-mycroft-gui-plugin/docs/TWO_BUS_ARCHITECTURE.md`](../../ovos-legacy-mycroft-gui-plugin/docs/TWO_BUS_ARCHITECTURE.md) to understand:
+- How Qt clients connect to both buses
+- Configuration for port 18181 and route `/gui`
+- Message flow between OVOS MessageBus and GUI WebSocket
+- Troubleshooting connection issues
+
+---
+
 ## Overview
 
 This document extends the [standard OVOS GUI protocol](./protocol.md) with standardized message types for shell features (brightness, color schemes, notifications, widgets, configuration UI).
 
-These extensions unify all GUI communication—both template rendering and shell features—over a single WebSocket protocol.
+These extensions unify all GUI communication—both template rendering and shell features—over a single WebSocket protocol on **port 18181**.
 
 ## Table of Contents
 
