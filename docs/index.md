@@ -115,11 +115,18 @@ If building a Qt adapter:
 | **[legacy-qt-plugin.md](adapter-development/legacy-qt-plugin.md)** | Reference | Canonical Qt5 implementation (study this) |
 | **[skill-migration.md](adapter-development/skill-migration.md)** | Migration | Upgrading from old `show_page()` to template API |
 
+### Shell Features & Extensions
+
+| Document | Purpose |
+|----------|---------|
+| **[shell-features/index.md](shell-features/index.md)** ⭐ **(NEW)** | System-level GUI features: brightness, color schemes, notifications, widgets, configuration |
+
 ### Protocol & Technical Reference
 
 | Document | Purpose |
 |----------|---------|
 | **[protocol/protocol.md](protocol/protocol.md)** | Complete wire protocol: core GUI, shell features, message formats |
+| **[Message Types API](../ovos_gui/message_types.py)** ⭐ **(NEW)** | `GUIMessageType` enum with all 50+ standardized message types and documentation |
 
 ### Operations & Administration
 

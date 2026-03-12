@@ -315,6 +315,8 @@ class NamespaceManager:
         """
         LOG.info(f"GUI PROTOCOL - Forwarding status event '{message.msg_type}'")
         site_id = self._gui_routing_key(message)
+        # TECH-007: site_id is the routing key for client targeting
+        # Adapters use this to route events to the correct display(s)
         for adapter in self.adapters:
             self._safe_call(adapter, "on_status_event", message.msg_type,
                            message.data, site_id)
@@ -427,13 +429,39 @@ class NamespaceManager:
 
     def _get_session_key(self, session_id: str, site_id: str) -> str:
         """Determine the key for state isolation.
-        
+
         If site_id is provided and meaningful, it acts as a virtual session
         that groups multiple session_ids.
         """
         if site_id and site_id != "unknown":
             return site_id
         return session_id
+
+    def _gui_routing_key(self, message: Message) -> str:
+        """Compute the session key for state isolation from a message.
+
+        TECH-007: This clarifies the routing logic for multi-device scenarios.
+
+        The session key is used for organizing GUI state by site/session.
+        It uses priority logic:
+
+        1. If site_id is meaningful (not "unknown") → use site_id
+           - Multi-room scenario: site_id = "kitchen", "bedroom", etc.
+           - All devices at this site receive the same GUI state
+        2. Otherwise → use session_id
+           - Single-screen or remote client scenario
+
+        Note: site_id is passed to adapters in callbacks. When site_id is
+        meaningful, the adapter uses it as the routing key for client targeting.
+
+        Args:
+            message: The GUI message to extract routing from
+
+        Returns:
+            str: The session key (which becomes the routing key for adapter callbacks)
+        """
+        session_id, site_id = self._get_routing_info(message)
+        return self._get_session_key(session_id, site_id)
 
     def _safe_call(self, adapter, method_name, *args, **kwargs):
         """Invoke an adapter hook safely.
@@ -629,6 +657,7 @@ class NamespaceManager:
         with namespace_lock:
             if not session.active_namespaces or session.active_namespaces[0].skill_id != namespace_name:
                 self._activate_namespace(namespace_name, session, session_id, site_id)
+            self._update_namespace_persistence(persistence, session)
 
     def _activate_namespace(self, namespace_name: str, session: GUISession, 
                           session_id: str, site_id: str):
@@ -659,6 +688,10 @@ class NamespaceManager:
                 namespace.load_data(key, value)
 
         self._emit_namespace_displayed_event(session)
+        # Notify adapters of namespace activation
+        # TECH-007: site_id is passed for client targeting:
+        #   - If site_id != "unknown": routes to clients at that site (multi-room)
+        #   - Otherwise: session_id is the routing target
         for adapter in self.adapters:
             self._safe_call(adapter, "on_namespace_activated", namespace_name, session_id, site_id)
 
@@ -692,6 +725,9 @@ class NamespaceManager:
                     namespace.persistent = persistence
 
                 namespace.set_persistence(skill_type="genericSkill")
+                if isinstance(persistence, int) and not isinstance(persistence, bool):
+                    namespace.duration = persistence
+
                 # check if there is a scheduled remove_namespace_timer
                 # and cancel it
                 if namespace.persistent and namespace.skill_id in \
@@ -761,6 +797,7 @@ class NamespaceManager:
             namespace_position = session.active_namespaces.index(namespace)
             namespace.remove(namespace_position)
             session.active_namespaces.remove(namespace)
+            # TECH-007: Notify adapters with site_id routing key for client targeting
             for adapter in self.adapters:
                 self._safe_call(adapter, "on_namespace_deactivated", namespace_name, session_id, site_id)
 
@@ -812,6 +849,7 @@ class NamespaceManager:
             with namespace_lock:
                 self._update_namespace_data(namespace_name, message.data, session)
             # Notify adapters of the session data update
+            # TECH-007: site_id is the routing key for targeting correct display(s)
             filtered = {k: v for k, v in message.data.items() if k not in RESERVED_KEYS}
             for adapter in self.adapters:
                 self._safe_call(adapter, "on_session_update", namespace_name, filtered, session_id, site_id)
