@@ -24,7 +24,7 @@
 3. **[adapter-development/CONTRACT.md](adapter-development/CONTRACT.md)** ⭐ **(NEW)** — Formal adapter interface contract and compliance
 4. **[ROUTING_KEY_GUIDE.md](ROUTING_KEY_GUIDE.md)** ⭐ **(NEW)** — Multi-device routing semantics and site_id usage
 5. **[adapter-development/bus-protocol.md](adapter-development/bus-protocol.md)** — MessageBus API specification
-6. **[protocol/protocol.md](protocol/protocol.md)** (reference) — Wire protocol details
+6. **[protocol/index.md](protocol/index.md)** (reference) — Protocol documentation hub (Qt vs MessageBus)
 
 If building a Qt adapter:
 - **[adapter-development/legacy-qt-plugin.md](adapter-development/legacy-qt-plugin.md)** — Study the Qt5 implementation
@@ -80,7 +80,7 @@ If building a Qt adapter:
 | **[DESIGN_PHILOSOPHY.md](DESIGN_PHILOSOPHY.md)** | Template design, voice-first principles, cross-platform requirements | **All developers** |
 | **[SESSION_AND_SITE_ID_DESIGN.md](SESSION_AND_SITE_ID_DESIGN.md)** | Multi-session/multi-device GUI state partitioning and routing | **System integrators, adapter developers** |
 | **[adapter-development/architecture.md](adapter-development/architecture.md)** | System components and data flow | **Adapter developers** |
-| **[protocol/protocol.md](protocol/protocol.md)** | Wire protocol and message formats (includes session routing) | **Adapter developers** |
+| **[protocol/index.md](protocol/index.md)** | Protocol documentation (Qt WebSocket, MessageBus, routing) | **Adapter developers** |
 
 ### 🏆 Reference Implementation
 

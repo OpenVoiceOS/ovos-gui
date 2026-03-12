@@ -1,10 +1,17 @@
-# OVOS GUI Service Protocol
+# Qt GUI WebSocket Protocol (Mycroft Protocol)
 
-Complete specification for GUI communication between ovos-gui and connected clients.
+**FORMAL SPECIFICATION**: Qt5/Qt6 client wire protocol for ovos-gui service.
 
-This document covers both **core GUI rendering** and **shell feature extensions** in a unified protocol.
+This is the **Qt-specific client protocol** — the WebSocket-based interface for mycroft-gui-qt5 and mycroft-gui-qt6 clients communicating with the ovos-gui service.
 
-**See also:** [SESSION_AND_SITE_ID_DESIGN.md](../SESSION_AND_SITE_ID_DESIGN.md) for comprehensive multi-session architecture.
+> **IMPORTANT**: This protocol is **Qt-only**. Different GUI clients (web browsers, terminal, accessibility) use different protocols. Only Qt clients use this specification.
+
+This document covers both **core GUI rendering** (namespaces, pages, events, skill data) and **shell feature extensions** (brightness, color scheme, notifications, widgets, configuration).
+
+**Related Documentation**:
+- [MessageBus Protocol](../adapter-development/bus-protocol.md) — Skill-to-GUI message format (used by ALL adapters)
+- [ROUTING_KEY_GUIDE.md](../ROUTING_KEY_GUIDE.md) — Session/site routing semantics
+- [Session and Site ID Design](../SESSION_AND_SITE_ID_DESIGN.md) — Multi-session architecture reference
 
 ## Quick Reference: Sessions and Routing
 

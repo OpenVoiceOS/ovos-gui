@@ -355,7 +355,7 @@ class LegacyMycoftGuiPlugin(AbstractGUIPlugin):
         icon = data.get("icon")
         location = data.get("location")
         
-        # Map to QML template (see protocol/protocol.md)
+        # Map to QML template (see protocol/qt-gui-protocol.md)
         qml_file = "Weather.qml"
         
         # Send to Qt clients via WebSocket (mycroft-gui protocol)
@@ -368,7 +368,7 @@ class LegacyMycoftGuiPlugin(AbstractGUIPlugin):
         """Send mycroft.gui.list.insert message to Qt clients.
         
         This implements the standard mycroft-gui WebSocket protocol
-        as specified in ovos-gui/protocol/protocol.md
+        as specified in protocol/qt-gui-protocol.md
         """
         message = {
             "type": "mycroft.gui.list.insert",
@@ -395,7 +395,7 @@ class LegacyMycoftGuiPlugin(AbstractGUIPlugin):
 - [Source Code](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin)
 - [Documentation Hub](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/index.md)
 - [Architecture Review](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/ARCHITECTURE_REVIEW.md)
-- [Protocol Extensions](./protocol/protocol.md)
+- [Protocol Specifications](./protocol/index.md) — Qt WebSocket protocol & shell features
 
 ### 🔧 Key Architectural Features
 
@@ -499,7 +499,7 @@ graph TD
 - ⚠️ Shell features require protocol extensions
 - ✅ Backwards compatible with Mycroft AI ecosystem
 
-**Documentation**: [protocol/protocol.md](./protocol/protocol.md)
+**Documentation**: [protocol/qt-gui-protocol.md](./protocol/qt-gui-protocol.md)
 
 #### ADR-002: Consolidate Shell-Companion
 **Decision**: Merge ovos-gui-plugin-shell-companion into this adapter
@@ -599,7 +599,7 @@ For adapter developers using this as reference:
 | Document | Purpose |
 |----------|---------|
 | [ARCHITECTURE_REVIEW.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/ARCHITECTURE_REVIEW.md) | Architecture decisions and tradeoffs |
-| [protocol/protocol.md](./protocol/protocol.md) | WebSocket protocol extensions |
+| [protocol/qt-gui-protocol.md](./protocol/qt-gui-protocol.md) | Qt WebSocket protocol (Mycroft protocol) |
 | [OVOS_GUI_COMPATIBILITY.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/OVOS_GUI_COMPATIBILITY.md) | ✅ Verified compatibility audit |
 | [bus-api-reference.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/bus-api-reference.md) | Complete bus message reference |
 
