@@ -104,9 +104,6 @@ class Namespace:
         self.page_number = 0
         self.session_set = False
 
-    def send_message_to_gui(self, message):
-        pass  # TODO
-
     @property
     def page_names(self):
         return [page.name for page in self.pages]
@@ -122,39 +119,28 @@ class Namespace:
     def add(self):
         """
         Adds this namespace to the list of active namespaces.
+        State change is notified to adapters via NamespaceManager.on_namespace_activated().
         """
         LOG.info(f"GUI PROTOCOL - Adding \"{self.skill_id}\" to active namespaces")
-        message = dict(
-            type="mycroft.session.list.insert",
-            namespace="mycroft.system.active_skills",
-            position=0,
-            data=[dict(skill_id=self.skill_id)]
-        )
-        self.send_message_to_gui(message)
 
     def activate(self, position: int):
         """
         Activate this namespace if its already in the list of active namespaces.
-        @param position: position to move this namespace FROM
+        State change is notified to adapters via NamespaceManager.on_namespace_activated().
+        @param position: position to move this namespace FROM (unused after refactor)
         """
         if not len(self.pages):
             LOG.error(f"Tried to activate namespace without loaded pages: \"{self.skill_id}\"")
             return
 
         LOG.info(f"GUI PROTOCOL - Activating namespace \"{self.skill_id}\"")
-        message = {
-            "type": "mycroft.session.list.move",
-            "namespace": "mycroft.system.active_skills",
-            "from": position,
-            "to": 0,
-            "items_number": 1
-        }
-        self.send_message_to_gui(message)
 
     def remove(self, position: int):
         """
         Removes this namespace from the list of active namespaces. Also clears
-        any session data.
+        any session data. State change is notified to adapters via
+        NamespaceManager.on_namespace_deactivated().
+
         @param position: position to remove this namespace FROM
         """
         LOG.info(f"GUI PROTOCOL - Removing \"{self.skill_id}\" from active namespaces")
@@ -163,45 +149,29 @@ class Namespace:
         for key in self.data:
             self.unload_data(key)
 
-        message = dict(
-            type="mycroft.session.list.remove",
-            namespace="mycroft.system.active_skills",
-            position=position,
-            items_number=1
-        )
-        self.send_message_to_gui(message)
         self.session_set = False
         self.pages = list()
         self.data = dict()
 
     def load_data(self, name: str, value: str):
         """
-        Adds or changes the value of a namespace data attribute.
+        Adds or changes the value of a namespace data attribute. Data changes are
+        synchronized to adapters via NamespaceManager.on_session_data_changed().
 
         Args:
             name: The name of the attribute
             value: The attribute's value
         """
-        LOG.info(f"GUI PROTOCOL - Sending \"{self.skill_id}\" data -- {name} : {value} ")
-        message = dict(
-            type="mycroft.session.set",
-            namespace=self.skill_id,
-            data={name: value}
-        )
-        self.send_message_to_gui(message)
+        LOG.info(f"GUI PROTOCOL - Loading \"{self.skill_id}\" data -- {name} : {value} ")
 
     def unload_data(self, name: str):
         """
-        Delete data from the namespace
+        Delete data from the namespace. Data changes are synchronized to adapters
+        via NamespaceManager.on_session_data_changed().
+
         @param name: name of property to delete
         """
-        LOG.info(f"GUI PROTOCOL - Deleting namespace \"{self.skill_id}\" key: {name}")
-        message = dict(
-            type="mycroft.session.delete",
-            property=name,
-            namespace=self.skill_id
-        )
-        self.send_message_to_gui(message)
+        LOG.info(f"GUI PROTOCOL - Unloading namespace \"{self.skill_id}\" key: {name}")
 
     def get_position_of_last_item_in_data(self) -> int:
         """
@@ -269,33 +239,12 @@ class Namespace:
                 new_pages.append(page)
 
         self.pages.extend(new_pages)
-        if new_pages:
-            self._add_pages(new_pages)
         if show_index >= len(pages):
             LOG.error(
                 f"Invalid page index requested: {show_index} , only {len(pages)} pages available for \"{self.skill_id}\"")
         else:
             LOG.info(f"Activating page {show_index} from: {[p.name for p in pages]} for \"{self.skill_id}\"")
             self._activate_page(target_page)
-
-    def _add_pages(self, new_pages: List[GuiPage]):
-        """
-        Adds one or more pages to the active page list.
-        @param new_pages: pages to add to the active page list
-        """
-        LOG.debug(f"namespace \"{self.skill_id}\" current pages: {self.pages}")
-        LOG.debug(f"new_pages={new_pages}")
-
-        # Find position of new page in self.pages
-        position = self.pages.index(new_pages[0])
-
-        # TODO
-        #for client in GUIWebsocketHandler.clients:
-        #    try:
-        #        LOG.debug(f"Updating {client.framework} client")
-        #        client.send_gui_pages(new_pages, self.skill_id, position)
-        #    except Exception as e:
-        #        LOG.exception(f"Error updating {client.framework} client: {e}")
 
     def focus_page(self, page):
         """
@@ -326,7 +275,8 @@ class Namespace:
 
     def _activate_page(self, page: GuiPage):
         """
-        Tells mycroft-gui to returns focus to a page
+        Activates a page, setting it as the current focus. Adapters are notified
+        via NamespaceManager.on_page_gained_focus().
 
         @param page: the page that will gain focus
         """
@@ -334,18 +284,12 @@ class Namespace:
         self.focus_page(page)
 
         LOG.info(
-            f"GUI PROTOCOL - Sending event 'page_gained_focus' -- page: {page.name} -- namespace: \"{self.skill_id}\"")
-        message = dict(
-            type="mycroft.events.triggered",
-            namespace=self.skill_id,
-            event_name="page_gained_focus",
-            data={"number": self.page_number}
-        )
-        self.send_message_to_gui(message)
+            f"GUI PROTOCOL - Activating page 'page_gained_focus' -- page: {page.name} -- namespace: \"{self.skill_id}\"")
 
     def remove_pages(self, positions: List[int]):
         """
         Deletes one or more pages by index from the active page list.
+        Page changes are notified to adapters via NamespaceManager callbacks.
 
         @param positions: list of int page positions to remove
         """
@@ -353,13 +297,6 @@ class Namespace:
         for position in positions:
             page = self.pages.pop(position)
             LOG.info(f"GUI PROTOCOL - Deleting {page.name} -- namespace: \"{self.skill_id}\"")
-            message = dict(
-                type="mycroft.gui.list.remove",
-                namespace=self.skill_id,
-                position=position,
-                items_number=1
-            )
-            self.send_message_to_gui(message)
 
     def page_gained_focus(self, page_number: int):
         """
@@ -405,7 +342,6 @@ class NamespaceManager:
         Defines event handlers for core messagebus.
         """
         self.core_bus.on("gui.clear.namespace", self.handle_clear_namespace)
-        self.core_bus.on("gui.event.send", self.handle_send_event)
         self.core_bus.on("gui.page.delete", self.handle_delete_page)
         self.core_bus.on("gui.page.delete.all", self.handle_delete_all_pages)
         self.core_bus.on("gui.page.show", self.handle_show_page)
@@ -470,23 +406,13 @@ class NamespaceManager:
         for msg in messages_to_forward:
             self.core_bus.on(msg, self.forward_to_gui)
 
-    def send_message_to_gui(self, message):
-        pass # TODO
-
     def forward_to_gui(self, message: Message):
         """
-        Forward a core Message to the GUI
+        Forward a core Message status event to registered adapters.
+
         @param message: Core message to forward
         """
-        gui_message = dict(
-            type='mycroft.events.triggered',
-            namespace="system",
-            event_name=message.msg_type,
-            data=message.data
-        )
-        LOG.info(f"GUI PROTOCOL - Sending event '{message.msg_type}' for namespace: system")
-        self.send_message_to_gui(gui_message)
-        # Also notify adapter plugins of the status event
+        LOG.info(f"GUI PROTOCOL - Forwarding status event '{message.msg_type}'")
         site_id = self._gui_routing_key(message)
         for adapter in self.adapters:
             try:
@@ -511,26 +437,6 @@ class NamespaceManager:
             if self.loaded_namespaces.get(namespace_name):
                 with namespace_lock:
                     self._remove_namespace(namespace_name)
-
-    def handle_send_event(self, message: Message):
-        """
-        Handles a request to send a message to the GUI message bus.
-        @param message: the message requesting a message to be sent to the GUI
-                message bus.
-        """
-        try:
-            skill_id = message.data.get('__from')
-            event = message.data.get('event_name')
-            LOG.info(f"GUI PROTOCOL - Sending event '{event}' for namespace: {skill_id}")
-            message = dict(
-                type='mycroft.events.triggered',
-                namespace=skill_id,
-                event_name=event,
-                data=message.data.get('params')
-            )
-            self.send_message_to_gui(message)
-        except Exception:
-            LOG.exception('Could not send event trigger')
 
     def handle_delete_all_pages(self, message: Message):
         """

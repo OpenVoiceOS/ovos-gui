@@ -3,7 +3,6 @@ from ovos_config.config import Configuration
 from ovos_gui.namespace import NamespaceManager
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
-from ovos_utils.skill_installer import ServiceInstaller
 
 
 def on_started():
@@ -33,7 +32,6 @@ class GUIService:
         self.bus = MessageBusClient()
         self.extension_manager = None
         self.namespace_manager = None
-        self.pip_installer: ServiceInstaller = None  # initialised after bus connects
         callbacks = StatusCallbackMap(on_started=started_hook,
                                       on_alive=alive_hook,
                                       on_ready=ready_hook,
@@ -73,7 +71,6 @@ class GUIService:
         # if they may cause the Service to fail.
         self.status.set_alive()
         self._init_bus_client()
-        self.pip_installer = ServiceInstaller(self.bus, service_name="ovos_gui")
         adapters = self._load_adapter_plugins()
         self.namespace_manager = NamespaceManager(self.bus, adapters=adapters)
         self.status.set_ready()
@@ -90,5 +87,3 @@ class GUIService:
         Perform any GUI shutdown processes.
         """
         self.status.set_stopping()
-        if self.pip_installer:
-            self.pip_installer.shutdown()

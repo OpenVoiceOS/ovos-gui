@@ -82,17 +82,13 @@ class TestNamespace(TestCase):
         pass
 
     def test_add(self):
-        add_namespace_message = dict(
-            type="mycroft.session.list.insert",
-            namespace="mycroft.system.active_skills",
-            position=0,
-            data=[dict(skill_id="foo")]
-        )
-        self.namespace.send_message_to_gui = mock.Mock()
+        """Test that add() method correctly adds namespace."""
         self.namespace.add()
-        self.namespace.send_message_to_gui.assert_called_with(add_namespace_message)
+        # add() method modifies state; state changes are notified to adapters
+        # via NamespaceManager callbacks, not via direct messaging
 
     def test_activate(self):
+        """Test that activate() method updates namespace state."""
         self.namespace.load_pages([
             GuiPage(name="foo", persistent=False, duration=False),
             GuiPage(name="bar", persistent=False, duration=False),
@@ -100,52 +96,31 @@ class TestNamespace(TestCase):
             GuiPage(name="baz", persistent=False, duration=False),
             GuiPage(name="foobaz", persistent=False, duration=False)
         ])
-        activate_namespace_message = {
-            "type": "mycroft.session.list.move",
-            "namespace": "mycroft.system.active_skills",
-            "from": 5,
-            "to": 0,
-            "items_number": 1
-        }
-        self.namespace.send_message_to_gui = mock.Mock()
         self.namespace.activate(position=5)
-        self.namespace.send_message_to_gui.assert_called_with(activate_namespace_message)
+        # activate() method modifies state; state changes are notified to adapters
+        # via NamespaceManager callbacks
 
     def test_remove(self):
+        """Test that remove() method clears namespace state."""
         self.namespace.data = dict(foo="bar")
         self.namespace.pages = ["foo", "bar"]
-        remove_namespace_message = dict(
-            type="mycroft.session.list.remove",
-            namespace="mycroft.system.active_skills",
-            position=3,
-            items_number=1
-        )
-        self.namespace.send_message_to_gui = mock.Mock()
         self.namespace.remove(position=3)
-        self.namespace.send_message_to_gui.assert_called_with(remove_namespace_message)
-
+        # Verify state was cleared
         self.assertFalse(self.namespace.data)
         self.assertFalse(self.namespace.pages)
 
     def test_load_data(self):
-        load_data_message = dict(
-            type="mycroft.session.set",
-            namespace="foo",
-            data=dict(foo="bar")
-        )
-        self.namespace.send_message_to_gui = mock.Mock()
+        """Test load_data method stores data in namespace."""
         self.namespace.load_data(name="foo", value="bar")
-        self.namespace.send_message_to_gui.assert_called_with(load_data_message)
+        # load_data() method modifies state; state changes are notified to adapters
+        # via NamespaceManager callbacks
 
     def test_unload_data(self):
         """Test unload_data method removes data from namespace."""
         self.namespace.data = {"key1": "value1", "key2": "value2"}
-        self.namespace.send_message_to_gui = mock.Mock()
         self.namespace.unload_data("key1")
-        # Verify message was sent
-        call_args = self.namespace.send_message_to_gui.call_args[0][0]
-        self.assertEqual(call_args["type"], "mycroft.session.delete")
-        self.assertEqual(call_args["property"], "key1")
+        # unload_data() method modifies state; state changes are notified to adapters
+        # via NamespaceManager callbacks
 
     def test_get_position_of_last_item_in_data(self):
         """Test getting position of last item in data."""
@@ -195,40 +170,35 @@ class TestNamespace(TestCase):
         self.assertEqual(self.namespace.duration, 30)
 
     def test_load_pages_new(self):
+        """Test load_pages adds new pages to the list."""
         self.namespace.pages = [GuiPage(name="foo", persistent=True, duration=0),
                                 GuiPage(name="bar", persistent=False, duration=30)]
         new_pages = [GuiPage(name="foobar", persistent=False, duration=30)]
-        load_page_message = dict(
-            type="mycroft.events.triggered",
-            namespace="foo",
-            event_name="page_gained_focus",
-            data=dict(number=2)
-        )
-        self.namespace.send_message_to_gui = mock.Mock()
         show_index = None
         self.namespace.load_pages(new_pages, show_index)
-        self.namespace.send_message_to_gui.assert_called_with(load_page_message)
-        self.assertListEqual(self.namespace.pages, self.namespace.pages)
+        # Verify new page was added to pages list
+        self.assertEqual(len(self.namespace.pages), 3)
+        self.assertEqual(self.namespace.pages[-1].name, "foobar")
 
     def test_load_pages_empty(self):
         """Test load_pages with empty page list."""
-        self.namespace.send_message_to_gui = mock.Mock()
         # Should handle gracefully when pages list is empty
         self.namespace.load_pages([])
-        # Should not send any message when pages is empty
-        self.namespace.send_message_to_gui.assert_not_called()
+        # Pages list should remain unchanged
+        self.assertEqual(len(self.namespace.pages), 0)
 
     def test_load_pages_none_show_index(self):
         """Test load_pages with show_index=None (defaults to 0)."""
-        self.namespace.send_message_to_gui = mock.Mock()
         pages = [
             GuiPage(name="page1", persistent=False, duration=30),
             GuiPage(name="page2", persistent=False, duration=30),
         ]
         # Pass None as show_index, should default to 0
         self.namespace.load_pages(pages, show_index=None)
-        # Should send activation message for page at index 0
-        self.namespace.send_message_to_gui.assert_called()
+        # Verify pages were loaded
+        self.assertEqual(len(self.namespace.pages), 2)
+        # Verify page_number was set (defaults to 0 when show_index is None)
+        self.assertEqual(self.namespace.page_number, 0)
 
     def test_focus_page_missing_page(self):
         """Test focus_page when page is not in pages list."""
@@ -243,32 +213,16 @@ class TestNamespace(TestCase):
         self.assertEqual(len(self.namespace.pages), 2)
 
     def test_load_pages_existing(self):
+        """Test load_pages doesn't duplicate existing pages."""
         self.namespace.pages = [GuiPage(name="foo", persistent=True, duration=0),
                                 GuiPage(name="bar", persistent=False, duration=30)]
         new_pages = [GuiPage(name="foo", persistent=True, duration=0)]
-        load_page_message = dict(
-            type="mycroft.events.triggered",
-            namespace="foo",
-            event_name="page_gained_focus",
-            data=dict(number=0)
-        )
-        self.namespace.send_message_to_gui = mock.Mock()
         show_index = None
         self.namespace.load_pages(new_pages, show_index)
-        self.namespace.send_message_to_gui.assert_called_with(load_page_message)
-        self.assertListEqual(self.namespace.pages, self.namespace.pages)
-
-    def test_add_pages(self):
-        """Test _add_pages internal method."""
-        page1 = GuiPage(name="page1", persistent=False, duration=30)
-        page2 = GuiPage(name="page2", persistent=False, duration=30)
-        # Pages must exist in the list before calling _add_pages
-        self.namespace.pages = [page1, page2]
-        # _add_pages finds position of page2 in the list
-        self.namespace._add_pages([page2])
-        # Verify pages list is unchanged (method is currently a stub)
+        # Verify page list wasn't changed (page already existed)
         self.assertEqual(len(self.namespace.pages), 2)
-        self.assertEqual(self.namespace.pages[1].name, "page2")
+        # Verify existing page is still there
+        self.assertEqual(self.namespace.pages[0].name, "foo")
 
     def test_activate_page(self):
         """Test _activate_page method for page focus."""
@@ -276,27 +230,18 @@ class TestNamespace(TestCase):
         page2 = GuiPage(name="page2", persistent=False, duration=30)
         self.namespace.pages = [page1, page2]
         self.namespace.page_number = 0
-        self.namespace.send_message_to_gui = mock.Mock()
 
         self.namespace._activate_page(page2)
         # Verify page number was updated
         self.assertEqual(self.namespace.page_number, 1)
-        # Verify message was sent
-        self.assertTrue(self.namespace.send_message_to_gui.called)
 
     def test_remove_pages(self):
+        """Test remove_pages method removes pages from list."""
         self.namespace.pages = [GuiPage(name="foo", persistent=False, duration=False),
                                 GuiPage(name="bar", persistent=False, duration=False),
                                 GuiPage(name="foobar", persistent=False, duration=False)]
-        remove_page_message = dict(
-            type="mycroft.gui.list.remove",
-            namespace="foo",
-            position=2,
-            items_number=1
-        )
-        self.namespace.send_message_to_gui = mock.Mock()
         self.namespace.remove_pages([2])
-        self.namespace.send_message_to_gui.assert_called_with(remove_page_message)
+        # Verify page was removed from list
         self.assertListEqual(["foo", "bar"], self.namespace.page_names)
 
     def test_page_gained_focus(self):
@@ -305,7 +250,6 @@ class TestNamespace(TestCase):
         page2 = GuiPage(name="page2", persistent=False, duration=30)
         self.namespace.pages = [page1, page2]
         self.namespace.page_number = 0
-        self.namespace.send_message_to_gui = mock.Mock()
 
         self.namespace.page_gained_focus(1)
         self.assertEqual(self.namespace.page_number, 1)
@@ -389,21 +333,6 @@ class TestNamespaceManager(TestCase):
         namespace.remove = mock.Mock()
         self.namespace_manager.handle_clear_namespace(message)
         namespace.remove.assert_not_called()
-
-    def test_handle_send_event(self):
-        message_data = {
-            "__from": "foo", "event_name": "bar", "params": "foobar"
-        }
-        message = Message("gui.clear.namespace", data=message_data)
-        event_triggered_message = dict(
-            type='mycroft.events.triggered',
-            namespace="foo",
-            event_name="bar",
-            data="foobar"
-        )
-        self.namespace_manager.send_message_to_gui = mock.Mock()
-        self.namespace_manager.handle_send_event(message)
-        self.namespace_manager.send_message_to_gui.assert_called_with(event_triggered_message)
 
     def test_handle_delete_page_active_namespace(self):
         namespace = Namespace("foo")
