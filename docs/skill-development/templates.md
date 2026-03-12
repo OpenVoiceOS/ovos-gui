@@ -1,5 +1,8 @@
 # Page Templates
 
+**For the complete design philosophy and justification, see:**
+[DESIGN_PHILOSOPHY.md](../DESIGN_PHILOSOPHY.md)
+
 Skills display content exclusively through pre-defined page templates.
 Custom per-skill QML or HTML is no longer supported through this interface.
 
