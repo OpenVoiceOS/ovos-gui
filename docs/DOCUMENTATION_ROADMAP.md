@@ -67,7 +67,7 @@ graph LR
    - Wire protocol and message formats
 
 5. **WebSocket extensions**:
-   - [ovos-legacy-mycroft-gui-plugin: PROTOCOL_EXTENSIONS.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/PROTOCOL_EXTENSIONS.md)
+   - [ovos-legacy-mycroft-gui-plugin: protocol/protocol.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/protocol/protocol.md)
    - Shell features protocol (brightness, colors, etc.)
 
 **Time estimate**: 2-4 hours
@@ -205,7 +205,7 @@ graph LR
 ├── index.md                      📋 Adapter hub
 ├── bus-api-reference.md          📡 Bus message reference
 ├── ARCHITECTURE_REVIEW.md        🔧 Architecture decisions
-├── PROTOCOL_EXTENSIONS.md        📋 WebSocket extensions
+├── protocol/protocol.md        📋 WebSocket extensions
 ├── OVOS_GUI_COMPATIBILITY.md     ✅ Compatibility audit
 ├── homescreen.md                 🏠 Homescreen design
 └── FAQ.md                        ❓ Common questions
@@ -278,7 +278,7 @@ graph TD
 
 1. **Start with**: [bus-api-reference.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/bus-api-reference.md) → Message format
 2. **See protocol**: [protocol/protocol.md](protocol/protocol.md) → Wire format
-3. **Check extensions**: [PROTOCOL_EXTENSIONS.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/PROTOCOL_EXTENSIONS.md) → Shell features
+3. **Check extensions**: [protocol/protocol.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/protocol/protocol.md) → Shell features
 
 ---
 

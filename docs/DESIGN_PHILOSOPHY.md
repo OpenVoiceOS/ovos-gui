@@ -355,7 +355,7 @@ class LegacyMycoftGuiPlugin(AbstractGUIPlugin):
         icon = data.get("icon")
         location = data.get("location")
         
-        # Map to QML template (see PROTOCOL_EXTENSIONS.md)
+        # Map to QML template (see protocol/protocol.md)
         qml_file = "Weather.qml"
         
         # Send to Qt clients via WebSocket (mycroft-gui protocol)
@@ -395,7 +395,7 @@ class LegacyMycoftGuiPlugin(AbstractGUIPlugin):
 - [Source Code](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin)
 - [Documentation Hub](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/index.md)
 - [Architecture Review](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/ARCHITECTURE_REVIEW.md)
-- [Protocol Extensions](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/PROTOCOL_EXTENSIONS.md)
+- [Protocol Extensions](./protocol/protocol.md)
 
 ### 🔧 Key Architectural Features
 
@@ -499,7 +499,7 @@ graph TD
 - ⚠️ Shell features require protocol extensions
 - ✅ Backwards compatible with Mycroft AI ecosystem
 
-**Documentation**: [PROTOCOL_EXTENSIONS.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/PROTOCOL_EXTENSIONS.md)
+**Documentation**: [protocol/protocol.md](./protocol/protocol.md)
 
 #### ADR-002: Consolidate Shell-Companion
 **Decision**: Merge ovos-gui-plugin-shell-companion into this adapter
@@ -599,7 +599,7 @@ For adapter developers using this as reference:
 | Document | Purpose |
 |----------|---------|
 | [ARCHITECTURE_REVIEW.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/ARCHITECTURE_REVIEW.md) | Architecture decisions and tradeoffs |
-| [PROTOCOL_EXTENSIONS.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/PROTOCOL_EXTENSIONS.md) | WebSocket protocol extensions |
+| [protocol/protocol.md](./protocol/protocol.md) | WebSocket protocol extensions |
 | [OVOS_GUI_COMPATIBILITY.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/OVOS_GUI_COMPATIBILITY.md) | ✅ Verified compatibility audit |
 | [bus-api-reference.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/bus-api-reference.md) | Complete bus message reference |
 
@@ -613,7 +613,7 @@ For adapter developers using this as reference:
 | [ovos-gui-api-client: page-templates.md](https://github.com/OpenVoiceOS/ovos-gui-api-client/blob/dev/docs/page-templates.md) | Skill API reference |
 | [ovos-legacy-mycroft-gui-plugin: bus-api-reference.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/bus-api-reference.md) | Bus message specifications |
 | [ovos-legacy-mycroft-gui-plugin: ARCHITECTURE_REVIEW.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/ARCHITECTURE_REVIEW.md) | Reference implementation architecture |
-| [ovos-legacy-mycroft-gui-plugin: PROTOCOL_EXTENSIONS.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/PROTOCOL_EXTENSIONS.md) | WebSocket protocol extensions |
+| [ovos-legacy-mycroft-gui-plugin: protocol/protocol.md](./protocol/protocol.md) | WebSocket protocol extensions |
 | [ovos-legacy-mycroft-gui-plugin: OVOS_GUI_COMPATIBILITY.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/OVOS_GUI_COMPATIBILITY.md) | Compatibility audit and verification |
 
 ---

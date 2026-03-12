@@ -115,7 +115,7 @@ If building a Qt adapter:
 
 | Document | Purpose |
 |----------|---------|
-| **[protocol/protocol.md](protocol/protocol.md)** | Wire protocol, message format, handshake sequence |
+| **[protocol/protocol.md](protocol/protocol.md)** | Complete wire protocol: core GUI, shell features, message formats |
 
 ### Operations & Administration
 
