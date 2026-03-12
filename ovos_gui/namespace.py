@@ -316,26 +316,47 @@ class Namespace:
             self.page_gained_focus(self.page_number - 1)
 
 
+class GUISession:
+    """Represents a single GUI session (site/screen).
+
+    Each session maintains its own stack of active namespaces, loaded
+    namespace data, and timers.
+    """
+
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.loaded_namespaces: Dict[str, Namespace] = dict()
+        self.active_namespaces: List[Namespace] = list()
+        self.remove_namespace_timers: Dict[str, Timer] = dict()
+
+
 class NamespaceManager:
     """
     Manages the active namespace stack and the content of namespaces.
 
     Attributes:
         core_bus: client for communicating with the core message bus
-        gui_bus: client for communicating with the GUI message bus
-        loaded_namespaces: cache of namespaces that have been introduced
-        active_namespaces: LIFO stack of namespaces being displayed
-        remove_namespace_timers: background process to remove a namespace with
-            a persistence expressed in seconds
+        adapters: loaded GUI adapter plugins
+        sessions: dictionary of active sessions (site_id -> GUISession)
     """
 
     def __init__(self, core_bus: MessageBusClient, adapters: Optional[List] = None):
         self.core_bus = core_bus
         self.adapters: List = adapters or []
-        self.loaded_namespaces: Dict[str, Namespace] = dict()
-        self.active_namespaces: List[Namespace] = list()
-        self.remove_namespace_timers: Dict[str, Timer] = dict()
+        self.sessions: Dict[str, GUISession] = dict()
         self._define_message_handlers()
+
+    def get_session(self, session_id: str) -> GUISession:
+        """Retrieve a session by ID, creating it if necessary.
+
+        Args:
+            session_id: Routing key for the session.
+        Returns:
+            The GUISession object.
+        """
+        if session_id not in self.sessions:
+            self.sessions[session_id] = GUISession(session_id)
+        return self.sessions[session_id]
 
     def _define_message_handlers(self):
         """

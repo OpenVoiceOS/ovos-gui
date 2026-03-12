@@ -23,3 +23,14 @@ Skills use the template system. Instead of shipping QML, they call methods like 
 ## Where is the documentation hub?
 
 Start at `docs/index.md` which provides role-based navigation paths for skill developers, adapter developers, system integrators, and contributors.
+
+## How does ovos-gui communicate state changes to adapters?
+
+`ovos-gui` maintains the **centralized GUI state** (active skill namespace, pages, session data) in the `NamespaceManager` class. Adapters are notified of state changes via callback methods, not direct message sends:
+
+- `on_namespace_activated()` — when a skill becomes visible
+- `on_page_gained_focus()` — when a page is activated
+- `on_session_data_changed()` — when skill data is updated
+- `on_status_event()` — when system events occur (speaker muted, sleep, etc.)
+
+This **unidirectional flow** (ovos-gui → adapters) separates concerns: ovos-gui handles state management, adapters handle rendering.
