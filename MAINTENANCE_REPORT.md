@@ -1,5 +1,24 @@
 # Maintenance Report — ovos-gui
 
+## 2026-03-12 — TECH-005: Formal Adapter Interface Contract Documentation
+
+- **AI Model**: Claude Haiku 4.5
+- **Actions Taken**:
+  - Created `docs/adapter-development/CONTRACT.md` — Formal specification for GUI adapter interface
+  - Documented 3 layers of contract: signature requirements, behavioral requirements, state management
+  - Specified exception safety (CRITICAL), threading model, blocking operation restrictions
+  - Provided compliance checklist and testing guidelines
+  - Added 4 common adapter patterns (web, terminal, Qt reference)
+  - Updated `docs/index.md` to reference CONTRACT.md in quick navigation and reference table
+- **Result**:
+  - All 102 tests passing (TECH-007 changes verified stable)
+  - Adapter developers now have explicit requirements for:
+    - Exception handling (all methods must catch exceptions)
+    - Threading model (no blocking I/O in handlers)
+    - State management (use provided query APIs, don't modify manager state)
+    - Compliance validation (automated checklist)
+- **Oversight**: MEDIUM — based on architectural audit findings that adapter requirements were undocumented
+
 ## 2026-03-12 — Dead Code Removal: GUI Messaging Refactor
 
 - **AI Model**: Claude Haiku 4.5

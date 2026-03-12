@@ -34,3 +34,14 @@ Start at `docs/index.md` which provides role-based navigation paths for skill de
 - `on_status_event()` — when system events occur (speaker muted, sleep, etc.)
 
 This **unidirectional flow** (ovos-gui → adapters) separates concerns: ovos-gui handles state management, adapters handle rendering.
+
+## What are the requirements for building a GUI adapter?
+
+Adapters must follow a formal **interface contract** specified in `docs/adapter-development/CONTRACT.md`:
+
+1. **Exception Safety** — All adapter methods must catch exceptions and never raise
+2. **No Blocking I/O** — Handlers must return immediately; use threading for blocking calls
+3. **State Management** — Adapters can query NamespaceManager state but cannot modify it
+4. **Threading** — Methods are called synchronously on the main thread; use `Thread(daemon=True)` for background work
+
+See the compliance checklist in CONTRACT.md before publishing an adapter.

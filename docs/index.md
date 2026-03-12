@@ -21,8 +21,10 @@
 
 1. **[adapter-development/architecture.md](adapter-development/architecture.md)** — How the system works
 2. **[adapter-development/adapter-plugins.md](adapter-development/adapter-plugins.md)** — Plugin architecture and lifecycle
-3. **[adapter-development/bus-protocol.md](adapter-development/bus-protocol.md)** — MessageBus API specification
-4. **[protocol/protocol.md](protocol/protocol.md)** (reference) — Wire protocol details
+3. **[adapter-development/CONTRACT.md](adapter-development/CONTRACT.md)** ⭐ **(NEW)** — Formal adapter interface contract and compliance
+4. **[ROUTING_KEY_GUIDE.md](ROUTING_KEY_GUIDE.md)** ⭐ **(NEW)** — Multi-device routing semantics and site_id usage
+5. **[adapter-development/bus-protocol.md](adapter-development/bus-protocol.md)** — MessageBus API specification
+6. **[protocol/protocol.md](protocol/protocol.md)** (reference) — Wire protocol details
 
 If building a Qt adapter:
 - **[adapter-development/legacy-qt-plugin.md](adapter-development/legacy-qt-plugin.md)** — Study the Qt5 implementation
@@ -108,6 +110,7 @@ If building a Qt adapter:
 |----------|-------|---------|
 | **[architecture.md](adapter-development/architecture.md)** | Design | System architecture, data flow, component interaction |
 | **[adapter-plugins.md](adapter-development/adapter-plugins.md)** | Implementation | Plugin entry points, lifecycle hooks, resource management |
+| **[CONTRACT.md](adapter-development/CONTRACT.md)** ⭐ **(NEW)** | Specification | Formal interface contract: exception safety, threading, state management |
 | **[bus-protocol.md](adapter-development/bus-protocol.md)** | API | MessageBus events, message format, state synchronization |
 | **[legacy-qt-plugin.md](adapter-development/legacy-qt-plugin.md)** | Reference | Canonical Qt5 implementation (study this) |
 | **[skill-migration.md](adapter-development/skill-migration.md)** | Migration | Upgrading from old `show_page()` to template API |
