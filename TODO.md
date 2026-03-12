@@ -45,9 +45,9 @@
 
 ---
 
-### [ ] TECH-007: Formalize Routing Key Concept
+### [x] TECH-007: Formalize Routing Key Concept
 
-**Status**: Not Started
+**Status**: COMPLETED ✅ (2026-03-12)
 **Effort**: 1 day
 **Blocking**: Adapter developer confusion, multi-device deployments
 **Owner**: Maintainer
@@ -107,9 +107,9 @@
 
 ---
 
-### [ ] TECH-005: Document Adapter Contract (Spec)
+### [x] TECH-005: Document Adapter Contract (Spec)
 
-**Status**: Not Started
+**Status**: COMPLETED ✅ (2026-03-12)
 **Effort**: 1 day
 **Blocking**: Community adapter quality, code review friction
 **Owner**: Any contributor
@@ -914,10 +914,10 @@
 
 Track overall audit completion:
 
-- [ ] **Phase 1 Complete**: E2E tests green, routing key formalized, contract documented
+- [x] **Phase 1 Complete**: E2E tests green ✅, routing key formalized ✅, contract documented ✅
 - [ ] **Phase 2 Complete**: State query API working, timers retry, async callbacks operational
 - [ ] **Phase 3 Complete**: Config hot-reload, memory capped, docs consolidated
-- [ ] **All TECH-* items resolved**: 10/10 debt items addressed
+- [ ] **All TECH-* items resolved**: 3/10 debt items addressed
 - [ ] **Coverage maintained**: ≥88% test coverage
 - [ ] **CI passing**: All workflows green
 - [ ] **Adapters updated**: Legacy, PyHTMX, Shell Companion updated & verified
