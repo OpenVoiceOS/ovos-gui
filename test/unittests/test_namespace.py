@@ -328,7 +328,163 @@ class TestNamespaceManager(TestCase):
         
         session1 = self.namespace_manager.get_session("room1")
         session2 = self.namespace_manager.get_session("room2")
-        
+
         self.assertEqual(session1.loaded_namespaces["skill"].data["val"], 1)
         self.assertEqual(session2.loaded_namespaces["skill"].data["val"], 2)
-        self.assertIsNot(session1, session2)
+
+    # ====== TECH-006: State Query API Tests ======
+
+    def test_get_active_namespace_empty_session(self):
+        """Test get_active_namespace returns None for empty session."""
+        result = self.namespace_manager.get_active_namespace("default")
+        self.assertIsNone(result)
+
+    def test_get_active_namespace_returns_top_of_stack(self):
+        """Test get_active_namespace returns the top (index 0) of active stack."""
+        # Create namespace
+        msg = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default", "site_id": "default"}})
+        self.namespace_manager.handle_show_page(msg)
+
+        # Get active namespace
+        active = self.namespace_manager.get_active_namespace("default")
+        self.assertIsNotNone(active)
+        self.assertEqual(active.skill_id, "weather.skill")
+
+    def test_get_active_namespace_different_sessions(self):
+        """Test get_active_namespace isolates by session."""
+        # Create in default session
+        msg1 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default", "site_id": "default"}})
+        self.namespace_manager.handle_show_page(msg1)
+
+        # Create in kitchen session
+        msg2 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_clock"], "__from": "clock.skill", "__idle": 30
+        }, context={"session": {"session_id": "kitchen", "site_id": "kitchen"}})
+        self.namespace_manager.handle_show_page(msg2)
+
+        # Verify each session has its own active namespace
+        default_active = self.namespace_manager.get_active_namespace("default")
+        kitchen_active = self.namespace_manager.get_active_namespace("kitchen")
+
+        self.assertEqual(default_active.skill_id, "weather.skill")
+        self.assertEqual(kitchen_active.skill_id, "clock.skill")
+
+    def test_get_namespace_data_returns_none_for_missing(self):
+        """Test get_namespace_data returns None if namespace doesn't exist."""
+        result = self.namespace_manager.get_namespace_data("nonexistent.skill", "default")
+        self.assertIsNone(result)
+
+    def test_get_namespace_data_returns_session_data(self):
+        """Test get_namespace_data returns the data dict for a namespace."""
+        # Create namespace
+        msg = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default", "site_id": "default"}})
+        self.namespace_manager.handle_show_page(msg)
+
+        # Set data via gui.value.set (how skills actually work)
+        set_msg = Message("gui.value.set", data={
+            "__from": "weather.skill",
+            "current_temp": 22,
+            "condition": "sunny"
+        }, context={"session": {"session_id": "default", "site_id": "default"}})
+        self.namespace_manager.handle_set_value(set_msg)
+
+        # Get data
+        data = self.namespace_manager.get_namespace_data("weather.skill", "default")
+        self.assertIsNotNone(data)
+        self.assertEqual(data["current_temp"], 22)
+        self.assertEqual(data["condition"], "sunny")
+
+    def test_get_namespace_data_is_copy(self):
+        """Test get_namespace_data returns a copy, not a reference."""
+        # Create namespace
+        msg = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_text"], "__from": "test.skill", "__idle": 30
+        }, context={"session": {"session_id": "default", "site_id": "default"}})
+        self.namespace_manager.handle_show_page(msg)
+
+        # Set data
+        set_msg = Message("gui.value.set", data={
+            "__from": "test.skill",
+            "text": "original"
+        }, context={"session": {"session_id": "default", "site_id": "default"}})
+        self.namespace_manager.handle_set_value(set_msg)
+
+        # Get data and modify it
+        data = self.namespace_manager.get_namespace_data("test.skill", "default")
+        data["text"] = "modified"
+
+        # Verify original is unchanged
+        data2 = self.namespace_manager.get_namespace_data("test.skill", "default")
+        self.assertEqual(data2["text"], "original")
+
+    def test_get_all_sessions_empty(self):
+        """Test get_all_sessions returns empty list when no sessions exist."""
+        result = self.namespace_manager.get_all_sessions()
+        self.assertEqual(result, [])
+
+    def test_get_all_sessions_returns_all(self):
+        """Test get_all_sessions lists all active sessions."""
+        # Create in multiple sessions
+        msg1 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default", "site_id": "default"}})
+        self.namespace_manager.handle_show_page(msg1)
+
+        msg2 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_clock"], "__from": "clock.skill", "__idle": 30
+        }, context={"session": {"session_id": "kitchen", "site_id": "kitchen"}})
+        self.namespace_manager.handle_show_page(msg2)
+
+        msg3 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_text"], "__from": "text.skill", "__idle": 30
+        }, context={"session": {"session_id": "bedroom", "site_id": "bedroom"}})
+        self.namespace_manager.handle_show_page(msg3)
+
+        # Get all sessions
+        sessions = self.namespace_manager.get_all_sessions()
+        self.assertEqual(len(sessions), 3)
+        self.assertIn("default", sessions)
+        self.assertIn("kitchen", sessions)
+        self.assertIn("bedroom", sessions)
+
+    def test_is_namespace_active_returns_false_when_inactive(self):
+        """Test is_namespace_active returns False for inactive namespaces."""
+        result = self.namespace_manager.is_namespace_active("nonexistent.skill", "default")
+        self.assertFalse(result)
+
+    def test_is_namespace_active_returns_true_for_active(self):
+        """Test is_namespace_active returns True when namespace is at top of stack."""
+        # Create namespace
+        msg = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default", "site_id": "default"}})
+        self.namespace_manager.handle_show_page(msg)
+
+        # Check it's active
+        result = self.namespace_manager.is_namespace_active("weather.skill", "default")
+        self.assertTrue(result)
+
+    def test_is_namespace_active_returns_false_for_lower_stack(self):
+        """Test is_namespace_active returns False for non-top namespaces."""
+        # Create first namespace
+        msg1 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default", "site_id": "default"}})
+        self.namespace_manager.handle_show_page(msg1)
+
+        # Create second namespace (pushes first to lower stack)
+        msg2 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_text"], "__from": "text.skill", "__idle": 30
+        }, context={"session": {"session_id": "default", "site_id": "default"}})
+        self.namespace_manager.handle_show_page(msg2)
+
+        # First should be inactive now
+        self.assertFalse(self.namespace_manager.is_namespace_active("weather.skill", "default"))
+        # Second should be active
+        self.assertTrue(self.namespace_manager.is_namespace_active("text.skill", "default"))

@@ -221,6 +221,72 @@ class NamespaceManager:
             self.sessions[session_id] = GUISession(session_id)
         return self.sessions[session_id]
 
+    # ====== TECH-006: State Query API for Adapters ======
+
+    def get_active_namespace(self, session_id: str = "default") -> Optional[Namespace]:
+        """Get the currently active (top-of-stack) namespace for a session.
+
+        TECH-006: Allows adapters to query which namespace is currently visible
+        and recover state after crashes.
+
+        Args:
+            session_id: Session identifier (default: "default" for single-screen)
+
+        Returns:
+            Active Namespace object if one exists, else None
+        """
+        session = self.sessions.get(session_id)
+        if session and session.active_namespaces:
+            return session.active_namespaces[0]  # Top of stack is index 0
+        return None
+
+    def get_namespace_data(self, namespace_name: str, session_id: str = "default") -> Optional[dict]:
+        """Get current session data for a namespace.
+
+        TECH-006: Allows adapters to query the full data dict (gui[key] = value)
+        for a namespace without relying on callback parameters.
+
+        Args:
+            namespace_name: Skill ID or namespace name
+            session_id: Session identifier
+
+        Returns:
+            Dict of session data if namespace exists, else None
+        """
+        session = self.sessions.get(session_id)
+        if session:
+            namespace = session.loaded_namespaces.get(namespace_name)
+            if namespace:
+                return namespace.data.copy()  # Return copy to prevent external modification
+        return None
+
+    def get_all_sessions(self) -> List[str]:
+        """Get list of all active session IDs.
+
+        TECH-006: Allows adapters to discover all sessions for multi-room scenarios.
+
+        Returns:
+            List of session_id strings
+        """
+        return list(self.sessions.keys())
+
+    def is_namespace_active(self, namespace_name: str, session_id: str = "default") -> bool:
+        """Check if a namespace is currently visible (top of active stack).
+
+        TECH-006: Quick check for adapter logic without pulling full state.
+
+        Args:
+            namespace_name: Skill ID or namespace name
+            session_id: Session identifier
+
+        Returns:
+            True if namespace is currently displayed, False otherwise
+        """
+        active_ns = self.get_active_namespace(session_id)
+        if active_ns:
+            return active_ns.skill_id == namespace_name
+        return False
+
     def _define_message_handlers(self):
         """
         Defines event handlers for core messagebus.
