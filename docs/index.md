@@ -60,6 +60,26 @@ If building a Qt adapter:
 | **[installation.md](getting-started/installation.md)** | 15 min | Installing ovos-gui, adapters, and dependencies |
 | **[concepts.md](getting-started/concepts.md)** | 15 min | Key terminology: namespaces, templates, adapters, MessageBus |
 
+### Design & Architecture (Core Reference)
+
+| Document | Purpose |
+|----------|---------|
+| **[DESIGN_PHILOSOPHY.md](DESIGN_PHILOSOPHY.md)** | ✅ **Central source of truth** — Template design principles, voice-first patterns, cross-platform requirements |
+| **[adapter-development/architecture.md](adapter-development/architecture.md)** | System architecture and component interactions |
+| **[protocol/protocol.md](protocol/protocol.md)** | Wire protocol and message format specifications |
+
+### Reference Implementation (ovos-legacy-mycroft-gui-plugin)
+
+**The canonical reference implementation of the OVOS GUI adapter interface:**
+
+| Document | Purpose |
+|----------|---------|
+| [ovos-legacy-mycroft-gui-plugin: index.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/index.md) | Complete adapter documentation hub |
+| [ovos-legacy-mycroft-gui-plugin: bus-api-reference.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/bus-api-reference.md) | All bus messages with examples |
+| [ovos-legacy-mycroft-gui-plugin: ARCHITECTURE_REVIEW.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/ARCHITECTURE_REVIEW.md) | Architecture decisions and solutions |
+| [ovos-legacy-mycroft-gui-plugin: PROTOCOL_EXTENSIONS.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/PROTOCOL_EXTENSIONS.md) | WebSocket protocol extensions |
+| [ovos-legacy-mycroft-gui-plugin: OVOS_GUI_COMPATIBILITY.md](https://github.com/OpenVoiceOS/ovos-legacy-mycroft-gui-plugin/blob/dev/docs/OVOS_GUI_COMPATIBILITY.md) | ✅ Verified compatible with ovos-gui |
+
 ### Skill Development (Python Developers)
 
 | Document | Focus | Purpose |

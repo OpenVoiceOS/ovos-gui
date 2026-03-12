@@ -1,6 +1,10 @@
 # OVOS GUI service protocol
 
-This protocol defines how ovos-gui communicates with connected clients
+This protocol defines how ovos-gui communicates with connected clients.
+
+**NOTE**: This document covers core GUI rendering and data synchronization. For shell features (brightness, colors, notifications, widgets, configuration), see [PROTOCOL_EXTENSIONS.md](./PROTOCOL_EXTENSIONS.md).
+
+## Table of Contents
 
 - [CONNECTION - mycroft.gui.connected](#connection---mycroftguiconnected)
 - [NAMESPACES](#namespaces)
