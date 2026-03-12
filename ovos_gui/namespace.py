@@ -39,8 +39,6 @@ The state of the active namespace stack is maintained locally and in the GUI
 code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
-import shutil
-from os.path import join, dirname, exists
 from threading import Lock, Timer
 from typing import List, Union, Optional, Dict
 
@@ -49,13 +47,6 @@ from ovos_config.config import Configuration
 from ovos_spec_tools import SpecMessage
 from ovos_utils.log import LOG
 
-from ovos_gui.bus import (
-    create_gui_service,
-    determine_if_gui_connected,
-    get_gui_websocket_config,
-    send_message_to_gui, GUIWebsocketHandler
-)
-from ovos_gui.constants import GUI_CACHE_PATH
 from ovos_gui.page import GuiPage
 
 namespace_lock = Lock()
@@ -86,30 +77,6 @@ def _validate_page_message(message: Message) -> bool:
     return valid
 
 
-def _get_idle_display_config() -> str:
-    """
-    Retrieves the current value of the idle display skill configuration.
-    @returns: Configured idle_display_skill (skill_id)
-    """
-    config = Configuration()
-    enclosure_config = config.get("gui") or {}
-    idle_display_skill = enclosure_config.get("idle_display_skill")
-    LOG.info(f"Configured homescreen: {idle_display_skill}")
-    return idle_display_skill
-
-
-def _get_active_gui_extension() -> str:
-    """
-    Retrieves the current value of the gui extension configuration.
-    @returns: Configured gui extension
-    """
-    config = Configuration()
-    enclosure_config = config.get("gui") or {}
-    gui_extension = enclosure_config.get("extension", "generic")
-    LOG.info(f"Configured GUI extension: {gui_extension}")
-    return gui_extension.lower()
-
-
 class Namespace:
     """A grouping mechanism for related GUI pages and data.
 
@@ -138,6 +105,9 @@ class Namespace:
         self.page_number = 0
         self.session_set = False
 
+    def send_message_to_gui(self, message):
+        pass  # TODO
+
     @property
     def page_names(self):
         return [page.name for page in self.pages]
@@ -161,7 +131,7 @@ class Namespace:
             position=0,
             data=[dict(skill_id=self.skill_id)]
         )
-        send_message_to_gui(message)
+        self.send_message_to_gui(message)
 
     def activate(self, position: int):
         """
@@ -180,7 +150,7 @@ class Namespace:
             "to": 0,
             "items_number": 1
         }
-        send_message_to_gui(message)
+        self.send_message_to_gui(message)
 
     def remove(self, position: int):
         """
@@ -200,7 +170,7 @@ class Namespace:
             position=position,
             items_number=1
         )
-        send_message_to_gui(message)
+        self.send_message_to_gui(message)
         self.session_set = False
         self.pages = list()
         self.data = dict()
@@ -219,7 +189,7 @@ class Namespace:
             namespace=self.skill_id,
             data={name: value}
         )
-        send_message_to_gui(message)
+        self.send_message_to_gui(message)
 
     def unload_data(self, name: str):
         """
@@ -232,7 +202,7 @@ class Namespace:
             property=name,
             namespace=self.skill_id
         )
-        send_message_to_gui(message)
+        self.send_message_to_gui(message)
 
     def get_position_of_last_item_in_data(self) -> int:
         """
@@ -319,12 +289,14 @@ class Namespace:
 
         # Find position of new page in self.pages
         position = self.pages.index(new_pages[0])
-        for client in GUIWebsocketHandler.clients:
-            try:
-                LOG.debug(f"Updating {client.framework} client")
-                client.send_gui_pages(new_pages, self.skill_id, position)
-            except Exception as e:
-                LOG.exception(f"Error updating {client.framework} client: {e}")
+
+        # TODO
+        #for client in GUIWebsocketHandler.clients:
+        #    try:
+        #        LOG.debug(f"Updating {client.framework} client")
+        #        client.send_gui_pages(new_pages, self.skill_id, position)
+        #    except Exception as e:
+        #        LOG.exception(f"Error updating {client.framework} client: {e}")
 
     def focus_page(self, page):
         """
@@ -370,7 +342,7 @@ class Namespace:
             event_name="page_gained_focus",
             data={"number": self.page_number}
         )
-        send_message_to_gui(message)
+        self.send_message_to_gui(message)
 
     def remove_pages(self, positions: List[int]):
         """
@@ -388,7 +360,7 @@ class Namespace:
                 position=position,
                 items_number=1
             )
-            send_message_to_gui(message)
+            self.send_message_to_gui(message)
 
     def page_gained_focus(self, page_number: int):
         """
@@ -419,28 +391,15 @@ class NamespaceManager:
         active_namespaces: LIFO stack of namespaces being displayed
         remove_namespace_timers: background process to remove a namespace with
             a persistence expressed in seconds
-        idle_display_skill: skill ID of the skill that controls the idle screen
     """
 
-    def __init__(self, core_bus: MessageBusClient):
+    def __init__(self, core_bus: MessageBusClient, adapters: Optional[List] = None):
         self.core_bus = core_bus
-        self.gui_bus = create_gui_service(self)
+        self.adapters: List = adapters or []
         self.loaded_namespaces: Dict[str, Namespace] = dict()
         self.active_namespaces: List[Namespace] = list()
         self.remove_namespace_timers: Dict[str, Timer] = dict()
-        self.idle_display_skill = _get_idle_display_config()
-        self.active_extension = _get_active_gui_extension()
-        self._system_res_dir = join(dirname(__file__), "res", "gui")
-        self._init_gui_file_share()
         self._define_message_handlers()
-
-    def _init_gui_file_share(self):
-        """
-        Initialize optional GUI file collection. if `gui_file_path` is
-        defined, resources are assumed to be referenced outside this container.
-        """
-        config = Configuration().get("gui", {})
-        self._cache_system_resources()
 
     def _define_message_handlers(self):
         """
@@ -453,7 +412,6 @@ class NamespaceManager:
         self.core_bus.on("gui.page.show", self.handle_show_page)
         self.core_bus.on("gui.status.request", self.handle_status_request)
         self.core_bus.on("gui.value.set", self.handle_set_value)
-        self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
         self.core_bus.on("mycroft.gui.screen.close", self.handle_namespace_global_back)
@@ -513,8 +471,10 @@ class NamespaceManager:
         for msg in messages_to_forward:
             self.core_bus.on(msg, self.forward_to_gui)
 
-    @staticmethod
-    def forward_to_gui(message: Message):
+    def send_message_to_gui(self, message):
+        pass # TODO
+
+    def forward_to_gui(self, message: Message):
         """
         Forward a core Message to the GUI
         @param message: Core message to forward
@@ -526,7 +486,16 @@ class NamespaceManager:
             data=message.data
         )
         LOG.info(f"GUI PROTOCOL - Sending event '{message.msg_type}' for namespace: system")
-        send_message_to_gui(gui_message)
+        self.send_message_to_gui(gui_message)
+        # Also notify adapter plugins of the status event
+        site_id = self._gui_routing_key(message)
+        for adapter in self.adapters:
+            try:
+                adapter.on_status_event(message.msg_type, message.data, site_id)
+            except Exception:
+                LOG.exception(
+                    f"Error in {adapter.__class__.__name__}.on_status_event"
+                )
 
     def handle_clear_namespace(self, message: Message):
         """
@@ -544,8 +513,7 @@ class NamespaceManager:
                 with namespace_lock:
                     self._remove_namespace(namespace_name)
 
-    @staticmethod
-    def handle_send_event(message: Message):
+    def handle_send_event(self, message: Message):
         """
         Handles a request to send a message to the GUI message bus.
         @param message: the message requesting a message to be sent to the GUI
@@ -561,7 +529,7 @@ class NamespaceManager:
                 event_name=event,
                 data=message.data.get('params')
             )
-            send_message_to_gui(message)
+            self.send_message_to_gui(message)
         except Exception:
             LOG.exception('Could not send event trigger')
 
@@ -635,6 +603,62 @@ class NamespaceManager:
             # Defines default behavior as displaying for 30 seconds
             return False, 30
 
+    @staticmethod
+    def _gui_routing_key(message: Message) -> str:
+        """Compute the GUI routing key from a message's session context.
+
+        Three cases, in priority order:
+
+        1. **On-device** — ``session_id == "default"`` (the SessionManager
+           default session, e.g. Mark2 / laptop with local listener).
+           Routing key → ``"default"``.
+
+        2. **Location group** — ``session.site_id`` is set and meaningful
+           (not ``"unknown"``), meaning the interaction came from a device
+           configured with a physical location such as ``"living_room"``.
+           Multiple screens at the same location share this key.
+           Routing key → ``site_id``.
+
+        3. **Standalone remote GUI** — UUID ``session_id`` with no configured
+           ``site_id`` (e.g. OVOS running as a server, GUI on a phone).
+           The phone's GUI client registers with its session UUID.
+           Routing key → ``session_id``.
+        """
+        ctx = message.context if message else {}
+        session = ctx.get("session", {})
+        session_id = session.get("session_id") or "default"
+        site_id = session.get("site_id") or ""
+
+        # Case 1: on-device default session
+        if session_id == "default":
+            return "default"
+
+        # Case 2: meaningful physical location configured on the remote device
+        if site_id and site_id != "unknown":
+            return site_id
+
+        # Case 3: remote session with no site — route by session_id so the
+        # specific phone/client GUI receives the event
+        return session_id
+
+    def _dispatch_template_to_adapters(self, template: str, skill_id: str, data: dict, site_id: str = "default"):
+        """Call matching handler on every loaded adapter for a SYSTEM_* template.
+
+        Args:
+            template: PageTemplates value, e.g. ``"SYSTEM_weather"``.
+            skill_id: Namespace / skill that requested the display.
+            data:     Current session data for the namespace.
+            site_id:  Physical site/screen to target; ``"default"`` = all.
+        """
+        for adapter in self.adapters:
+            try:
+                adapter.dispatch_template(template, skill_id, data, site_id)
+            except Exception:
+                LOG.exception(
+                    f"Error dispatching template '{template}' to adapter "
+                    f"{adapter.__class__.__name__}"
+                )
+
     def handle_show_page(self, message: Message):
         """
         Handles a request to show one or more pages on the screen.
@@ -651,6 +675,22 @@ class NamespaceManager:
         show_index = message.data.get("index", 0)
 
         LOG.debug(f"Got {namespace_name} request to show: {page_ids_to_show} at index: {show_index}")
+
+        # --- Template-based routing (new adapter plugin system) ---
+        # PageTemplates enum values all start with "SYSTEM_".  When any page
+        # in the list uses this convention, route the first one to all adapters
+        # with the current namespace session data.
+        if page_ids_to_show and page_ids_to_show[0].startswith("SYSTEM_"):
+            namespace = self._ensure_namespace_exists(namespace_name)
+            data = {k: v for k, v in namespace.data.items()}
+            site_id = self._gui_routing_key(message)
+            for template in page_ids_to_show:
+                self._dispatch_template_to_adapters(template, namespace_name, data, site_id)
+            # Notify lifecycle: activate namespace (updates internal stack state)
+            with namespace_lock:
+                if not self.active_namespaces or self.active_namespaces[0].skill_id != namespace_name:
+                    self._activate_namespace(namespace_name, site_id)
+            return
 
         pages = list()
         persist, duration = self._parse_persistence(message.data["__idle"])
@@ -673,11 +713,12 @@ class NamespaceManager:
             self._load_pages(pages, show_index)
             self._update_namespace_persistence(persistence)
 
-    def _activate_namespace(self, namespace_name: str):
+    def _activate_namespace(self, namespace_name: str, site_id: str = "default"):
         """
         Instructs the GUI to load a namespace and its associated data.
 
         @param namespace_name: the name of the namespace to load
+        @param site_id: physical site/screen identifier
         """
         namespace = self._ensure_namespace_exists(namespace_name)
 
@@ -698,6 +739,13 @@ class NamespaceManager:
                 namespace.load_data(key, value)
 
         self._emit_namespace_displayed_event()
+        for adapter in self.adapters:
+            try:
+                adapter.on_namespace_activated(namespace_name, site_id)
+            except Exception:
+                LOG.exception(
+                    f"Error in {adapter.__class__.__name__}.on_namespace_activated"
+                )
 
     def _ensure_namespace_exists(self, namespace_name: str) -> Namespace:
         """
@@ -756,16 +804,13 @@ class NamespaceManager:
                     LOG.info(f"Setting namespace '{namespace.skill_id}' persistence to: {persistence}")
                     namespace.persistent = persistence
 
-                if namespace.skill_id == self.idle_display_skill:
-                    namespace.set_persistence(skill_type="idleDisplaySkill")
-                else:
-                    namespace.set_persistence(skill_type="genericSkill")
-                    # check if there is a scheduled remove_namespace_timer
-                    # and cancel it
-                    if namespace.persistent and namespace.skill_id in \
-                            self.remove_namespace_timers:
-                        self.remove_namespace_timers[namespace.skill_id].cancel()
-                        self._del_namespace_in_remove_timers(namespace.skill_id)
+                namespace.set_persistence(skill_type="genericSkill")
+                # check if there is a scheduled remove_namespace_timer
+                # and cancel it
+                if namespace.persistent and namespace.skill_id in \
+                        self.remove_namespace_timers:
+                    self.remove_namespace_timers[namespace.skill_id].cancel()
+                    self._del_namespace_in_remove_timers(namespace.skill_id)
 
                 if not namespace.persistent:
                     self._schedule_namespace_removal(namespace)
@@ -817,6 +862,15 @@ class NamespaceManager:
             namespace_position = self.active_namespaces.index(namespace)
             namespace.remove(namespace_position)
             self.active_namespaces.remove(namespace)
+            for adapter in self.adapters:
+                try:
+                    adapter.on_namespace_deactivated(namespace_name)
+                except Exception:
+                    LOG.exception(
+                        f"Error in {adapter.__class__.__name__}.on_namespace_deactivated"
+                    )
+            # Note: on_namespace_deactivated broadcasts to all sites by design
+            # (a skill cleared from any session should clear from all displays)
 
         self._emit_namespace_displayed_event()
 
@@ -835,9 +889,13 @@ class NamespaceManager:
     def handle_status_request(self, message: Message):
         """
         Handles a GUI status request by replying with the connection status.
+        Checks all loaded adapters; returns True if any adapter has a connected client.
         @param message: the request for status of the GUI
         """
-        gui_connected = determine_if_gui_connected()
+        gui_connected = any(
+            getattr(adapter, 'any_client_connected', lambda: False)()
+            for adapter in self.adapters
+        ) if self.adapters else False
         reply = message.reply(
             "gui.status.request.response", dict(connected=gui_connected)
         )
@@ -858,6 +916,14 @@ class NamespaceManager:
         else:
             with namespace_lock:
                 self._update_namespace_data(namespace_name, message.data)
+            # Notify adapters of the session data update
+            filtered = {k: v for k, v in message.data.items() if k not in RESERVED_KEYS}
+            site_id = self._gui_routing_key(message)
+            for adapter in self.adapters:
+                try:
+                    adapter.on_session_update(namespace_name, filtered, site_id)
+                except Exception:
+                    LOG.exception(f"Error in {adapter.__class__.__name__}.on_session_update")
 
     def _update_namespace_data(self, namespace_name: str, data: dict):
         """
@@ -871,30 +937,6 @@ class NamespaceManager:
                 namespace.data[key] = value
                 if namespace in self.active_namespaces:
                     namespace.load_data(key, value)
-
-    def handle_client_connected(self, message: Message):
-        """
-        Handles an event from the GUI indicating it is connected to the bus.
-        @param message: the event sent by the GUI
-        """
-        # old style GUI has announced presence in core bus
-        # send websocket port, the GUI should connect on it soon
-        gui_id = message.data.get("gui_id")
-
-        framework = message.data.get("framework")  # new api
-        if framework is None:
-            qt = message.data.get("qt_version", 5)  # mycroft-gui api
-            if int(qt) == 6:
-                framework = "qt6"
-            else:
-                framework = "qt5"
-
-        LOG.info(f"GUI with ID {gui_id} connected to core message bus")
-        websocket_config = get_gui_websocket_config()
-        port = websocket_config["base_port"]
-        message = message.forward("mycroft.gui.port",
-                                  dict(port=port, gui_id=gui_id, framework=framework))
-        self.core_bus.emit(message)
 
     def handle_page_interaction(self, message: Message):
         """
@@ -913,8 +955,7 @@ class NamespaceManager:
             namespace.page_gained_focus(pidx)
 
         # reschedule namespace timeout
-        if namespace_name != self.idle_display_skill and \
-                not namespace.persistent and \
+        if not namespace.persistent and \
                 self.remove_namespace_timers[namespace.skill_id]:
             self.remove_namespace_timers[namespace.skill_id].cancel()
             self._del_namespace_in_remove_timers(namespace.skill_id)
@@ -944,7 +985,7 @@ class NamespaceManager:
         """
         if not self.active_namespaces:
             LOG.debug("received 'back' signal but there are no active namespaces, attempting to show homescreen")
-            self.core_bus.emit(Message("homescreen.manager.show_active"))
+            self.core_bus.emit(Message("mycroft.device.show.idle"))
             return
 
         namespace_name = self.active_namespaces[0].skill_id
@@ -955,7 +996,7 @@ class NamespaceManager:
                 namespace.global_back()
             # homescreen
             else:
-                self.core_bus.emit(Message("homescreen.manager.show_active"))
+                self.core_bus.emit(Message("mycroft.device.show.idle"))
 
     def _del_namespace_in_remove_timers(self, namespace_name: str):
         """
@@ -964,14 +1005,3 @@ class NamespaceManager:
         """
         if namespace_name in self.remove_namespace_timers:
             del self.remove_namespace_timers[namespace_name]
-
-    def _cache_system_resources(self):
-        """
-        Copy system GUI resources to the served file path
-        """
-        output_path = f"{GUI_CACHE_PATH}/system"
-        if exists(output_path):
-            LOG.info(f"Removing existing system resources before updating")
-            shutil.rmtree(output_path)
-        shutil.copytree(self._system_res_dir, output_path)
-        LOG.debug(f"Copied system resources from {self._system_res_dir} to {output_path}")
