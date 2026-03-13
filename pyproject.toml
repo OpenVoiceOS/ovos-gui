@@ -7,12 +7,13 @@ dynamic = ["version"]
  description = "ovos-core gui service daemon"
 readme = "README.md"
 license = "Apache-2.0"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "ovos_bus_client>=1.0.0,<2.0.0",
     "ovos-utils>=0.0.37,<1.0.0",
     "ovos-config>=0.0.12,<3.0.0",
-    "ovos-plugin-manager>=0.5.5,<3.0.0",
+    "ovos-plugin-manager @ file:///home/miro/PycharmProjects/OpenVoiceOS%20Workspace/ovos-plugin-manager",
+    "ovos-legacy-mycroft-gui-plugin @ file:///home/miro/PycharmProjects/OpenVoiceOS%20Workspace/GUI%20stuff/ovos-legacy-mycroft-gui-plugin",
 ]
 
 [project.urls]
