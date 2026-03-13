@@ -1,11 +1,10 @@
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
-
 [project]
 name = "ovos-gui"
 dynamic = ["version"]
-description = "ovos-core gui service daemon"
+ description = "ovos-core gui service daemon"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.9"
@@ -19,21 +18,17 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/OpenVoiceOS/ovos-gui"
 Repository = "https://github.com/OpenVoiceOS/ovos-gui"
-
 [project.optional-dependencies]
 extras = [
-    "ovos-gui-plugin-shell-companion>=1.0.1,<2.0.0",
-]
+    "ovos-gui-plugin-shell-companion>=1.0.1,<2.0.0",]
 
 [project.scripts]
 ovos-gui-service = "ovos_gui.__main__:main"
 ovos-gui-debug-tui = "ovos_gui.tui:main"
-
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["ovos_gui*"]
-
 [tool.setuptools.dynamic]
 version = {attr = "ovos_gui.version.__version__"}

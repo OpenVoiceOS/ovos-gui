@@ -1,6 +1,7 @@
 from ovos_bus_client import MessageBusClient, Message
 from ovos_config.config import Configuration
 from ovos_gui.namespace import NamespaceManager
+from ovos_plugin_manager.gui import OVOSGuiFactory
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 
@@ -53,15 +54,16 @@ class GUIService:
 
     def _load_adapter_plugins(self):
         """Load all installed ``opm.gui_adapter`` plugins and return instances."""
-        try:
-            from ovos_plugin_manager.gui_adapter import OVOSGUIAdapterFactory
-            adapter_config = Configuration().get("gui", {}).get("adapters", {})
-            adapters = OVOSGUIAdapterFactory.create_all(config=adapter_config, bus=self.bus)
-            LOG.info(f"Loaded {len(adapters)} GUI adapter plugin(s)")
-            return adapters
-        except Exception:
-            LOG.exception("Failed to load GUI adapter plugins")
-            return []
+        adapter_config = Configuration().get("gui", {}).get("adapters", {})
+        # Use create_all if available, otherwise fall back to empty list
+        if hasattr(OVOSGuiFactory, 'create_all'):
+            adapters = OVOSGuiFactory.create_all(config=adapter_config, bus=self.bus)
+        else:
+            adapters = []
+        if not adapters:
+            raise RuntimeError("No GUI adapters found. Configure at least one adapter in the 'gui.adapters' section of mycroft.conf")
+        LOG.info(f"Loaded {len(adapters)} GUI adapter plugin(s)")
+        return adapters
 
     def run(self):
         """
