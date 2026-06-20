@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.7a3](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.7a3) (2026-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.7a2...1.3.7a3)
+
+**Merged pull requests:**
+
+- test: fix failing unit\_tests in test\_namespace.py [\#110](https://github.com/OpenVoiceOS/ovos-gui/pull/110) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.3.7a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.7a2) (2026-06-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.7a1...1.3.7a2)
