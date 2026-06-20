@@ -12,51 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Defines the API for the QT GUI.
+"""Defines the API for the GUI service.
 
-Manages what is displayed on a device with a touch screen using a LIFO stack
-of "active" namespaces (e.g. skills).  At the bottom of the stack is the
-namespace for the idle screen skill (if one is specified in the device
-configuration).  The namespace for the idle screen skill should never be
-removed from the stack.
+Manages what is displayed on a device with a screen using a LIFO stack of
+"active" namespaces (e.g. skills). At the bottom of the stack is the namespace
+for the idle screen skill (if one is specified in the device configuration).
+The namespace at the top of the stack represents what is visible on the device.
+When a skill is finished displaying information, its namespace is removed from
+the top of the stack, displaying the previously active namespace.
 
-When a skill with a GUI is triggered by the user, the namespace for that skill
-is placed at the top of the stack.  The namespace at the top of the stack
-represents the namespace that is visible on the device.  When the skill is
-finished displaying information on the screen, it is removed from the top of
-the stack.  This will result in the previously active namespace being
-displayed.
+The persistence of a namespace indicates how long it stays in the active stack.
+A numeric persistence is the number of seconds the namespace stays active; a
+``True`` persistence keeps it active until the skill removes it.
 
-The persistence of a namespace indicates how long that namespace stays in the
-active stack.  A persistence expressed using a number represents how many
-seconds the namespace will be active.  A persistence expressed with a True
-value will be active until the skill issues a command to remove the namespace.
-If a skill with a numeric persistence replaces a namespace at the top of the
-stack that also has a numeric persistence, the namespace being replaced will
-be removed from the active namespace stack.
-
-The state of the active namespace stack is maintained locally and in the GUI
-code.  Changes to namespaces, and their contents, are communicated to the GUI
-over the GUI message bus.
+Routing is keyed solely by ``session_id``: every GUI message carries a session
+in ``message.context["session"]``. A shared/multi-room screen is expressed by
+clients sharing the same ``session_id`` (the on-device default is
+``session_id == "default"``). There is no separate location dimension. Each
+session keeps its own namespace stack; the ``session_id`` is forwarded to every
+adapter so adapters can target the matching client(s).
 """
-import shutil
-from os.path import join, dirname, exists
 from threading import Lock, Timer
 from typing import List, Union, Optional, Dict
 
 from ovos_bus_client import Message, MessageBusClient
-from ovos_config.config import Configuration
 from ovos_spec_tools import SpecMessage
 from ovos_utils.log import LOG
-
-from ovos_gui.bus import (
-    create_gui_service,
-    determine_if_gui_connected,
-    get_gui_websocket_config,
-    send_message_to_gui, GUIWebsocketHandler
-)
-from ovos_gui.constants import GUI_CACHE_PATH
-from ovos_gui.page import GuiPage
 
 namespace_lock = Lock()
 
@@ -86,37 +67,12 @@ def _validate_page_message(message: Message) -> bool:
     return valid
 
 
-def _get_idle_display_config() -> str:
-    """
-    Retrieves the current value of the idle display skill configuration.
-    @returns: Configured idle_display_skill (skill_id)
-    """
-    config = Configuration()
-    enclosure_config = config.get("gui") or {}
-    idle_display_skill = enclosure_config.get("idle_display_skill")
-    LOG.info(f"Configured homescreen: {idle_display_skill}")
-    return idle_display_skill
-
-
-def _get_active_gui_extension() -> str:
-    """
-    Retrieves the current value of the gui extension configuration.
-    @returns: Configured gui extension
-    """
-    config = Configuration()
-    enclosure_config = config.get("gui") or {}
-    gui_extension = enclosure_config.get("extension", "generic")
-    LOG.info(f"Configured GUI extension: {gui_extension}")
-    return gui_extension.lower()
-
-
 class Namespace:
-    """A grouping mechanism for related GUI pages and data.
+    """A grouping mechanism for related GUI templates and data.
 
-    In the majority of cases, a namespace represents a skill.  There is a
-    SYSTEM namespace for GUI screens that exist outside of skills.  This class
-    defines an API to manage a namespace, its pages and its data.  Actions
-    are communicated to the GUI message bus.
+    In the majority of cases, a namespace represents a skill. This class defines
+    an API to manage a namespace and its session data. All display goes through
+    standardized templates (SYSTEM_*).
 
     Attributes:
         skill_id: the name of the Namespace, generally the skill ID
@@ -124,8 +80,6 @@ class Namespace:
             period of time or until the namespace is removed.
         duration: if the namespace persists for a period of time, this is the
             number of seconds of persistence
-        pages: when the namespace is active, contains all the pages that are
-            displayed at the same time
         data: a key/value pair representing the data used to populate the GUI
     """
 
@@ -133,76 +87,36 @@ class Namespace:
         self.skill_id = skill_id
         self.persistent = False
         self.duration = 30
-        self.pages: List[GuiPage] = list()
         self.data = dict()
-        self.page_number = 0
         self.session_set = False
-
-    @property
-    def page_names(self):
-        return [page.name for page in self.pages]
-
-    @property
-    def active_page(self):
-        if len(self.pages):
-            if self.page_number >= len(self.pages):
-                return None  # TODO - error ?
-            return self.pages[self.page_number]
-        return None
 
     def add(self):
         """
         Adds this namespace to the list of active namespaces.
+        State change is notified to adapters via NamespaceManager.
         """
         LOG.info(f"GUI PROTOCOL - Adding \"{self.skill_id}\" to active namespaces")
-        message = dict(
-            type="mycroft.session.list.insert",
-            namespace="mycroft.system.active_skills",
-            position=0,
-            data=[dict(skill_id=self.skill_id)]
-        )
-        send_message_to_gui(message)
 
     def activate(self, position: int):
         """
-        Activate this namespace if its already in the list of active namespaces.
+        Activate this namespace if it's already in the list of active namespaces.
         @param position: position to move this namespace FROM
         """
-        if not len(self.pages):
-            LOG.error(f"Tried to activate namespace without loaded pages: \"{self.skill_id}\"")
-            return
-
         LOG.info(f"GUI PROTOCOL - Activating namespace \"{self.skill_id}\"")
-        message = {
-            "type": "mycroft.session.list.move",
-            "namespace": "mycroft.system.active_skills",
-            "from": position,
-            "to": 0,
-            "items_number": 1
-        }
-        send_message_to_gui(message)
 
     def remove(self, position: int):
         """
-        Removes this namespace from the list of active namespaces. Also clears
+        Removes this namespace from the list of active namespaces and clears
         any session data.
+
         @param position: position to remove this namespace FROM
         """
         LOG.info(f"GUI PROTOCOL - Removing \"{self.skill_id}\" from active namespaces")
         # unload the data first before removing the namespace
-        # use the keys of the data to unload the data
-        for key in self.data:
+        for key in list(self.data.keys()):
             self.unload_data(key)
 
-        message = dict(
-            type="mycroft.session.list.remove",
-            namespace="mycroft.system.active_skills",
-            position=position,
-            items_number=1
-        )
-        send_message_to_gui(message)
         self.session_set = False
-        self.pages = list()
         self.data = dict()
 
     def load_data(self, name: str, value: str):
@@ -213,26 +127,17 @@ class Namespace:
             name: The name of the attribute
             value: The attribute's value
         """
-        LOG.info(f"GUI PROTOCOL - Sending \"{self.skill_id}\" data -- {name} : {value} ")
-        message = dict(
-            type="mycroft.session.set",
-            namespace=self.skill_id,
-            data={name: value}
-        )
-        send_message_to_gui(message)
+        LOG.info(f"GUI PROTOCOL - Loading \"{self.skill_id}\" data -- {name} : {value} ")
 
     def unload_data(self, name: str):
         """
-        Delete data from the namespace
+        Delete data from the namespace.
+
         @param name: name of property to delete
         """
-        LOG.info(f"GUI PROTOCOL - Deleting namespace \"{self.skill_id}\" key: {name}")
-        message = dict(
-            type="mycroft.session.delete",
-            property=name,
-            namespace=self.skill_id
-        )
-        send_message_to_gui(message)
+        LOG.info(f"GUI PROTOCOL - Unloading namespace \"{self.skill_id}\" key: {name}")
+        if name in self.data:
+            del self.data[name]
 
     def get_position_of_last_item_in_data(self) -> int:
         """
@@ -245,167 +150,32 @@ class Namespace:
         Sets the duration of the namespace's time in the active list.
 
         @param skill_type: if skill type is idleDisplaySkill, the namespace will
-            always persist.  Otherwise, the namespace will persist based on the
-            active page's persistence.
+            always persist.  Otherwise, the namespace persists for a default duration.
         """
-        # check if skill_type is idleDisplaySkill
         if skill_type == "idleDisplaySkill":
             self.persistent = True
             self.duration = 0
-
         else:
-            # get the active page in the namespace
-            active_page = self.active_page
-            # if type(persistence) == int:
-            # Get the duration of the active page if it is not persistent
-            if active_page is not None and not active_page.persistent:
-                self.persistent = False
-                self.duration = active_page.duration
-
-            # elif type(persistence) == bool:
-            # Get the persistance of the active page
-            elif active_page is not None and active_page.persistent:
-                self.persistent = True
-                self.duration = 0
-
-            # else use the default duration of 30 seconds
-            else:
-                LOG.warning(f"No active page, reset persistence for {self.skill_id}")
-                self.persistent = False
-                self.duration = 30
-
-    def load_pages(self, pages: List[GuiPage], show_index: int = 0):
-        """
-        Maintains a list of active pages within the active namespace.
-
-        Skills with multiple pages of data can either show all the screens
-        at once, allowing the user to swipe back and forth among them, or
-        the pages can be loaded one at a time.  The latter is represented by
-        a single list item, the former by multiple list items
-
-        @param pages: list of pages to be displayed
-        @param show_index: index of page to display (default 0)
-        """
-        if not pages:
-            LOG.error("No pages to load ?")
-            return
-        if show_index is None:
-            LOG.warning(f"Expected int show_index but got `None`. Default to 0")
-            show_index = 0
-        new_pages = list()
-        target_page = pages[show_index]
-
-        for page in pages:
-            if page.name not in [p.name for p in self.pages]:
-                new_pages.append(page)
-
-        self.pages.extend(new_pages)
-        if new_pages:
-            self._add_pages(new_pages)
-        if show_index >= len(pages):
-            LOG.error(
-                f"Invalid page index requested: {show_index} , only {len(pages)} pages available for \"{self.skill_id}\"")
-        else:
-            LOG.info(f"Activating page {show_index} from: {[p.name for p in pages]} for \"{self.skill_id}\"")
-            self._activate_page(target_page)
-
-    def _add_pages(self, new_pages: List[GuiPage]):
-        """
-        Adds one or more pages to the active page list.
-        @param new_pages: pages to add to the active page list
-        """
-        LOG.debug(f"namespace \"{self.skill_id}\" current pages: {self.pages}")
-        LOG.debug(f"new_pages={new_pages}")
-
-        # Find position of new page in self.pages
-        position = self.pages.index(new_pages[0])
-        for client in GUIWebsocketHandler.clients:
-            try:
-                LOG.debug(f"Updating {client.framework} client")
-                client.send_gui_pages(new_pages, self.skill_id, position)
-            except Exception as e:
-                LOG.exception(f"Error updating {client.framework} client: {e}")
-
-    def focus_page(self, page):
-        """
-        Returns focus to a page already in the active page list.
-
-        @param page: the page that will gain focus
-        """
-        # set the index of the page in the self.pages list
-        page_index = None
-        for i, p in enumerate(self.pages):
-            if p.name == page.name:
-                # save page index
-                page_index = i
-                break
-
-        # handle missing page (TODO, can this happen?)
-        if page_index is None:
-            LOG.warning("tried to activate page missing from pages list, inserting it at index 0")
-            page_index = 0
-            self.pages.insert(0, page)
-        # update page data
-        else:
-            self.pages[page_index] = page
-
-        if page_index != self.page_number:
-            self.page_number = page_index
-            LOG.info(f"Focusing page {page.name} -- namespace \"{self.skill_id}\"")
-
-    def _activate_page(self, page: GuiPage):
-        """
-        Tells mycroft-gui to returns focus to a page
-
-        @param page: the page that will gain focus
-        """
-        LOG.debug(f"Current pages from _activate_page: {self.pages}")
-        self.focus_page(page)
+            self.persistent = False
+            self.duration = 30
 
         LOG.info(
-            f"GUI PROTOCOL - Sending event 'page_gained_focus' -- page: {page.name} -- namespace: \"{self.skill_id}\"")
-        message = dict(
-            type="mycroft.events.triggered",
-            namespace=self.skill_id,
-            event_name="page_gained_focus",
-            data={"number": self.page_number}
-        )
-        send_message_to_gui(message)
+            f"GUI PROTOCOL - Set persistence for \"{self.skill_id}\" -- "
+            f"persistent: {self.persistent}, duration: {self.duration}s")
 
-    def remove_pages(self, positions: List[int]):
-        """
-        Deletes one or more pages by index from the active page list.
 
-        @param positions: list of int page positions to remove
-        """
-        positions.sort(reverse=True)
-        for position in positions:
-            page = self.pages.pop(position)
-            LOG.info(f"GUI PROTOCOL - Deleting {page.name} -- namespace: \"{self.skill_id}\"")
-            message = dict(
-                type="mycroft.gui.list.remove",
-                namespace=self.skill_id,
-                position=position,
-                items_number=1
-            )
-            send_message_to_gui(message)
+class GUISession:
+    """Represents a single GUI session (a screen or a group of shared screens).
 
-    def page_gained_focus(self, page_number: int):
-        """
-        Updates the active page in `self.pages`.
-        @param page_number: the index of the page that will gain focus
-        """
-        LOG.info(f"Page {page_number} gained focus -- namespace \"{self.skill_id}\"")
-        self.page_number = page_number
-        self._activate_page(self.active_page)
+    Each session maintains its own stack of active namespaces, loaded namespace
+    data, and timers. Clients that share a ``session_id`` share this session.
+    """
 
-    def global_back(self):
-        """
-        Returns to the previous page in the active page list.
-        """
-        if self.page_number > 0:  # go back 1 page
-            self.remove_pages([self.page_number])
-            self.page_gained_focus(self.page_number - 1)
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.loaded_namespaces: Dict[str, Namespace] = dict()
+        self.active_namespaces: List[Namespace] = list()
+        self.remove_namespace_timers: Dict[str, Timer] = dict()
 
 
 class NamespaceManager:
@@ -414,46 +184,106 @@ class NamespaceManager:
 
     Attributes:
         core_bus: client for communicating with the core message bus
-        gui_bus: client for communicating with the GUI message bus
-        loaded_namespaces: cache of namespaces that have been introduced
-        active_namespaces: LIFO stack of namespaces being displayed
-        remove_namespace_timers: background process to remove a namespace with
-            a persistence expressed in seconds
-        idle_display_skill: skill ID of the skill that controls the idle screen
+        adapters: loaded GUI adapter plugins
+        sessions: dictionary of active sessions (session_id -> GUISession)
     """
 
-    def __init__(self, core_bus: MessageBusClient):
+    def __init__(self, core_bus: MessageBusClient, adapters: Optional[List] = None):
         self.core_bus = core_bus
-        self.gui_bus = create_gui_service(self)
-        self.loaded_namespaces: Dict[str, Namespace] = dict()
-        self.active_namespaces: List[Namespace] = list()
-        self.remove_namespace_timers: Dict[str, Timer] = dict()
-        self.idle_display_skill = _get_idle_display_config()
-        self.active_extension = _get_active_gui_extension()
-        self._system_res_dir = join(dirname(__file__), "res", "gui")
-        self._init_gui_file_share()
+        self.adapters: List = adapters or []
+        self.sessions: Dict[str, GUISession] = dict()
         self._define_message_handlers()
 
-    def _init_gui_file_share(self):
+    def get_session(self, session_id: str) -> GUISession:
+        """Retrieve a session by ID, creating it if necessary.
+
+        Args:
+            session_id: Routing key for the session.
+        Returns:
+            The GUISession object.
         """
-        Initialize optional GUI file collection. if `gui_file_path` is
-        defined, resources are assumed to be referenced outside this container.
+        if session_id not in self.sessions:
+            self.sessions[session_id] = GUISession(session_id)
+        return self.sessions[session_id]
+
+    @staticmethod
+    def _session_id(message: Optional[Message]) -> str:
+        """Extract the routing ``session_id`` from a message.
+
+        The routing identifier is the ``session_id``; shared screens share a
+        ``session_id``. Defaults to ``"default"`` for on-device displays.
         """
-        config = Configuration().get("gui", {})
-        self._cache_system_resources()
+        ctx = message.context if message else {}
+        session = ctx.get("session", {})
+        return session.get("session_id") or "default"
+
+    # ====== State Query API for Adapters ======
+
+    def get_active_namespace(self, session_id: str = "default") -> Optional[Namespace]:
+        """Get the currently active (top-of-stack) namespace for a session.
+
+        Allows adapters to query which namespace is currently visible and
+        recover state after a crash.
+
+        Args:
+            session_id: Session identifier (default: "default" for single-screen)
+
+        Returns:
+            Active Namespace object if one exists, else None
+        """
+        session = self.sessions.get(session_id)
+        if session and session.active_namespaces:
+            return session.active_namespaces[0]  # Top of stack is index 0
+        return None
+
+    def get_namespace_data(self, namespace_name: str, session_id: str = "default") -> Optional[dict]:
+        """Get current session data for a namespace.
+
+        Args:
+            namespace_name: Skill ID or namespace name
+            session_id: Session identifier
+
+        Returns:
+            Copy of the session data dict if the namespace exists, else None
+        """
+        session = self.sessions.get(session_id)
+        if session:
+            namespace = session.loaded_namespaces.get(namespace_name)
+            if namespace:
+                return namespace.data.copy()  # copy prevents external mutation
+        return None
+
+    def get_all_sessions(self) -> List[str]:
+        """Get list of all active session IDs.
+
+        Returns:
+            List of session_id strings
+        """
+        return list(self.sessions.keys())
+
+    def is_namespace_active(self, namespace_name: str, session_id: str = "default") -> bool:
+        """Check if a namespace is currently visible (top of active stack).
+
+        Args:
+            namespace_name: Skill ID or namespace name
+            session_id: Session identifier
+
+        Returns:
+            True if namespace is currently displayed, False otherwise
+        """
+        active_ns = self.get_active_namespace(session_id)
+        if active_ns:
+            return active_ns.skill_id == namespace_name
+        return False
 
     def _define_message_handlers(self):
         """
         Defines event handlers for core messagebus.
         """
         self.core_bus.on("gui.clear.namespace", self.handle_clear_namespace)
-        self.core_bus.on("gui.event.send", self.handle_send_event)
-        self.core_bus.on("gui.page.delete", self.handle_delete_page)
-        self.core_bus.on("gui.page.delete.all", self.handle_delete_all_pages)
         self.core_bus.on("gui.page.show", self.handle_show_page)
         self.core_bus.on("gui.status.request", self.handle_status_request)
         self.core_bus.on("gui.value.set", self.handle_set_value)
-        self.core_bus.on("mycroft.gui.connected", self.handle_client_connected)
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
         self.core_bus.on("mycroft.gui.screen.close", self.handle_namespace_global_back)
@@ -513,20 +343,35 @@ class NamespaceManager:
         for msg in messages_to_forward:
             self.core_bus.on(msg, self.forward_to_gui)
 
-    @staticmethod
-    def forward_to_gui(message: Message):
+    def _safe_call(self, adapter, method_name, *args, **kwargs):
+        """Invoke an adapter hook safely.
+
+        Missing methods are ignored. Any exception raised by the adapter is
+        logged so a broken adapter cannot crash the service or block the other
+        adapters. Signature errors are surfaced (logged) rather than silently
+        retried with fewer arguments.
         """
-        Forward a core Message to the GUI
+        method = getattr(adapter, method_name, None)
+        if method:
+            try:
+                method(*args, **kwargs)
+            except Exception:
+                LOG.exception(f"Error in {adapter.__class__.__name__}.{method_name}")
+
+    def forward_to_gui(self, message: Message):
+        """
+        Forward a core Message status event to registered adapters.
+
+        Status events are system-wide signals; adapters typically broadcast them
+        to all connected clients regardless of session.
+
         @param message: Core message to forward
         """
-        gui_message = dict(
-            type='mycroft.events.triggered',
-            namespace="system",
-            event_name=message.msg_type,
-            data=message.data
-        )
-        LOG.info(f"GUI PROTOCOL - Sending event '{message.msg_type}' for namespace: system")
-        send_message_to_gui(gui_message)
+        LOG.info(f"GUI PROTOCOL - Forwarding status event '{message.msg_type}'")
+        session_id = self._session_id(message)
+        for adapter in self.adapters:
+            self._safe_call(adapter, "on_status_event", message.msg_type,
+                            message.data, session_id)
 
     def handle_clear_namespace(self, message: Message):
         """
@@ -540,80 +385,11 @@ class NamespaceManager:
                 "Request to delete namespace failed: no namespace specified"
             )
         else:
-            if self.loaded_namespaces.get(namespace_name):
+            session_id = self._session_id(message)
+            session = self.get_session(session_id)
+            if session.loaded_namespaces.get(namespace_name):
                 with namespace_lock:
-                    self._remove_namespace(namespace_name)
-
-    @staticmethod
-    def handle_send_event(message: Message):
-        """
-        Handles a request to send a message to the GUI message bus.
-        @param message: the message requesting a message to be sent to the GUI
-                message bus.
-        """
-        try:
-            skill_id = message.data.get('__from')
-            event = message.data.get('event_name')
-            LOG.info(f"GUI PROTOCOL - Sending event '{event}' for namespace: {skill_id}")
-            message = dict(
-                type='mycroft.events.triggered',
-                namespace=skill_id,
-                event_name=event,
-                data=message.data.get('params')
-            )
-            send_message_to_gui(message)
-        except Exception:
-            LOG.exception('Could not send event trigger')
-
-    def handle_delete_all_pages(self, message: Message):
-        """
-        Handles request to remove all current pages from a namespace.
-        @param message: the message requesting page removal
-        """
-        namespace_name = message.data["__from"]
-        except_pages = message.data.get("except") or []
-
-        if except_pages:
-            LOG.info(f"Got {namespace_name} request to delete all pages except: {except_pages}")
-        else:
-            LOG.info(f"Got {namespace_name} request to delete all pages")
-
-        with namespace_lock:
-            namespace = self.loaded_namespaces.get(namespace_name)
-            if namespace:
-                to_rm = [p.name for p in namespace.pages if p.name not in except_pages]
-                self._remove_pages(namespace_name, to_rm)
-
-    def handle_delete_page(self, message: Message):
-        """
-        Handles request to remove one or more pages from a namespace.
-        @param message: the message requesting page removal
-        """
-        message_is_valid = _validate_page_message(message)
-        if message_is_valid:
-            namespace_name = message.data["__from"]
-            pages_to_remove = message.data.get("page_names")
-            LOG.debug(f"Got {namespace_name} request to delete: {pages_to_remove}")
-            with namespace_lock:
-                self._remove_pages(namespace_name, pages_to_remove)
-
-    def _remove_pages(self, namespace_name: str, pages_to_remove: List[str]):
-        """
-        Removes one or more pages from a namespace. Pages are removed from the
-        bottom of the stack.
-        @param namespace_name: the affected namespace
-        @param pages_to_remove: names of pages to delete
-        """
-        namespace = self.loaded_namespaces.get(namespace_name)
-        if namespace is not None and namespace in self.active_namespaces:
-            page_positions = []
-            for index, page in enumerate(namespace.pages):
-                if page.name in pages_to_remove:
-                    page_positions.append(index)
-
-            if page_positions:
-                page_positions.sort(reverse=True)
-                namespace.remove_pages(page_positions)
+                    self._remove_namespace(namespace_name, session, session_id)
 
     @staticmethod
     def _parse_persistence(persistence: Optional[Union[int, bool]]) -> \
@@ -635,6 +411,25 @@ class NamespaceManager:
             # Defines default behavior as displaying for 30 seconds
             return False, 30
 
+    def _dispatch_template_to_adapters(self, template: str, skill_id: str,
+                                       data: dict, session_id: str):
+        """Call matching handler on every loaded adapter for a SYSTEM_* template.
+
+        Args:
+            template: PageTemplates value, e.g. ``"SYSTEM_weather"``.
+            skill_id: Namespace / skill that requested the display.
+            data:     Current session data for the namespace.
+            session_id: Routing identifier (shared screens share a session_id).
+        """
+        for adapter in self.adapters:
+            try:
+                adapter.dispatch_template(template, skill_id, data, session_id)
+            except Exception:
+                LOG.exception(
+                    f"Error dispatching template '{template}' to adapter "
+                    f"{adapter.__class__.__name__}"
+                )
+
     def handle_show_page(self, message: Message):
         """
         Handles a request to show one or more pages on the screen.
@@ -652,192 +447,190 @@ class NamespaceManager:
 
         LOG.debug(f"Got {namespace_name} request to show: {page_ids_to_show} at index: {show_index}")
 
-        pages = list()
-        persist, duration = self._parse_persistence(message.data["__idle"])
-        for page in page_ids_to_show:
-            pages.append(GuiPage(name=page, persistent=persist, duration=duration,
-                                 namespace=namespace_name))
+        session_id = self._session_id(message)
+        session = self.get_session(session_id)
 
-        if not pages:
-            LOG.error(f"Activated namespace '{namespace_name}' has no pages!")
-            LOG.error(f"Can't show page, bad message: {message.data}")
+        # All page shows must use SYSTEM_* templates (no legacy QML path)
+        if not page_ids_to_show:
+            LOG.error(f"Namespace '{namespace_name}' requested show with no page_names")
             return
 
-        with namespace_lock:
-            if not self.active_namespaces:
-                self._activate_namespace(namespace_name)
-            else:
-                active_namespace = self.active_namespaces[0]
-                if active_namespace.skill_id != namespace_name:
-                    self._activate_namespace(namespace_name)
-            self._load_pages(pages, show_index)
-            self._update_namespace_persistence(persistence)
+        if not page_ids_to_show[0].startswith("SYSTEM_"):
+            LOG.error(
+                f"Namespace '{namespace_name}' sent non-template page name: {page_ids_to_show[0]}. "
+                f"All GUI display must use SYSTEM_* templates. Custom QML is not supported."
+            )
+            return
 
-    def _activate_namespace(self, namespace_name: str):
+        # Template-based routing: dispatch all templates to adapters
+        namespace = self._ensure_namespace_exists(namespace_name, session)
+        data = {k: v for k, v in namespace.data.items()}
+        for template in page_ids_to_show:
+            self._dispatch_template_to_adapters(template, namespace_name, data, session_id)
+
+        # Activate namespace (updates internal stack state)
+        with namespace_lock:
+            if not session.active_namespaces or session.active_namespaces[0].skill_id != namespace_name:
+                self._activate_namespace(namespace_name, session, session_id)
+            self._update_namespace_persistence(persistence, session)
+
+    def _activate_namespace(self, namespace_name: str, session: GUISession,
+                            session_id: str):
         """
         Instructs the GUI to load a namespace and its associated data.
 
         @param namespace_name: the name of the namespace to load
+        @param session: the session affected (state object)
+        @param session_id: routing identifier
         """
-        namespace = self._ensure_namespace_exists(namespace_name)
+        namespace = self._ensure_namespace_exists(namespace_name, session)
 
-        if namespace in self.active_namespaces:
-            namespace_position = self.active_namespaces.index(namespace)
+        if namespace in session.active_namespaces:
+            namespace_position = session.active_namespaces.index(namespace)
             namespace.activate(namespace_position)
             if namespace_position != 0:
-                LOG.info(f"Activating namespace: {namespace_name}")
-                self.active_namespaces.insert(
-                    0, self.active_namespaces.pop(namespace_position)
+                LOG.info(f"Activating namespace: {namespace_name} for session {session.session_id}")
+                session.active_namespaces.insert(
+                    0, session.active_namespaces.pop(namespace_position)
                 )
         else:
-            LOG.info(f"New namespace: {namespace_name}")
+            LOG.info(f"New namespace: {namespace_name} for session {session.session_id}")
             namespace.add()
-            self.active_namespaces.insert(0, namespace)
+            session.active_namespaces.insert(0, namespace)
             # sync initial state
             for key, value in namespace.data.items():
                 namespace.load_data(key, value)
 
-        self._emit_namespace_displayed_event()
+        self._emit_namespace_displayed_event(session)
+        # Notify adapters of namespace activation
+        for adapter in self.adapters:
+            self._safe_call(adapter, "on_namespace_activated", namespace_name, session_id)
 
-    def _ensure_namespace_exists(self, namespace_name: str) -> Namespace:
+    def _ensure_namespace_exists(self, namespace_name: str, session: GUISession) -> Namespace:
         """
         Retrieves the requested namespace, creating one if it doesn't exist.
         @param namespace_name: the name of the namespace being retrieved
+        @param session: the session affected
         @returns: requested namespace
         """
-        # TODO: - Update sync to match.
-        namespace = self.loaded_namespaces.get(namespace_name)
+        namespace = session.loaded_namespaces.get(namespace_name)
         if namespace is None:
             namespace = Namespace(namespace_name)
-            self.loaded_namespaces[namespace_name] = namespace
+            session.loaded_namespaces[namespace_name] = namespace
 
         return namespace
 
-    def _load_pages(self, pages_to_show: List[GuiPage], show_index: int):
-        """
-        Loads the requested pages in the namespace.
-        @param pages_to_show: list of pages to be loaded
-        @param show_index: index to load pages at
-        """
-        if not self.active_namespaces:
-            LOG.error("received 'load_pages' request but there are no active namespaces")
-            return
-
-        if not len(pages_to_show) or show_index >= len(pages_to_show):
-            LOG.error(f"requested invalid page index: {show_index}, defaulting to last page")
-            show_index = len(pages_to_show) - 1
-
-        active_namespace = self.active_namespaces[0]
-        oldp = [p.name for p in active_namespace.pages]
-        active_namespace.load_pages(pages_to_show, show_index)
-        # LOG only on change
-        if oldp != [p.name for p in active_namespace.pages]:
-            pn = active_namespace.page_number
-            LOG.info(f"Loaded {active_namespace.skill_id} at index: {pn} "
-                     f"pages: {[p.name for p in active_namespace.pages]}")
-
-    def _update_namespace_persistence(self, persistence: Union[bool, int]):
+    def _update_namespace_persistence(self, persistence: Union[bool, int], session: GUISession):
         """
         Sets the persistence of the namespace being activated.
-        A namespace's persistence is the same as the persistence of the
-        most recent pages added to a namespace.  For example, a multi-page
-        namespace could show the first set of pages with a persistence of
-        True (show until removed) and the last page with a persistence of
-        15 seconds.  This would ensure that the namespace isn't removed while
-        the skill is showing the pages.
         @param persistence: length of time the namespace should be displayed
+        @param session: the session affected
         """
-        for idx, namespace in enumerate(self.active_namespaces):
+        for idx, namespace in enumerate(session.active_namespaces):
             if idx:
                 if not namespace.persistent:
-                    self._remove_namespace(namespace.skill_id)
+                    self._remove_namespace(namespace.skill_id, session, session.session_id)
             else:
                 if namespace.persistent != persistence:
                     LOG.info(f"Setting namespace '{namespace.skill_id}' persistence to: {persistence}")
                     namespace.persistent = persistence
 
-                if namespace.skill_id == self.idle_display_skill:
-                    namespace.set_persistence(skill_type="idleDisplaySkill")
-                else:
-                    namespace.set_persistence(skill_type="genericSkill")
-                    # check if there is a scheduled remove_namespace_timer
-                    # and cancel it
-                    if namespace.persistent and namespace.skill_id in \
-                            self.remove_namespace_timers:
-                        self.remove_namespace_timers[namespace.skill_id].cancel()
-                        self._del_namespace_in_remove_timers(namespace.skill_id)
+                namespace.set_persistence(skill_type="genericSkill")
+                if isinstance(persistence, int) and not isinstance(persistence, bool):
+                    namespace.duration = persistence
+
+                # check if there is a scheduled remove_namespace_timer
+                # and cancel it
+                if namespace.persistent and namespace.skill_id in \
+                        session.remove_namespace_timers:
+                    session.remove_namespace_timers[namespace.skill_id].cancel()
+                    self._del_namespace_in_remove_timers(namespace.skill_id, session)
 
                 if not namespace.persistent:
-                    self._schedule_namespace_removal(namespace)
+                    self._schedule_namespace_removal(namespace, session)
 
-                self.active_namespaces[idx] = namespace
+                session.active_namespaces[idx] = namespace
 
-    def _schedule_namespace_removal(self, namespace: Namespace):
+    def _schedule_namespace_removal(self, namespace: Namespace, session: GUISession):
         """
         Uses a timer thread to remove the namespace.
         @param namespace: the namespace to be removed
+        @param session: the session affected
         """
         # Before removing check if there isn't already a timer for this namespace
-        if namespace.skill_id in self.remove_namespace_timers:
+        if namespace.skill_id in session.remove_namespace_timers:
             return
 
         remove_namespace_timer = Timer(
             namespace.duration,
             self._remove_namespace_via_timer,
-            args=(namespace.skill_id,)
+            args=(namespace.skill_id, session.session_id)
         )
-        LOG.info(f"Removal of namespace {namespace.skill_id} in "
+        LOG.info(f"Removal of namespace {namespace.skill_id} in session {session.session_id} in "
                  f"{namespace.duration} seconds")
         remove_namespace_timer.start()
-        self.remove_namespace_timers[namespace.skill_id] = remove_namespace_timer
+        session.remove_namespace_timers[namespace.skill_id] = remove_namespace_timer
 
-    def _remove_namespace_via_timer(self, namespace_name: str):
+    def _remove_namespace_via_timer(self, namespace_name: str, session_id: str):
         """
         Removes a namespace and the corresponding timer instance.
         @param namespace_name: name of namespace to remove
+        @param session_id: ID of the session
         """
-        self._remove_namespace(namespace_name)
-        self._del_namespace_in_remove_timers(namespace_name)
+        session = self.get_session(session_id)
+        self._remove_namespace(namespace_name, session, session_id)
+        self._del_namespace_in_remove_timers(namespace_name, session)
 
-    def _remove_namespace(self, namespace_name: str):
+    def _remove_namespace(self, namespace_name: str, session: GUISession,
+                          session_id: str):
         """
         Removes a namespace from the active namespace stack.
         @param namespace_name: name of namespace to remove
+        @param session: the session affected (state object)
+        @param session_id: routing identifier
         """
         # Remove all timers associated with the namespace
-        if namespace_name in self.remove_namespace_timers:
-            self.remove_namespace_timers[namespace_name].cancel()
-            self._del_namespace_in_remove_timers(namespace_name)
+        if namespace_name in session.remove_namespace_timers:
+            session.remove_namespace_timers[namespace_name].cancel()
+            self._del_namespace_in_remove_timers(namespace_name, session)
 
-        namespace: Namespace = self.loaded_namespaces.get(namespace_name)
-        if namespace is not None and namespace in self.active_namespaces:
-            LOG.info(f"Removing namespace {namespace_name}")
+        namespace: Namespace = session.loaded_namespaces.get(namespace_name)
+        if namespace is not None and namespace in session.active_namespaces:
+            LOG.info(f"Removing namespace {namespace_name} from session {session.session_id}")
             self.core_bus.emit(Message("gui.namespace.removed",
-                                       data={"skill_id": namespace.skill_id}))
-            namespace_position = self.active_namespaces.index(namespace)
+                                       data={"skill_id": namespace.skill_id},
+                                       context={"session": {"session_id": session_id}}))
+            namespace_position = session.active_namespaces.index(namespace)
             namespace.remove(namespace_position)
-            self.active_namespaces.remove(namespace)
+            session.active_namespaces.remove(namespace)
+            # Notify adapters of namespace deactivation
+            for adapter in self.adapters:
+                self._safe_call(adapter, "on_namespace_deactivated", namespace_name, session_id)
 
-        self._emit_namespace_displayed_event()
+        self._emit_namespace_displayed_event(session)
 
-    def _emit_namespace_displayed_event(self):
+    def _emit_namespace_displayed_event(self, session: GUISession):
         """
         Emit a `gui.namespace.displayed` Message to notify core of changes.
         """
-        if self.active_namespaces:
-            displaying_namespace = self.active_namespaces[0]
+        if session.active_namespaces:
+            displaying_namespace = session.active_namespaces[0]
             message_data = dict(skill_id=displaying_namespace.skill_id)
-            # TODO - no known listeners ?
             self.core_bus.emit(
-                Message("gui.namespace.displayed", data=message_data)
+                Message("gui.namespace.displayed", data=message_data,
+                        context={"session": {"session_id": session.session_id}})
             )
 
     def handle_status_request(self, message: Message):
         """
         Handles a GUI status request by replying with the connection status.
+        Checks all loaded adapters; returns True if any adapter has a connected client.
         @param message: the request for status of the GUI
         """
-        gui_connected = determine_if_gui_connected()
+        gui_connected = any(
+            getattr(adapter, 'any_client_connected', lambda: False)()
+            for adapter in self.adapters
+        ) if self.adapters else False
         reply = message.reply(
             "gui.status.request.response", dict(connected=gui_connected)
         )
@@ -856,122 +649,89 @@ class NamespaceManager:
                 "namespace specified"
             )
         else:
+            session_id = self._session_id(message)
+            session = self.get_session(session_id)
             with namespace_lock:
-                self._update_namespace_data(namespace_name, message.data)
+                self._update_namespace_data(namespace_name, message.data, session)
+            # Notify adapters of the session data update
+            filtered = {k: v for k, v in message.data.items() if k not in RESERVED_KEYS}
+            for adapter in self.adapters:
+                self._safe_call(adapter, "on_session_update", namespace_name, filtered, session_id)
 
-    def _update_namespace_data(self, namespace_name: str, data: dict):
+    def _update_namespace_data(self, namespace_name: str, data: dict, session: GUISession):
         """
         Updates the values of namespace data attributes, unless unchanged.
         @param namespace_name: the name of the namespace to update
         @param data: the name and new value of one or more data attributes
+        @param session: the session affected
         """
-        namespace = self._ensure_namespace_exists(namespace_name)
+        namespace = self._ensure_namespace_exists(namespace_name, session)
         for key, value in data.items():
             if key not in RESERVED_KEYS and namespace.data.get(key) != value:
                 namespace.data[key] = value
-                if namespace in self.active_namespaces:
+                if namespace in session.active_namespaces:
                     namespace.load_data(key, value)
-
-    def handle_client_connected(self, message: Message):
-        """
-        Handles an event from the GUI indicating it is connected to the bus.
-        @param message: the event sent by the GUI
-        """
-        # old style GUI has announced presence in core bus
-        # send websocket port, the GUI should connect on it soon
-        gui_id = message.data.get("gui_id")
-
-        framework = message.data.get("framework")  # new api
-        if framework is None:
-            qt = message.data.get("qt_version", 5)  # mycroft-gui api
-            if int(qt) == 6:
-                framework = "qt6"
-            else:
-                framework = "qt5"
-
-        LOG.info(f"GUI with ID {gui_id} connected to core message bus")
-        websocket_config = get_gui_websocket_config()
-        port = websocket_config["base_port"]
-        message = message.forward("mycroft.gui.port",
-                                  dict(port=port, gui_id=gui_id, framework=framework))
-        self.core_bus.emit(message)
 
     def handle_page_interaction(self, message: Message):
         """
-        Handles an event from the GUI indicating a page has been interacted with.
+        Handles user interaction with the active namespace.
+        Reschedules namespace timeout on user interaction.
         @param message: the event sent by the GUI
         """
-        # GUI has interacted with a page
-        # Update and increase the namespace duration and reset the remove timer
         namespace_name = message.data.get("skill_id")
-        pidx = message.data.get('page_number')
-        LOG.info(f"GUI interacted with page in namespace {namespace_name}")
-        namespace = self.loaded_namespaces.get(namespace_name)
+        LOG.info(f"GUI interacted with namespace {namespace_name}")
 
-        if namespace and pidx is not None and pidx != namespace.page_number:
-            # update focused page
-            namespace.page_gained_focus(pidx)
+        session_id = self._session_id(message)
+        session = self.get_session(session_id)
+        namespace = session.loaded_namespaces.get(namespace_name)
 
-        # reschedule namespace timeout
-        if namespace_name != self.idle_display_skill and \
-                not namespace.persistent and \
-                self.remove_namespace_timers[namespace.skill_id]:
-            self.remove_namespace_timers[namespace.skill_id].cancel()
-            self._del_namespace_in_remove_timers(namespace.skill_id)
-            self._schedule_namespace_removal(namespace)
+        # reschedule namespace timeout on user interaction
+        if namespace and not namespace.persistent and \
+                session.remove_namespace_timers.get(namespace.skill_id):
+            session.remove_namespace_timers[namespace.skill_id].cancel()
+            self._del_namespace_in_remove_timers(namespace.skill_id, session)
+            self._schedule_namespace_removal(namespace, session)
 
     def handle_page_gained_focus(self, message: Message):
         """
-        Handles focus events from the GUI indicating the page has gained focus.
+        Handles focus events from the GUI (template rendering updates).
         @param message: the event sent by the GUI
         """
         namespace_name = message.data.get("skill_id")
-        namespace_page_number = message.data.get("page_number")
-        LOG.debug(f"Page in namespace {namespace_name} gained focus")
-        namespace = self.loaded_namespaces.get(namespace_name)
+        LOG.debug(f"Namespace {namespace_name} received focus event")
 
-        # first check if the namespace is already active
-        if namespace in self.active_namespaces:
-            # if the namespace is already active,
-            # check if the page number has changed
-            if namespace_page_number != namespace.page_number:
-                namespace.page_gained_focus(namespace_page_number)
+        session_id = self._session_id(message)
+        session = self.get_session(session_id)
+
+        # Template-only: no page tracking, just verify namespace exists
+        namespace = session.loaded_namespaces.get(namespace_name)
+        if namespace and namespace in session.active_namespaces:
+            LOG.debug(f"Namespace {namespace_name} is active")
 
     def handle_namespace_global_back(self, message: Optional[Message]):
         """
         Handles global back events from the GUI.
+        Removes the current namespace and shows homescreen if none remain.
         @param message: the event sent by the GUI
         """
-        if not self.active_namespaces:
+        session_id = self._session_id(message)
+        session = self.get_session(session_id)
+
+        if not session.active_namespaces:
             LOG.debug("received 'back' signal but there are no active namespaces, attempting to show homescreen")
-            self.core_bus.emit(Message("homescreen.manager.show_active"))
+            self.core_bus.emit(Message("mycroft.device.show.idle",
+                                       context={"session": {"session_id": session_id}}))
             return
 
-        namespace_name = self.active_namespaces[0].skill_id
-        namespace = self.loaded_namespaces.get(namespace_name)
-        if namespace in self.active_namespaces:
-            # prev page
-            if namespace.page_number > 0:
-                namespace.global_back()
-            # homescreen
-            else:
-                self.core_bus.emit(Message("homescreen.manager.show_active"))
+        # Remove the current (top) namespace
+        namespace_name = session.active_namespaces[0].skill_id
+        self._remove_namespace(namespace_name, session, session_id)
 
-    def _del_namespace_in_remove_timers(self, namespace_name: str):
+    def _del_namespace_in_remove_timers(self, namespace_name: str, session: GUISession):
         """
         Delete namespace from remove_namespace_timers dict.
         @param namespace_name: name of namespace to be deleted
+        @param session: the session affected
         """
-        if namespace_name in self.remove_namespace_timers:
-            del self.remove_namespace_timers[namespace_name]
-
-    def _cache_system_resources(self):
-        """
-        Copy system GUI resources to the served file path
-        """
-        output_path = f"{GUI_CACHE_PATH}/system"
-        if exists(output_path):
-            LOG.info(f"Removing existing system resources before updating")
-            shutil.rmtree(output_path)
-        shutil.copytree(self._system_res_dir, output_path)
-        LOG.debug(f"Copied system resources from {self._system_res_dir} to {output_path}")
+        if namespace_name in session.remove_namespace_timers:
+            del session.remove_namespace_timers[namespace_name]
