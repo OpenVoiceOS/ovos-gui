@@ -1,12 +1,20 @@
 # Changelog
 
+## [1.3.7a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.7a2) (2026-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.7a1...1.3.7a2)
+
+**Merged pull requests:**
+
+- refactor: migrate packaging to pyproject.toml [\#108](https://github.com/OpenVoiceOS/ovos-gui/pull/108) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.3.7a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.7a1) (2026-06-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.6a1...1.3.7a1)
 
 **Merged pull requests:**
 
-- fix: modernize release workflow to shared publish-alpha [\#106](https://github.com/OpenVoiceOS/ovos-gui/pull/106) ([JarbasAl](https://github.com/JarbasAl))
+- refactor: migrate packaging to pyproject.toml [\#106](https://github.com/OpenVoiceOS/ovos-gui/pull/106) ([JarbasAl](https://github.com/JarbasAl))
 
 ## [1.3.6a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.6a1) (2026-06-20)
 
