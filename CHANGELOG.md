@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.6a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.6a1) (2026-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.5a3...1.3.6a1)
+
+**Merged pull requests:**
+
+- fix: allow ovos-bus-client 2.x [\#105](https://github.com/OpenVoiceOS/ovos-gui/pull/105) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.3.5a3](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.5a3) (2025-12-19)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.5a2...1.3.5a3)
