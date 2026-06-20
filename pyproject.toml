@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ovos-gui"
+dynamic = ["version"]
+description = "ovos-core gui service daemon"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [{name = "JarbasAi", email = "jarbasai@mailfence.com"}]
+keywords = ["ovos", "gui"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+]
+dependencies = [
+    "ovos_bus_client>=1.0.0,<3.0.0",
+    "ovos-utils>=0.0.37,<1.0.0",
+    "ovos-config>=0.0.12,<3.0.0",
+    "tornado~=6.0, >=6.0.3",
+    "ovos-plugin-manager>=0.5.5,<3.0.0",
+]
+
+[project.optional-dependencies]
+extras = ["ovos-gui-plugin-shell-companion>=1.0.1,<2.0.0"]
+
+[project.urls]
+Homepage = "https://github.com/OpenVoiceOS/ovos-gui"
+
+[project.scripts]
+ovos-gui-service = "ovos_gui.__main__:main"
+ovos-gui-debug-tui = "ovos_gui.tui:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["ovos_gui*"]
+
+[tool.setuptools.package-data]
+ovos_gui = ["res/**/*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "ovos_gui.version.__version__"}
