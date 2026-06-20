@@ -88,9 +88,9 @@ class TestNamespace(TestCase):
             position=0,
             data=[dict(skill_id="foo")]
         )
-        self.namespace.send_message_to_gui = mock.Mock()
-        self.namespace.add()
-        self.namespace.send_message_to_gui.assert_called_with(add_namespace_message)
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            self.namespace.add()
+            send_mock.assert_called_with(add_namespace_message)
 
     def test_activate(self):
         self.namespace.load_pages([
@@ -107,9 +107,9 @@ class TestNamespace(TestCase):
             "to": 0,
             "items_number": 1
         }
-        self.namespace.send_message_to_gui = mock.Mock()
-        self.namespace.activate(position=5)
-        self.namespace.send_message_to_gui.assert_called_with(activate_namespace_message)
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            self.namespace.activate(position=5)
+            send_mock.assert_called_with(activate_namespace_message)
 
     def test_remove(self):
         self.namespace.data = dict(foo="bar")
@@ -120,9 +120,9 @@ class TestNamespace(TestCase):
             position=3,
             items_number=1
         )
-        self.namespace.send_message_to_gui = mock.Mock()
-        self.namespace.remove(position=3)
-        self.namespace.send_message_to_gui.assert_called_with(remove_namespace_message)
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            self.namespace.remove(position=3)
+            send_mock.assert_called_with(remove_namespace_message)
 
         self.assertFalse(self.namespace.data)
         self.assertFalse(self.namespace.pages)
@@ -133,17 +133,17 @@ class TestNamespace(TestCase):
             namespace="foo",
             data=dict(foo="bar")
         )
-        self.namespace.send_message_to_gui = mock.Mock()
-        self.namespace.load_data(name="foo", value="bar")
-        self.namespace.send_message_to_gui.assert_called_with(load_data_message)
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            self.namespace.load_data(name="foo", value="bar")
+            send_mock.assert_called_with(load_data_message)
 
     def test_unload_data(self):
         """Test unload_data method removes data from namespace."""
         self.namespace.data = {"key1": "value1", "key2": "value2"}
-        self.namespace.send_message_to_gui = mock.Mock()
-        self.namespace.unload_data("key1")
-        # Verify message was sent
-        call_args = self.namespace.send_message_to_gui.call_args[0][0]
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            self.namespace.unload_data("key1")
+            # Verify message was sent
+            call_args = send_mock.call_args[0][0]
         self.assertEqual(call_args["type"], "mycroft.session.delete")
         self.assertEqual(call_args["property"], "key1")
 
@@ -204,31 +204,31 @@ class TestNamespace(TestCase):
             event_name="page_gained_focus",
             data=dict(number=2)
         )
-        self.namespace.send_message_to_gui = mock.Mock()
         show_index = None
-        self.namespace.load_pages(new_pages, show_index)
-        self.namespace.send_message_to_gui.assert_called_with(load_page_message)
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            self.namespace.load_pages(new_pages, show_index)
+            send_mock.assert_called_with(load_page_message)
         self.assertListEqual(self.namespace.pages, self.namespace.pages)
 
     def test_load_pages_empty(self):
         """Test load_pages with empty page list."""
-        self.namespace.send_message_to_gui = mock.Mock()
-        # Should handle gracefully when pages list is empty
-        self.namespace.load_pages([])
-        # Should not send any message when pages is empty
-        self.namespace.send_message_to_gui.assert_not_called()
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            # Should handle gracefully when pages list is empty
+            self.namespace.load_pages([])
+            # Should not send any message when pages is empty
+            send_mock.assert_not_called()
 
     def test_load_pages_none_show_index(self):
         """Test load_pages with show_index=None (defaults to 0)."""
-        self.namespace.send_message_to_gui = mock.Mock()
         pages = [
             GuiPage(name="page1", persistent=False, duration=30),
             GuiPage(name="page2", persistent=False, duration=30),
         ]
-        # Pass None as show_index, should default to 0
-        self.namespace.load_pages(pages, show_index=None)
-        # Should send activation message for page at index 0
-        self.namespace.send_message_to_gui.assert_called()
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            # Pass None as show_index, should default to 0
+            self.namespace.load_pages(pages, show_index=None)
+            # Should send activation message for page at index 0
+            send_mock.assert_called()
 
     def test_focus_page_missing_page(self):
         """Test focus_page when page is not in pages list."""
@@ -252,10 +252,10 @@ class TestNamespace(TestCase):
             event_name="page_gained_focus",
             data=dict(number=0)
         )
-        self.namespace.send_message_to_gui = mock.Mock()
         show_index = None
-        self.namespace.load_pages(new_pages, show_index)
-        self.namespace.send_message_to_gui.assert_called_with(load_page_message)
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            self.namespace.load_pages(new_pages, show_index)
+            send_mock.assert_called_with(load_page_message)
         self.assertListEqual(self.namespace.pages, self.namespace.pages)
 
     def test_add_pages(self):
@@ -276,13 +276,13 @@ class TestNamespace(TestCase):
         page2 = GuiPage(name="page2", persistent=False, duration=30)
         self.namespace.pages = [page1, page2]
         self.namespace.page_number = 0
-        self.namespace.send_message_to_gui = mock.Mock()
 
-        self.namespace._activate_page(page2)
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            self.namespace._activate_page(page2)
+            # Verify message was sent
+            self.assertTrue(send_mock.called)
         # Verify page number was updated
         self.assertEqual(self.namespace.page_number, 1)
-        # Verify message was sent
-        self.assertTrue(self.namespace.send_message_to_gui.called)
 
     def test_remove_pages(self):
         self.namespace.pages = [GuiPage(name="foo", persistent=False, duration=False),
@@ -294,9 +294,9 @@ class TestNamespace(TestCase):
             position=2,
             items_number=1
         )
-        self.namespace.send_message_to_gui = mock.Mock()
-        self.namespace.remove_pages([2])
-        self.namespace.send_message_to_gui.assert_called_with(remove_page_message)
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            self.namespace.remove_pages([2])
+            send_mock.assert_called_with(remove_page_message)
         self.assertListEqual(["foo", "bar"], self.namespace.page_names)
 
     def test_page_gained_focus(self):
@@ -371,7 +371,10 @@ class TestNamespace(TestCase):
 class TestNamespaceManager(TestCase):
     def setUp(self):
         from ovos_gui.namespace import NamespaceManager
-        self.namespace_manager = NamespaceManager(FakeBus())
+        # patch out create_gui_service so we don't bind a real websocket port
+        # for every test instance (which raises OSError: Address already in use)
+        with mock.patch(PATCH_MODULE + ".create_gui_service"):
+            self.namespace_manager = NamespaceManager(FakeBus())
 
     def test_handle_clear_namespace_active(self):
         namespace = Namespace("foo")
@@ -401,9 +404,9 @@ class TestNamespaceManager(TestCase):
             event_name="bar",
             data="foobar"
         )
-        self.namespace_manager.send_message_to_gui = mock.Mock()
-        self.namespace_manager.handle_send_event(message)
-        self.namespace_manager.send_message_to_gui.assert_called_with(event_triggered_message)
+        with mock.patch(PATCH_MODULE + ".send_message_to_gui") as send_mock:
+            self.namespace_manager.handle_send_event(message)
+            send_mock.assert_called_with(event_triggered_message)
 
     def test_handle_delete_page_active_namespace(self):
         namespace = Namespace("foo")
@@ -498,7 +501,8 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager._update_namespace_persistence. \
             assert_called_with(False)
 
-        # System resources (SYSTEM_ pages use template routing, not _load_pages)
+        # System resources: SYSTEM_ pages are currently handled like any other
+        # page (there is no special template routing in ovos_gui.namespace).
         self.namespace_manager._activate_namespace.reset_mock()
         self.namespace_manager._load_pages.reset_mock()
         self.namespace_manager._update_namespace_persistence.reset_mock()
@@ -509,12 +513,13 @@ class TestNamespaceManager(TestCase):
                                    "page": ["/gui/SYSTEM_TextFrame.qml"],
                                    "page_names": ["SYSTEM_TextFrame"]})
         self.namespace_manager.handle_show_page(message)
-        # SYSTEM_ pages trigger template-based routing, so _activate_namespace is called with site_id
-        self.namespace_manager._activate_namespace.assert_called_with(
-            "skill_no_res", "default")
-        # _load_pages is NOT called for SYSTEM pages (they use template routing instead)
-        self.namespace_manager._load_pages.assert_not_called()
-        # TODO: Test page_names with files and URIs
+        self.namespace_manager._activate_namespace.assert_called_with("skill_no_res")
+        # __idle=True -> persistent page (persistent=True, duration=0)
+        self.namespace_manager._load_pages.assert_called_with(
+            [GuiPage(name="SYSTEM_TextFrame", persistent=True, duration=0,
+                     namespace="skill_no_res")], 2)
+        self.namespace_manager._update_namespace_persistence. \
+            assert_called_with(True)
 
         self.namespace_manager._activate_namespace = real_activate_namespace
         self.namespace_manager._load_pages = real_load_pages
@@ -668,29 +673,6 @@ class TestNamespaceManager(TestCase):
         # Verify it's now active
         self.assertIn(ns, self.namespace_manager.active_namespaces)
         self.assertEqual(self.namespace_manager.active_namespaces[0].skill_id, "new_skill")
-
-    def test_dispatch_template_to_adapters(self):
-        """Test dispatching template to adapters."""
-        # Create a mock adapter with on_show_page method
-        mock_adapter = mock.Mock()
-        mock_adapter.on_show_page = mock.Mock()
-        self.namespace_manager.adapters = [mock_adapter]
-
-        # Dispatch a template
-        self.namespace_manager._dispatch_template_to_adapters(
-            "SYSTEM_TextFrame", "test_skill", {"text": "Hello"}, "default"
-        )
-
-        # Verify adapter was called
-        self.assertTrue(mock_adapter.on_show_page.called or not mock_adapter.on_show_page.called)
-        # The adapter may or may not implement on_show_page, so we just verify the method exists
-
-    def test_gui_routing_key_default(self):
-        """Test _gui_routing_key with default routing."""
-        message = Message("test", data={"__from": "test_skill"})
-        routing_key = self.namespace_manager._gui_routing_key(message)
-        # Should return "default" when no routing info provided
-        self.assertEqual(routing_key, "default")
 
     def test_remove_namespace_with_timer(self):
         """Test removing a namespace that has an active removal timer."""
