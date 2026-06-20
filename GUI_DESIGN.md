@@ -278,60 +278,67 @@ NamespaceManager(core_bus: MessageBusClient, adapters: list = None)
 
 `adapters` is a list of `AbstractGUIPlugin` instances loaded at startup by `GUIService._load_adapter_plugins()`.
 
-### 6.2 GUI routing key
+### 6.2 GUI routing key — `session_id`
 
-Every GUI event is tagged with a **routing key** computed by `_gui_routing_key(message)` from the message's session context (`message.context["session"]`). Adapters use this key to send only to the matching GUI clients.
+The routing identifier is the **`session_id`**, read from the message's session
+context (`message.context["session"]["session_id"]`). There is no separate
+location dimension. A shared/multi-room screen is expressed by clients
+**sharing the same `session_id`**. The on-device default is just
+`session_id == "default"`.
 
-Three cases, in priority order:
+| Scenario | `session_id` | Example |
+|---|---|---|
+| On-device display | `"default"` | Mark 2, laptop with local listener |
+| Shared screen group | a shared id | several screens connect with the same id |
+| Standalone remote GUI | the remote's session id (e.g. a UUID) | phone GUI on a remote OVOS server |
 
-| Case | Condition | Routing key | Example |
-|---|---|---|---|
-| **On-device** | `session_id == "default"` | `"default"` | Mark2, laptop with local listener |
-| **Location group** | `site_id` is set and not `"unknown"` | `site_id` value | `"living_room"` — mirrors to all screens at that location |
-| **Standalone remote** | UUID `session_id`, no `site_id` | `session_id` | Phone GUI connected to a remote OVOS server |
-
-GUI clients register with their routing key at connect time:
-- Qt: `mycroft.gui.connected` → `"site_id"` field (defaults to `"default"`)
-- Browser: `GET /?routing_key=<key>` (defaults to `"default"`)
+`NamespaceManager._session_id(message)` extracts it (defaulting to `"default"`).
+Each `session_id` owns an independent namespace stack; the `session_id` is
+forwarded to every adapter so adapters can target the matching client(s).
 
 **Routing rules:**
-- Template events, session data → sent only to clients whose routing key matches
-- Namespace removal, status events (wakeword, speaking, etc.) → broadcast to all connected clients
+- Template events and session data carry the `session_id`; adapters deliver
+  them to clients on that session.
+- Namespace removal and status events (wakeword, speaking, etc.) are
+  system-wide signals; adapters typically broadcast them to all clients.
 
 ### 6.3 Template dispatch
 
-`handle_show_page` is the central handler for `gui.page.show`. It checks the first page name:
+`handle_show_page` is the central handler for `gui.page.show`. The first page
+name must be a `SYSTEM_*` template:
 
-- Starts with `"SYSTEM_"` → **template path**: dispatches to all adapters with the routing key, then activates the namespace on the internal stack. No legacy page-loading occurs.
-- Otherwise → **legacy path**: activates namespace, loads pages into stack (unchanged behaviour).
+- Starts with `"SYSTEM_"` → **template path**: dispatches to all adapters with
+  the `session_id`, then activates the namespace on that session's stack.
+- Otherwise → rejected (custom QML is not supported).
 
 ```python
-if page_ids_to_show and page_ids_to_show[0].startswith("SYSTEM_"):
-    namespace = self._ensure_namespace_exists(namespace_name)
-    data = {k: v for k, v in namespace.data.items()}
-    routing_key = self._gui_routing_key(message)
-    for template in page_ids_to_show:
-        self._dispatch_template_to_adapters(template, namespace_name, data, routing_key)
-    with namespace_lock:
-        if not self.active_namespaces or self.active_namespaces[0].skill_id != namespace_name:
-            self._activate_namespace(namespace_name, routing_key)
-    return
+session_id = self._session_id(message)
+session = self.get_session(session_id)
+namespace = self._ensure_namespace_exists(namespace_name, session)
+data = {k: v for k, v in namespace.data.items()}
+for template in page_ids_to_show:
+    self._dispatch_template_to_adapters(template, namespace_name, data, session_id)
+with namespace_lock:
+    if not session.active_namespaces or session.active_namespaces[0].skill_id != namespace_name:
+        self._activate_namespace(namespace_name, session, session_id)
+    self._update_namespace_persistence(persistence, session)
 ```
 
 ### 6.4 Session data forwarding
 
-Every `gui.value.set` message calls `adapter.on_session_update(skill_id, filtered_data, routing_key)` on all adapters after updating the internal namespace data. `__from` and `__idle` reserved keys are stripped before delivery.
+Every `gui.value.set` message calls `adapter.on_session_update(skill_id, filtered_data, session_id)` on all adapters after updating the internal namespace data. `__from` and `__idle` reserved keys are stripped before delivery.
 
 ### 6.5 Lifecycle hook invocation
 
 | Internal event | Adapter hook called | Routing |
 |---|---|---|
-| Namespace moves to top of active stack | `on_namespace_activated(skill_id, routing_key)` | per-key |
-| Namespace removed from active stack | `on_namespace_deactivated(skill_id)` | broadcast all |
-| `gui.value.set` received | `on_session_update(skill_id, data, routing_key)` | per-key |
-| Status event forwarded | `on_status_event(event_name, data)` | broadcast all |
+| Namespace moves to top of active stack | `on_namespace_activated(skill_id, session_id)` | per-session |
+| Namespace removed from active stack | `on_namespace_deactivated(skill_id, session_id)` | per-session |
+| `gui.value.set` received | `on_session_update(skill_id, data, session_id)` | per-session |
+| Status event forwarded | `on_status_event(event_name, data, session_id)` | broadcast all |
 
-Status events (wakeword, speaking, etc.) are broadcast to all clients — they are system-wide signals not tied to a specific session or location.
+Status events (wakeword, speaking, etc.) are system-wide signals; adapters
+broadcast them to all clients regardless of session.
 
 ### 6.6 Namespace persistence
 
@@ -367,12 +374,14 @@ AbstractGUIPlugin(config: dict, bus: MessageBusClient = None)
 Each handler defaults to a no-op. Subclasses override only those they support. Handlers are invoked via `dispatch_template()` which catches and logs any exceptions, so a broken handler never affects other adapters.
 
 ```python
-def handle_show_text(self, skill_id: str, data: dict, site_id: str = "default") -> None: ...
-def handle_show_weather(self, skill_id: str, data: dict, site_id: str = "default") -> None: ...
+def handle_show_text(self, skill_id: str, data: dict, session_id: str = "default") -> None: ...
+def handle_show_weather(self, skill_id: str, data: dict, session_id: str = "default") -> None: ...
 # ... 19 others — see AbstractGUIPlugin._TEMPLATE_HANDLERS
 ```
 
-`site_id` is the **routing key** computed from the message context (see §6.2). Adapters use it to deliver the update only to the matching client(s).
+`session_id` is the **routing key** read from the message context (see §6.2).
+Adapters use it to deliver the update only to the matching client(s); shared
+screens share a `session_id`.
 
 The full handler-to-template mapping is maintained in `AbstractGUIPlugin._TEMPLATE_HANDLERS`:
 
@@ -392,6 +401,7 @@ _TEMPLATE_HANDLERS = {
     "SYSTEM_url":            "handle_show_url",
     "SYSTEM_audio_player":   "handle_show_audio_player",
     "SYSTEM_video_player":   "handle_show_video_player",
+    "SYSTEM_media_player":   "handle_show_media_player",
     "SYSTEM_clock":          "handle_show_clock",
     "SYSTEM_timer":          "handle_show_timer",
     "SYSTEM_weather":        "handle_show_weather",
@@ -405,14 +415,16 @@ _TEMPLATE_HANDLERS = {
 ### 7.3 Lifecycle hooks
 
 ```python
-def on_namespace_activated(self, skill_id: str, site_id: str = "default") -> None: ...
-def on_namespace_deactivated(self, skill_id: str) -> None: ...
+def on_namespace_activated(self, skill_id: str, session_id: str = "default") -> None: ...
+def on_namespace_deactivated(self, skill_id: str, session_id: str = "default") -> None: ...
 def on_idle(self) -> None: ...
-def on_session_update(self, skill_id: str, data: dict, site_id: str = "default") -> None: ...
-def on_status_event(self, event_name: str, data: dict, site_id: str = "default") -> None: ...
+def on_session_update(self, skill_id: str, data: dict, session_id: str = "default") -> None: ...
+def on_status_event(self, event_name: str, data: dict, session_id: str = "default") -> None: ...
 ```
 
-`on_namespace_deactivated` and `on_status_event` are system-wide signals; although `site_id` is accepted for API consistency, adapters should broadcast these to all connected clients regardless of routing key.
+`on_namespace_deactivated` and `on_status_event` are system-wide signals; the
+`session_id` is accepted for API consistency, but adapters should broadcast
+these to all connected clients regardless of session.
 
 ### 7.4 Connection status
 
@@ -441,21 +453,22 @@ entry_points={
 
 ## 8. Plugin Discovery and Loading (`ovos-plugin-manager`)
 
-**File:** `ovos_plugin_manager/gui_adapter.py`
+**File:** `ovos_plugin_manager/gui.py`
 
 ```python
 find_gui_adapter_plugins() -> Dict[str, Type[AbstractGUIPlugin]]
 load_gui_adapter_plugin(module_name) -> Optional[Type[AbstractGUIPlugin]]
 
-OVOSGUIAdapterFactory.create(module_name, config, bus) -> Optional[AbstractGUIPlugin]
-OVOSGUIAdapterFactory.create_all(config, bus) -> List[AbstractGUIPlugin]
+OVOSGUIAdapterFactory.create_all(bus=None, config=None) -> List[AbstractGUIPlugin]
 ```
 
 `GUIService._load_adapter_plugins()` calls `create_all` with:
-- `config = mycroft.conf["gui"]["adapters"]`
 - `bus = self.bus` (the shared MessageBusClient)
+- `config = mycroft.conf["gui"]["adapters"]`
 
-Plugins that raise during `__init__` are skipped and logged; they do not prevent other adapters from loading.
+`create_all` never raises: plugins that raise during `__init__` are skipped and
+logged, and a headless device with no adapters installed gets an empty list.
+The GUI service then degrades to no-op dispatch instead of crashing.
 
 `PluginTypes.GUI_ADAPTER = "opm.gui_adapter"` is defined in `ovos_plugin_manager/utils/__init__.py`.
 
@@ -475,9 +488,9 @@ Plugins that raise during `__init__` are skipped and logged; they do not prevent
 
 **What it does:**
 - On `__init__`, starts the Tornado WS server (previously run by `ovos-gui` itself)
-- For each `handle_show_*` call, resolves the matching bundled QML file from its `ui/` directory and sends `mycroft.gui.list.insert` + `mycroft.session.set` messages only to clients whose `site_id` matches the routing key via `send_to_clients_for_site(site_id, msg)`
+- For each `handle_show_*` call, resolves the matching bundled QML file from its `ui/` directory and sends `mycroft.gui.list.insert` + `mycroft.session.set` messages only to clients whose `session_id` matches via `send_to_clients_for_session(session_id, msg)`
 - Status events and namespace removal are broadcast to **all** connected Qt clients via `send_to_all_clients(msg)` — these are system-wide signals
-- Each Qt client announces its routing key in the `mycroft.gui.connected` handshake: `{"site_id": "default"}` for on-device, `{"site_id": "living_room"}` for a location group, or a UUID for a standalone remote GUI
+- Each Qt client announces its `session_id` in the `mycroft.gui.connected` handshake: `{"session_id": "default"}` on-device, a shared id for a multi-room screen group, or the remote session id for a standalone remote GUI
 - Implements `any_client_connected()` based on active WS connections
 - Skills provide **no QML** — the 21 QML stubs are bundled inside this plugin
 
@@ -493,10 +506,10 @@ Plugins that raise during `__init__` are skipped and logged; they do not prevent
 
 **What it does:**
 - On `__init__`, creates a `GUIManager` and starts FastAPI/uvicorn in a daemon thread
-- For each `handle_show_*` call, instantiates the matching `Page` subclass from `templates/__init__.py` and calls `GUIManager.show_template_page(..., site_id=site_id)`
-- DOM updates are pushed only to browser tabs whose routing key matches `site_id` via per-session SSE queues; status events broadcast to all tabs
-- Each browser tab gets a unique `session_id` (a random hex token) and a dedicated SSE endpoint `/updates/{session_id}`; tabs declare their routing key at `GET /?routing_key=`
-- `Renderer._clients: Dict[str, str]` maps `session_id → routing_key`; `send(data, site_id=None)` delivers to matching sessions (`None` = broadcast all)
+- For each `handle_show_*` call, instantiates the matching `Page` subclass from `templates/__init__.py` and calls `GUIManager.show_template_page(..., session_id=session_id)`
+- DOM updates are pushed only to browser tabs whose `session_id` matches via per-tab SSE queues; status events broadcast to all tabs
+- Each browser tab declares its `session_id` at `GET /?session_id=` (default `"default"`) and gets a dedicated SSE endpoint `/updates/{session_id}`
+- `Renderer.send(data, session_id=None)` delivers to matching tabs (`None` = broadcast all)
 - Implements `any_client_connected()` by checking `global_renderer._clients`
 - Touch events from `ConfirmPage` / `SelectPage` call back to OVOS via `self.bus.emit()`
 - Tabs that stop sending pings are cleaned up after 30 s (`_check_disconnected` daemon thread)
@@ -504,20 +517,20 @@ Plugins that raise during `__init__` are skipped and logged; they do not prevent
 **Server routes:**
 | Route | Purpose |
 |---|---|
-| `GET /?routing_key=default` | Serve initial HTML; register browser tab with a routing key (default: `"default"`) |
+| `GET /?session_id=default` | Serve initial HTML; register browser tab with a `session_id` (default: `"default"`) |
 | `GET /updates/{session_id}` | Per-tab SSE stream for DOM patch events |
 | `GET /local-event/{id}` | HTMX local callback — returns HTML fragment |
 | `POST /global-event/{id}` | HTMX global callback — no body returned |
 | `POST /ping/{session_id}` | Browser keepalive; sessions without pings time out after 30 s |
 | `GET /assets/*` | Static CSS/JS/font files |
 
-**Routing key values (query parameter `routing_key`):**
+**`session_id` values (query parameter `session_id`):**
 
 | Value | Meaning |
 |---|---|
 | `"default"` | On-device display (Mark 2, laptop) — default if not specified |
-| `"living_room"` / any string | Named physical location group |
-| `"<uuid>"` | Standalone remote GUI (phone/tablet) — must match the OVOS session ID |
+| any shared string | Multi-room screen group — tabs sharing the id share state |
+| remote session id | Standalone remote GUI (phone/tablet) — matches the OVOS session id |
 
 ---
 
@@ -624,14 +637,15 @@ Use this checklist to confirm the implementation matches this spec:
 - [ ] `ovos_gui/bus.py` does not exist (deleted — Tornado WS moved to legacy plugin)
 - [ ] `NamespaceManager.__init__` does NOT call `create_gui_service()` or start any WS server
 - [ ] `NamespaceManager` constructor accepts `adapters: list = None`
-- [ ] `_gui_routing_key(message)` implements the three-case logic: `session_id=="default"` → `"default"`, `site_id` set and not `"unknown"` → `site_id`, else → `session_id`
-- [ ] `handle_show_page` routes `SYSTEM_*` page names to `_dispatch_template_to_adapters(template, skill_id, data, routing_key)` and returns early (skips legacy path)
-- [ ] `_dispatch_template_to_adapters` calls `adapter.dispatch_template(template, skill_id, data, site_id)` for each adapter
-- [ ] `handle_set_value` calls `adapter.on_session_update(namespace_name, filtered_data, routing_key)` for each adapter (after stripping reserved keys)
-- [ ] `_activate_namespace(namespace, routing_key)` calls `adapter.on_namespace_activated(skill_id, routing_key)` for each adapter
-- [ ] `_remove_namespace` calls `adapter.on_namespace_deactivated(skill_id)` for each adapter (broadcast — no routing key)
+- [ ] `_session_id(message)` returns `message.context["session"]["session_id"]`, defaulting to `"default"` (the routing key is the session_id; no `site_id`)
+- [ ] `handle_show_page` routes `SYSTEM_*` page names to `_dispatch_template_to_adapters(template, skill_id, data, session_id)` and returns early (rejects non-template names)
+- [ ] `_dispatch_template_to_adapters` calls `adapter.dispatch_template(template, skill_id, data, session_id)` for each adapter
+- [ ] `handle_set_value` calls `adapter.on_session_update(namespace_name, filtered_data, session_id)` for each adapter (after stripping reserved keys)
+- [ ] `_activate_namespace(...)` calls `adapter.on_namespace_activated(skill_id, session_id)` for each adapter
+- [ ] `_remove_namespace` calls `adapter.on_namespace_deactivated(skill_id, session_id)` for each adapter
 - [ ] `handle_status_request` uses `adapter.any_client_connected()` (not a Tornado client list)
-- [ ] Status events from `_define_messages_to_forward` call `adapter.on_status_event(event_name, data)` for each adapter (broadcast — no routing key)
+- [ ] Status events from `_define_messages_to_forward` call `adapter.on_status_event(event_name, data, session_id)` for each adapter
+- [ ] No `gui.page.delete*` handlers and no `GuiPage`/page model (template-only namespaces)
 
 ### ovos-gui-api-client
 
@@ -654,13 +668,13 @@ Use this checklist to confirm the implementation matches this spec:
 - [ ] Inherits from `AbstractGUIPlugin`
 - [ ] Registered under entry point group `opm.gui_adapter`
 - [ ] Starts Tornado WS on port 18181 in `__init__` (not on module import)
-- [ ] `QtGUIWebSocketHandler` has `_site_id` attribute set from `mycroft.gui.connected` handshake (`site_id` field, default `"default"`)
-- [ ] `send_to_clients_for_site(site_id, msg)` delivers only to clients where `client.site_id == site_id` (exact match — `"default"` is NOT a wildcard)
+- [ ] `QtGUIWebSocketHandler` has `_session_id` attribute set from `mycroft.gui.connected` handshake (`session_id` field, default `"default"`)
+- [ ] `send_to_clients_for_session(session_id, msg)` delivers only to clients where `client.session_id == session_id` (exact match — `"default"` is NOT a wildcard)
 - [ ] `send_to_all_clients(msg)` used for status events and namespace removal (system-wide)
-- [ ] All 21 `handle_show_*` methods have signature `(self, skill_id, data, site_id="default")` and use `send_to_clients_for_site`
-- [ ] `on_namespace_activated(skill_id, site_id="default")` uses `send_to_clients_for_site`
-- [ ] `on_namespace_deactivated(skill_id)` uses `send_to_all_clients`
-- [ ] `on_status_event(event_name, data, site_id="default")` uses `send_to_all_clients` (always broadcast)
+- [ ] All `handle_show_*` methods have signature `(self, skill_id, data, session_id="default")` and use `send_to_clients_for_session`
+- [ ] `on_namespace_activated(skill_id, session_id="default")` uses `send_to_clients_for_session`
+- [ ] `on_namespace_deactivated(skill_id, session_id="default")` uses `send_to_all_clients`
+- [ ] `on_status_event(event_name, data, session_id="default")` uses `send_to_all_clients` (always broadcast)
 - [ ] All 21 `handle_show_*` methods implemented; each resolves a bundled QML file from `ui/`
 - [ ] Skills supply no QML — all 21 QML stubs are bundled inside this plugin's `ui/` directory
 - [ ] Implements `any_client_connected()` based on active WS connections
@@ -672,19 +686,18 @@ Use this checklist to confirm the implementation matches this spec:
 - [ ] Starts FastAPI/uvicorn in a daemon thread in `__init__`
 - [ ] `app.py` has NO `/cache` static mount
 - [ ] `gui_client.py` does not exist (deleted)
-- [ ] `GET /` accepts `routing_key: str = "default"` query parameter; generates a per-tab `session_id`; patches `sse-connect` to `/updates/{session_id}` and ping URL to `/ping/{session_id}`
+- [ ] `GET /` accepts `session_id: str = "default"` query parameter; patches `sse-connect` to `/updates/{session_id}` and ping URL to `/ping/{session_id}`
 - [ ] `GET /updates/{session_id}` serves a dedicated SSE queue per browser tab
 - [ ] `EventSender` uses `{session_id: Queue}` dict; `send(msg, session_ids=None)` delivers to matching tabs (`None` = broadcast all)
-- [ ] `Renderer._clients: Dict[str, str]` maps `session_id → routing_key`; `register_client(session_id, routing_key)` populates it
-- [ ] `Renderer.send(data, site_id=None)` — `None` broadcasts; string routes to matching sessions only
+- [ ] `Renderer.send(data, session_id=None)` — `None` broadcasts; string routes to matching sessions only
 - [ ] `_check_disconnected` daemon cleans up sessions that stop pinging after 30 s
-- [ ] All 21 `handle_show_*` methods have signature `(self, skill_id, data, site_id="default")`; pass `site_id` to `show_template_page`
-- [ ] `on_namespace_activated(skill_id, site_id="default")` passes `site_id` to `GUIManager.show`
-- [ ] `on_status_event(event_name, data, site_id="default")` passes `site_id=None` to `GUIManager.update_status` (always broadcast)
-- [ ] `templates/__init__.py` defines all 21 `Page` subclasses and `TEMPLATE_PAGE_MAP`
+- [ ] All `handle_show_*` methods have signature `(self, skill_id, data, session_id="default")`; pass `session_id` to `show_template_page`
+- [ ] `on_namespace_activated(skill_id, session_id="default")` passes `session_id` to `GUIManager.show`
+- [ ] `on_status_event(event_name, data, session_id="default")` passes `session_id=None` to `GUIManager.update_status` (always broadcast)
+- [ ] `templates/__init__.py` defines all `Page` subclasses and `TEMPLATE_PAGE_MAP`
 - [ ] `ConfirmPage` and `SelectPage` accept `skill_id` and call back to OVOS bus on touch
 - [ ] `app.set_plugin(plugin)` must be called before uvicorn starts
-- [ ] Implements `any_client_connected(site_id=None)` via `global_renderer._clients`
+- [ ] Implements `any_client_connected()` via the renderer's session map
 - [ ] `on_namespace_activated`, `on_namespace_deactivated`, `on_session_update`, `on_status_event` all implemented
 
 ### Skills
@@ -710,15 +723,15 @@ class TerminalGUIPlugin(AbstractGUIPlugin):
         super().__init__(config, bus)
         # start any server / rendering pipeline here
 
-    def handle_show_text(self, skill_id: str, data: dict, site_id: str = "default") -> None:
-        # site_id is the routing key — use it to target specific terminals if applicable
-        print(f"[{skill_id}@{site_id}] {data.get('title', '')}: {data.get('text', '')}")
+    def handle_show_text(self, skill_id: str, data: dict, session_id: str = "default") -> None:
+        # session_id is the routing key — use it to target specific terminals if applicable
+        print(f"[{skill_id}@{session_id}] {data.get('title', '')}: {data.get('text', '')}")
 
-    def handle_show_weather(self, skill_id: str, data: dict, site_id: str = "default") -> None:
-        print(f"[{skill_id}@{site_id}] {data['location']}: {data['current_temp']}° {data['condition']}")
+    def handle_show_weather(self, skill_id: str, data: dict, session_id: str = "default") -> None:
+        print(f"[{skill_id}@{session_id}] {data['location']}: {data['current_temp']}° {data['condition']}")
 
-    def on_status_event(self, event_name: str, data: dict, site_id: str = "default") -> None:
-        # Status events are system-wide — ignore site_id and broadcast to all terminals
+    def on_status_event(self, event_name: str, data: dict, session_id: str = "default") -> None:
+        # Status events are system-wide — ignore session_id and broadcast to all terminals
         print(f"[status] {event_name}")
 
     def any_client_connected(self) -> bool:
