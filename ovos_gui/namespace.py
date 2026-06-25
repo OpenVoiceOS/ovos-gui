@@ -46,6 +46,7 @@ from typing import List, Union, Optional, Dict
 
 from ovos_bus_client import Message, MessageBusClient
 from ovos_config.config import Configuration
+from ovos_spec_tools import SpecMessage
 from ovos_utils.log import LOG
 
 from ovos_gui.bus import (
@@ -472,14 +473,14 @@ class NamespaceManager:
             "recognizer_loop:audio_output_start",
             "recognizer_loop:audio_output_end",
             # Speech Service
-            "recognizer_loop:sleep",
+            SpecMessage.LISTENER_SLEEP,
             "recognizer_loop:wake_up",
-            "mycroft.awoken",
+            SpecMessage.LISTENER_AWOKEN,
             "recognizer_loop:utterance",
             "recognizer_loop:wakeword",
             "recognizer_loop:recognition_unknown",
-            "recognizer_loop:record_begin",
-            "recognizer_loop:record_end",
+            SpecMessage.LISTENER_RECORD_STARTED,
+            SpecMessage.LISTENER_RECORD_ENDED,
             # Enclosure commands for eyes
             "enclosure.eyes.on",
             "enclosure.eyes.off",
