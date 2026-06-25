@@ -9,6 +9,7 @@ description = "ovos-core gui service daemon"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [{name = "JarbasAi", email = "jarbasai@mailfence.com"}]
+requires-python = ">=3.10"
 keywords = ["ovos", "gui"]
 classifiers = [
     "Development Status :: 4 - Beta",
