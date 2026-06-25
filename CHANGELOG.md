@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.0a1) (2026-06-25)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.8a1...1.4.0a1)
+
+**Merged pull requests:**
+
+- feat: migrate listener-lifecycle topics to OVOS spec bus namespace [\#113](https://github.com/OpenVoiceOS/ovos-gui/pull/113) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.3.8a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.8a1) (2026-06-25)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.7a3...1.3.8a1)
