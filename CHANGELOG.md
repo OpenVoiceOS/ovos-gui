@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.8a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.8a1) (2026-06-25)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.7a3...1.3.8a1)
+
+**Merged pull requests:**
+
+- fix: drop archived shell-companion extra + single-source deps in pyproject [\#114](https://github.com/OpenVoiceOS/ovos-gui/pull/114) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.3.7a3](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.7a3) (2026-06-20)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.7a2...1.3.7a3)
