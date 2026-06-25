@@ -23,9 +23,6 @@ dependencies = [
     "ovos-plugin-manager>=0.5.5,<3.0.0",
 ]
 
-[project.optional-dependencies]
-extras = ["ovos-gui-plugin-shell-companion>=1.0.1,<2.0.0"]
-
 [project.urls]
 Homepage = "https://github.com/OpenVoiceOS/ovos-gui"
 
