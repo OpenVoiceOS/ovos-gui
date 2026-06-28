@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.1a1) (2026-06-28)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.0a1...1.4.1a1)
+
+**Merged pull requests:**
+
+- fix: lift ovos-spec-tools upper bound \(spec-tools 1.x\) [\#118](https://github.com/OpenVoiceOS/ovos-gui/pull/118) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.4.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.0a1) (2026-06-25)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.8a1...1.4.0a1)
