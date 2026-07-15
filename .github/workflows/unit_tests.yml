@@ -47,6 +47,13 @@ jobs:
           sudo apt-get update
           sudo apt install python3-dev swig
           python -m pip install build wheel
+      - name: Install ovos-plugin-manager (gui branch)
+        # The opm.gui_adapter loader (OVOSGUIAdapterFactory) is not yet on PyPI;
+        # it lives on the ovos-plugin-manager `gui` branch. Resolve it from git
+        # until it publishes, after which this step drops and the pyproject floor
+        # takes over.
+        run: |
+          pip install git+https://github.com/OpenVoiceOS/ovos-plugin-manager@gui
       - name: Install repo
         run: |
           pip install -e .
