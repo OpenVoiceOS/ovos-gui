@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.1a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.1a2) (2026-07-31)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.1a1...1.4.1a2)
+
+**Merged pull requests:**
+
+- docs: rewrite README in Simplified Technical English [\#121](https://github.com/OpenVoiceOS/ovos-gui/pull/121) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.4.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.1a1) (2026-06-28)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.0a1...1.4.1a1)
