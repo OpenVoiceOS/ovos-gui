@@ -22,7 +22,19 @@ dependencies = [
     "ovos-utils>=0.0.37,<1.0.0",
     "ovos-config>=0.0.12,<3.0.0",
     "tornado~=6.0, >=6.0.3",
+    # >=2.5.0a1 carries OVOSGUIAdapterFactory (the opm.gui_adapter loader).
     "ovos-plugin-manager>=2.5.0a1,<3.0.0",
+]
+
+[project.optional-dependencies]
+# Bundled Qt adapter. ovos-gui itself runs no display backend; install an
+# opm.gui_adapter plugin to render. Headless installs need none of these.
+gui = ["ovos-legacy-mycroft-gui-plugin>=0.0.1,<1.0.0"]
+test = [
+    "pytest~=7.1",
+    "pytest-cov~=4.1",
+    # skill-side interface — exercised by the full-path end2end integration test
+    "ovos-gui-api-client>=0.0.1,<1.0.0",
 ]
 
 [project.urls]
@@ -37,9 +49,6 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["ovos_gui*"]
-
-[tool.setuptools.package-data]
-ovos_gui = ["res/**/*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "ovos_gui.version.__version__"}
