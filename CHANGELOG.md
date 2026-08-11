@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.0a1) (2026-08-11)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.1a2...1.5.0a1)
+
+**Merged pull requests:**
+
+- feat: run ServiceInstaller so gui plugins install over the bus [\#123](https://github.com/OpenVoiceOS/ovos-gui/pull/123) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.4.1a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.1a2) (2026-07-31)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.1a1...1.4.1a2)
