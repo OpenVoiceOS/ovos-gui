@@ -17,12 +17,35 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
-    "ovos_bus_client>=2.2.0a1,<3.0.0",
-    "ovos-spec-tools>=0.9.0a1",
+    "ovos_bus_client>=2.5.1a1,<3.0.0",
+    "ovos-spec-tools>=0.17.3a1",
     "ovos-utils>=0.8.5,<1.0.0",
     "ovos-config>=0.0.12,<3.0.0",
     "tornado~=6.0, >=6.0.3",
     "ovos-plugin-manager>=2.5.0a1,<3.0.0",
+]
+
+[project.optional-dependencies]
+test = [
+    # ovoscope ships a pytest11 plugin and requires pytest>=8 (the
+    # pytest_pycollect_makemodule hook dropped 'path' in pytest 8).
+    "pytest>=8",
+    "pytest-cov>=4.1",
+    # ovoscope drives the in-repo OVOS-GUI-1 end-to-end conformance
+    # (test/end2end/test_gui1_service_e2e.py): it boots the real
+    # NamespaceManager + the GUIInterface producer on a bus and captures the
+    # gui.* wire with GUICaptureSession. The 1.0.2a1 line is the first whose
+    # transitive ovos-core no longer caps ovos-bus-client<2.0.0, so it resolves
+    # against the GUI-1 floors below. Prerelease-floor pin (>=) so pip resolves
+    # the prerelease with no --pre.
+    "ovoscope>=1.0.2a1",
+    # GUI-1 service-contract floors: per-session routing reads context.session
+    # via the bus-client 2.5.x session carrier; the SYSTEM_ template vocabulary
+    # lives in ovos-spec-tools; ovoscope's GUICaptureSession + the FakeBus
+    # legacy<->ovos.* session bridging needs ovos-utils>=0.12.0a1.
+    "ovos_bus_client>=2.5.1a1,<3.0.0",
+    "ovos-spec-tools>=0.17.3a1",
+    "ovos-utils>=0.12.0a1,<1.0.0",
 ]
 
 [project.urls]
