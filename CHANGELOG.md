@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.1a1) (2026-09-10)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.0a1...1.5.1a1)
+
+**Merged pull requests:**
+
+- fix: drop the deprecated setup\_locale call from the gui service [\#126](https://github.com/OpenVoiceOS/ovos-gui/pull/126) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [1.5.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.0a1) (2026-08-11)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.1a2...1.5.0a1)
