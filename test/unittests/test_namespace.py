@@ -473,12 +473,12 @@ class TestNamespaceManager(TestCase):
                                                  "__idle": 10,
                                                  "page_names": ["bar", "test/baz"]})
         self.namespace_manager.handle_show_page(message)
-        self.namespace_manager._activate_namespace.assert_called_with("foo")
+        self.namespace_manager._activate_namespace.assert_called_with("foo", mock.ANY)
         self.namespace_manager._load_pages.assert_called_with(
             [GuiPage(name='bar', persistent=False, duration=10, namespace='foo'),
-             GuiPage(name='test/baz', persistent=False, duration=10, namespace='foo')], 0)
+             GuiPage(name='test/baz', persistent=False, duration=10, namespace='foo')], 0, mock.ANY)
         self.namespace_manager._update_namespace_persistence. \
-            assert_called_with(10)
+            assert_called_with(10, mock.ANY)
 
         # With resource info
         self.namespace_manager._activate_namespace.reset_mock()
@@ -494,12 +494,12 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager.handle_show_page(message)
         expected_page1 = GuiPage("page_1", False, 0, "skill")
         expected_page2 = GuiPage("test/page_2", False, 0, "skill")
-        self.namespace_manager._activate_namespace.assert_called_with("skill")
+        self.namespace_manager._activate_namespace.assert_called_with("skill", mock.ANY)
         self.namespace_manager._load_pages.assert_called_with([expected_page1,
                                                                expected_page2],
-                                                              1)
+                                                              1, mock.ANY)
         self.namespace_manager._update_namespace_persistence. \
-            assert_called_with(False)
+            assert_called_with(False, mock.ANY)
 
         # System resources: SYSTEM_ pages are currently handled like any other
         # page (there is no special template routing in ovos_gui.namespace).
@@ -513,13 +513,13 @@ class TestNamespaceManager(TestCase):
                                    "page": ["/gui/SYSTEM_TextFrame.qml"],
                                    "page_names": ["SYSTEM_TextFrame"]})
         self.namespace_manager.handle_show_page(message)
-        self.namespace_manager._activate_namespace.assert_called_with("skill_no_res")
+        self.namespace_manager._activate_namespace.assert_called_with("skill_no_res", mock.ANY)
         # __idle=True -> persistent page (persistent=True, duration=0)
         self.namespace_manager._load_pages.assert_called_with(
             [GuiPage(name="SYSTEM_TextFrame", persistent=True, duration=0,
-                     namespace="skill_no_res")], 2)
+                     namespace="skill_no_res")], 2, mock.ANY)
         self.namespace_manager._update_namespace_persistence. \
-            assert_called_with(True)
+            assert_called_with(True, mock.ANY)
 
         self.namespace_manager._activate_namespace = real_activate_namespace
         self.namespace_manager._load_pages = real_load_pages
@@ -546,14 +546,16 @@ class TestNamespaceManager(TestCase):
 
     def test_ensure_namespace_exists(self):
         """Test ensuring namespace exists or is created."""
-        ns = self.namespace_manager._ensure_namespace_exists("new_skill")
+        session = self.namespace_manager.get_session()
+        ns = self.namespace_manager._ensure_namespace_exists("new_skill", session)
         self.assertIsNotNone(ns)
         self.assertEqual(ns.skill_id, "new_skill")
         self.assertIn("new_skill", self.namespace_manager.loaded_namespaces)
 
     def test_load_pages(self):
         """Test loading pages into a namespace."""
-        ns = self.namespace_manager._ensure_namespace_exists("test")
+        session = self.namespace_manager.get_session()
+        ns = self.namespace_manager._ensure_namespace_exists("test", session)
         self.assertIsNotNone(ns)
 
     def test_update_namespace_persistence(self):
@@ -660,7 +662,8 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager.loaded_namespaces["other"] = other_ns
         self.namespace_manager.active_namespaces = [other_ns, ns]
         # Activate the existing namespace (should move to position 0)
-        self.namespace_manager._activate_namespace("existing")
+        session = self.namespace_manager.get_session()
+        self.namespace_manager._activate_namespace("existing", session)
         # Verify it's now at position 0
         self.assertEqual(self.namespace_manager.active_namespaces[0].skill_id, "existing")
 
@@ -669,7 +672,8 @@ class TestNamespaceManager(TestCase):
         ns = Namespace("new_skill")
         self.namespace_manager.loaded_namespaces["new_skill"] = ns
         # Activate the new namespace
-        self.namespace_manager._activate_namespace("new_skill")
+        session = self.namespace_manager.get_session()
+        self.namespace_manager._activate_namespace("new_skill", session)
         # Verify it's now active
         self.assertIn(ns, self.namespace_manager.active_namespaces)
         self.assertEqual(self.namespace_manager.active_namespaces[0].skill_id, "new_skill")
@@ -682,6 +686,7 @@ class TestNamespaceManager(TestCase):
         # Add a mock timer for this namespace
         self.namespace_manager.remove_namespace_timers["test"] = mock.Mock()
         # Remove the namespace
-        self.namespace_manager._remove_namespace("test")
+        session = self.namespace_manager.get_session()
+        self.namespace_manager._remove_namespace("test", session)
         # Verify namespace is removed from active_namespaces
         self.assertNotIn(ns, self.namespace_manager.active_namespaces)
