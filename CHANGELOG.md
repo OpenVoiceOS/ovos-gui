@@ -1,24 +1,116 @@
 # Changelog
 
-## [1.3.4a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.4a2) (2025-11-05)
+## [1.5.2a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.2a1) (2026-09-11)
 
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.4a1...1.3.4a2)
-
-**Merged pull requests:**
-
-- Update requirements.txt [\#88](https://github.com/OpenVoiceOS/ovos-gui/pull/88) ([JarbasAl](https://github.com/JarbasAl))
-
-## [1.3.4a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.4a1) (2025-06-16)
-
-[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.3...1.3.4a1)
-
-**Fixed bugs:**
-
-- Empty pages cause empty GUI [\#43](https://github.com/OpenVoiceOS/ovos-gui/issues/43)
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.1a1...1.5.2a1)
 
 **Merged pull requests:**
 
-- Update ovos-config requirement from \<2.0.0,\>=0.0.12 to \>=0.0.12,\<3.0.0 [\#83](https://github.com/OpenVoiceOS/ovos-gui/pull/83) ([dependabot[bot]](https://github.com/apps/dependabot))
+- fix: allow ovos-config 3.x [\#125](https://github.com/OpenVoiceOS/ovos-gui/pull/125) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.5.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.1a1) (2026-09-10)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.0a1...1.5.1a1)
+
+**Merged pull requests:**
+
+- fix: drop the deprecated setup\_locale call from the gui service [\#126](https://github.com/OpenVoiceOS/ovos-gui/pull/126) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
+## [1.5.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.0a1) (2026-08-11)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.1a2...1.5.0a1)
+
+**Merged pull requests:**
+
+- feat: run ServiceInstaller so gui plugins install over the bus [\#123](https://github.com/OpenVoiceOS/ovos-gui/pull/123) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.4.1a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.1a2) (2026-07-31)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.1a1...1.4.1a2)
+
+**Merged pull requests:**
+
+- docs: rewrite README in Simplified Technical English [\#121](https://github.com/OpenVoiceOS/ovos-gui/pull/121) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.4.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.1a1) (2026-06-28)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.0a1...1.4.1a1)
+
+**Merged pull requests:**
+
+- fix: lift ovos-spec-tools upper bound \(spec-tools 1.x\) [\#118](https://github.com/OpenVoiceOS/ovos-gui/pull/118) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.4.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.0a1) (2026-06-25)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.8a1...1.4.0a1)
+
+**Merged pull requests:**
+
+- feat: migrate listener-lifecycle topics to OVOS spec bus namespace [\#113](https://github.com/OpenVoiceOS/ovos-gui/pull/113) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.3.8a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.8a1) (2026-06-25)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.7a3...1.3.8a1)
+
+**Merged pull requests:**
+
+- fix: drop archived shell-companion extra + single-source deps in pyproject [\#114](https://github.com/OpenVoiceOS/ovos-gui/pull/114) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.3.7a3](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.7a3) (2026-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.7a2...1.3.7a3)
+
+**Merged pull requests:**
+
+- test: fix failing unit\_tests in test\_namespace.py [\#110](https://github.com/OpenVoiceOS/ovos-gui/pull/110) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.3.7a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.7a2) (2026-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.7a1...1.3.7a2)
+
+**Merged pull requests:**
+
+- refactor: migrate packaging to pyproject.toml [\#108](https://github.com/OpenVoiceOS/ovos-gui/pull/108) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.3.7a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.7a1) (2026-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.6a1...1.3.7a1)
+
+**Merged pull requests:**
+
+- refactor: migrate packaging to pyproject.toml [\#106](https://github.com/OpenVoiceOS/ovos-gui/pull/106) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.3.6a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.6a1) (2026-06-20)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.5a3...1.3.6a1)
+
+**Merged pull requests:**
+
+- fix: allow ovos-bus-client 2.x [\#105](https://github.com/OpenVoiceOS/ovos-gui/pull/105) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.3.5a3](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.5a3) (2025-12-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.5a2...1.3.5a3)
+
+**Merged pull requests:**
+
+- Update dependency python to 3.14 [\#92](https://github.com/OpenVoiceOS/ovos-gui/pull/92) ([renovate[bot]](https://github.com/apps/renovate))
+
+## [1.3.5a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.5a2) (2025-12-19)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.5a1...1.3.5a2)
+
+**Merged pull requests:**
+
+- Update actions/setup-python action to v6 [\#96](https://github.com/OpenVoiceOS/ovos-gui/pull/96) ([renovate[bot]](https://github.com/apps/renovate))
+
+## [1.3.5a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.3.5a1) (2025-12-18)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.3.4...1.3.5a1)
+
+**Merged pull requests:**
+
+- chore: Configure Renovate [\#91](https://github.com/OpenVoiceOS/ovos-gui/pull/91) ([renovate[bot]](https://github.com/apps/renovate))
 
 
 
