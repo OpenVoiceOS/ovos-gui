@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.2a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.2a1) (2026-09-11)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.1a1...1.5.2a1)
+
+**Merged pull requests:**
+
+- fix: allow ovos-config 3.x [\#125](https://github.com/OpenVoiceOS/ovos-gui/pull/125) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.5.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.1a1) (2026-09-10)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.0a1...1.5.1a1)
