@@ -30,6 +30,10 @@ class GuiPage:
         """
         if framework in ("qt5", "qt6"):
             return "qml"
+        elif framework in ("py-htmx", ):
+            return "py"
+        else:
+            pass
         return ""
 
     @property
