@@ -63,4 +63,4 @@ jobs:
         if: "${{ matrix.python-version == '3.10' }}"
         env:
           CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v7
