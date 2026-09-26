@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.2a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.2a2) (2026-09-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.2a1...1.5.2a2)
+
+**Merged pull requests:**
+
+- Update codecov/codecov-action action to v7 [\#103](https://github.com/OpenVoiceOS/ovos-gui/pull/103) ([renovate[bot]](https://github.com/apps/renovate))
+
 ## [1.5.2a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.2a1) (2026-09-11)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.1a1...1.5.2a1)
