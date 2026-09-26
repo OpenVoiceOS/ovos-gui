@@ -9,4 +9,6 @@ on:
 jobs:
   build_tests:
     uses: OpenVoiceOS/gh-automations/.github/workflows/build-tests.yml@dev
+    with:
+      test_path: 'test/unittests'
     secrets: inherit
