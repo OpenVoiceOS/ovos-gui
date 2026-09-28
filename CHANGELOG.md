@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.3a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.3a1) (2026-09-28)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.2a2...1.5.3a1)
+
+**Merged pull requests:**
+
+- fix\(gui\): build the system resource cache beside the served path and move it in [\#132](https://github.com/OpenVoiceOS/ovos-gui/pull/132) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [1.5.2a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.2a2) (2026-09-26)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.2a1...1.5.2a2)
