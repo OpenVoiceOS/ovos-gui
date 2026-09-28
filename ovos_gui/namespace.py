@@ -39,7 +39,9 @@ The state of the active namespace stack is maintained locally and in the GUI
 code.  Changes to namespaces, and their contents, are communicated to the GUI
 over the GUI message bus.
 """
+import os
 import shutil
+import tempfile
 from os.path import join, dirname, exists
 from threading import Lock, Timer
 from typing import List, Union, Optional, Dict
@@ -970,8 +972,69 @@ class NamespaceManager:
         Copy system GUI resources to the served file path
         """
         output_path = f"{GUI_CACHE_PATH}/system"
-        if exists(output_path):
-            LOG.info(f"Removing existing system resources before updating")
-            shutil.rmtree(output_path)
-        shutil.copytree(self._system_res_dir, output_path)
-        LOG.debug(f"Copied system resources from {self._system_res_dir} to {output_path}")
+        # the served path is fixed, so every process that starts a
+        # NamespaceManager under one XDG_CACHE_HOME builds this same
+        # directory: a restart that overlaps the previous run, or a second
+        # container sharing the cache root. Destroying it and refilling it
+        # leaves a reader of ovos_gui/page.py, which resolves
+        # {GUI_CACHE_PATH}/{namespace}/{framework}/{file} by name, serving
+        # from a tree that is missing or half filled. Build the whole tree in
+        # a private directory beside the target and move it into place at the
+        # end, so nothing ever reads a tree that is still being written.
+        os.makedirs(GUI_CACHE_PATH, exist_ok=True)
+        staging = tempfile.mkdtemp(dir=GUI_CACHE_PATH,
+                                   prefix=".system.staging.")
+        try:
+            # mkdtemp already made the directory, so the copy needs to be
+            # allowed to write into an existing one
+            shutil.copytree(self._system_res_dir, staging, dirs_exist_ok=True)
+            if self._move_cache_into_place(staging, output_path):
+                staging = None
+                LOG.debug(f"Copied system resources from "
+                          f"{self._system_res_dir} to {output_path}")
+        finally:
+            if staging is not None:
+                shutil.rmtree(staging, ignore_errors=True)
+
+    @staticmethod
+    def _move_cache_into_place(staging: str, output_path: str,
+                               attempts: int = 5) -> bool:
+        """
+        Move a staged resource tree onto the served path, whatever is there.
+
+        @param staging: directory holding the complete new tree
+        @param output_path: the served path, $XDG_CACHE_HOME/ovos_gui/system
+        @param attempts: how many times to retry a lost race
+        @return: True if the staged tree is now the tree in place
+        """
+        # os.rename onto a directory that holds files fails, so the tree in
+        # place is moved aside first. Another process that refills
+        # output_path between the two moves makes the second one fail; the
+        # loop then moves its tree aside as well and tries again. Every tree
+        # either process publishes is complete, so the loser of the race
+        # loses nothing.
+        retired = f"{staging}.retired"
+        for _ in range(attempts):
+            if os.path.isdir(output_path):
+                try:
+                    os.rename(output_path, retired)
+                except OSError as e:
+                    LOG.debug(f"cached system GUI resources at {output_path} "
+                              f"were already moved: ({e})")
+            elif exists(output_path):
+                # not a directory: a stale file cannot be renamed onto
+                try:
+                    os.remove(output_path)
+                except OSError as e:
+                    LOG.error(f"Failed to remove {output_path}: ({e})")
+            try:
+                os.rename(staging, output_path)
+                return True
+            except OSError as e:
+                LOG.debug(f"Failed to move cached system GUI resources into "
+                          f"{output_path}, retrying: ({e})")
+            finally:
+                shutil.rmtree(retired, ignore_errors=True)
+        LOG.error(f"Failed to update cached system GUI resources at "
+                  f"{output_path}")
+        return False
