@@ -19,6 +19,9 @@ jobs:
         sudo apt-get update
         sudo apt install python3-dev libssl-dev
         pip install uv
+        uv venv
+        echo "VIRTUAL_ENV=$PWD/.venv" >> "$GITHUB_ENV"
+        echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
     - name: Install test dependencies
       run: |
         uv pip install -r test/requirements.txt
