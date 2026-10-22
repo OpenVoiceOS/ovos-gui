@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.4a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.4a1) (2026-10-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.3a1...1.5.4a1)
+
+**Merged pull requests:**
+
+- fix\(deps\): accept ovos-plugin-manager 3 [\#137](https://github.com/OpenVoiceOS/ovos-gui/pull/137) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
 ## [1.5.3a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.3a1) (2026-09-28)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.2a2...1.5.3a1)
