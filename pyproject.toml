@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest~=7.1", "pytest-cov~=4.1"]
+test = ["pytest~=7.1", "pytest-cov~=7.1"]
 
 [project.urls]
 Homepage = "https://github.com/OpenVoiceOS/ovos-gui"
