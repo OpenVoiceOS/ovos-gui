@@ -52,7 +52,7 @@ jobs:
           pip install -e .
       - name: Install test dependencies
         run: |
-          pip install -r test/requirements.txt
+          pip install -e '.[test]'
       - name: Run unittests
         run: |
           pytest --cov=ovos_gui --cov-report xml test/unittests

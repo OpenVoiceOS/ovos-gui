@@ -21,7 +21,7 @@ jobs:
         pip install uv
     - name: Install test dependencies
       run: |
-        uv pip install -r test/requirements.txt
+        uv pip install -e '.[test]'
     - name: Install core repo
       run: |
         uv pip install -e .
