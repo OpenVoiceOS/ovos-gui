@@ -133,7 +133,8 @@ class TestNamespaceManager(TestCase):
 
     def test_parse_persistence(self):
         self.assertEqual(self.namespace_manager._parse_persistence(True), (True, 0))
-        self.assertEqual(self.namespace_manager._parse_persistence(False), (False, 0))
+        # GUI-1 §4.3: __idle false follows the same default as an omitted __idle
+        self.assertEqual(self.namespace_manager._parse_persistence(False), (False, 30))
         self.assertEqual(self.namespace_manager._parse_persistence(None), (False, 30))
         self.assertEqual(self.namespace_manager._parse_persistence(10), (False, 10))
         self.assertEqual(self.namespace_manager._parse_persistence(1.0), (False, 1))
