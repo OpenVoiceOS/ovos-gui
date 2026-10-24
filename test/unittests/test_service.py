@@ -170,3 +170,15 @@ class TestGuiService(unittest.TestCase):
 
             # Verify service initialized properly
             self.assertIsNotNone(service.namespace_manager)
+
+
+class TestGUIServiceBusOrdering(unittest.TestCase):
+    def test_bus_handles_messages_in_order(self):
+        from pyee import EventEmitter
+        from pyee.executor import ExecutorEventEmitter
+        from ovos_gui.service import GUIService
+        with mock.patch('ovos_gui.service.ProcessStatus'), \
+                mock.patch('ovos_gui.service.ServiceInstaller'):
+            service = GUIService()
+        self.assertIs(type(service.bus.emitter), EventEmitter)
+        self.assertNotIsInstance(service.bus.emitter, ExecutorEventEmitter)

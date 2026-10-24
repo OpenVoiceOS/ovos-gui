@@ -5,6 +5,7 @@ from ovos_plugin_manager.gui import OVOSGUIAdapterFactory
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
 from ovos_utils.skill_installer import ServiceInstaller
+from pyee import EventEmitter
 
 
 def on_started():
@@ -31,7 +32,9 @@ class GUIService:
     def __init__(self, alive_hook=on_alive, started_hook=on_started,
                  ready_hook=on_ready, error_hook=on_error,
                  stopping_hook=on_stopping):
-        self.bus = MessageBusClient()
+        # GUI messages are an ordered stream (gui.value.set before gui.page.show);
+        # the default ExecutorEventEmitter would handle them concurrently.
+        self.bus = MessageBusClient(emitter=EventEmitter())
         self.namespace_manager = None
         callbacks = StatusCallbackMap(on_started=started_hook,
                                       on_alive=alive_hook,
