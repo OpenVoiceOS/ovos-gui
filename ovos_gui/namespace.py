@@ -595,13 +595,21 @@ class NamespaceManager:
             namespace_position = session.active_namespaces.index(namespace)
             namespace.remove(namespace_position)
             session.active_namespaces.remove(namespace)
-            # Notify adapters of namespace deactivation
             for adapter in self.adapters:
                 self._safe_call(adapter, "on_namespace_deactivated", namespace_name, session_id)
             if not session.active_namespaces:
                 self._notify_idle(session_id)
+            elif namespace_position == 0:
+                self._notify_exposed_top(session, session_id)
 
         self._emit_namespace_displayed_event(session)
+
+    def _notify_exposed_top(self, session: GUISession, session_id: str):
+        """The namespace below a removed top is now on top: it was activated (§6.3)."""
+        exposed = session.active_namespaces[0].skill_id
+        LOG.info(f"Namespace {exposed} is back on top of session {session_id}")
+        for adapter in self.adapters:
+            self._safe_call(adapter, "on_namespace_activated", exposed, session_id)
 
     def _notify_idle(self, session_id: str):
         """The stack of ``session_id`` emptied; ``on_idle`` is device-wide (§6.3)."""

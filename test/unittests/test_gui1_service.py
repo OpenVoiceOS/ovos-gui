@@ -122,6 +122,20 @@ class TestIdle(GUI1ServiceCase):
         self.assertEqual(self.stack(), [SKILL_A])
         self.adapter.on_idle.assert_not_called()
 
+    def test_exposed_namespace_is_reactivated(self):
+        self.show(SKILL_A, ["SYSTEM_text"], __idle=True)
+        self.show(SKILL_B, ["SYSTEM_text"], __idle=True)
+        self.adapter.reset_mock()
+        self.clear(SKILL_B)
+        self.adapter.on_namespace_activated.assert_called_once_with(SKILL_A, "default")
+
+    def test_removing_lower_namespace_does_not_reactivate_top(self):
+        self.show(SKILL_A, ["SYSTEM_text"], __idle=True)
+        self.show(SKILL_B, ["SYSTEM_text"], __idle=True)
+        self.adapter.reset_mock()
+        self.clear(SKILL_A)
+        self.adapter.on_namespace_activated.assert_not_called()
+
     def test_on_idle_after_timer_expiry(self):
         fired = threading.Event()
         self.adapter.on_idle.side_effect = lambda: fired.set()
