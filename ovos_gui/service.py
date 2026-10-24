@@ -4,6 +4,7 @@ from ovos_gui.namespace import NamespaceManager
 from ovos_plugin_manager.gui import OVOSGUIAdapterFactory
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
+from ovos_utils.skill_installer import ServiceInstaller
 
 
 def on_started():
@@ -39,6 +40,7 @@ class GUIService:
                                       on_stopping=stopping_hook)
         self.status = ProcessStatus('gui_service', callback_map=callbacks)
         self.status.bind(self.bus)
+        self.installer = ServiceInstaller(self.bus, service_name="ovos_gui")
 
     def _init_bus_client(self):
         """
@@ -92,4 +94,6 @@ class GUIService:
         """
         Perform any GUI shutdown processes.
         """
+        if getattr(self, "installer", None):
+            self.installer.shutdown()
         self.status.set_stopping()

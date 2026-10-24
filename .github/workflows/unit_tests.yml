@@ -59,7 +59,7 @@ jobs:
           pip install -e .
       - name: Install test dependencies
         run: |
-          pip install -r test/requirements.txt
+          pip install -e '.[test]'
       - name: Run unittests
         run: |
           pytest --cov=ovos_gui --cov-report xml test/unittests
@@ -70,4 +70,4 @@ jobs:
         if: "${{ matrix.python-version == '3.10' }}"
         env:
           CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v7

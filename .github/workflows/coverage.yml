@@ -21,7 +21,7 @@ jobs:
         pip install uv
     - name: Install test dependencies
       run: |
-        uv pip install -r test/requirements.txt
+        uv pip install -e '.[test]'
     - name: Install core repo
       run: |
         uv pip install -e .
@@ -29,7 +29,7 @@ jobs:
       run: |
         uv run pytest --cov=ovos_gui --cov-report xml test/unittests
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         directory: ./coverage/reports/
