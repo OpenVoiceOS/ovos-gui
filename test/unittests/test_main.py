@@ -42,7 +42,6 @@ class TestMain(unittest.TestCase):
         """Test main() with default callbacks."""
         from ovos_gui.__main__ import main
         with mock.patch('ovos_gui.__main__.init_service_logger'), \
-             mock.patch('ovos_gui.__main__.setup_locale'), \
              mock.patch('ovos_gui.__main__.GUIService') as mock_gui_service, \
              mock.patch('ovos_gui.__main__.wait_for_exit_signal'), \
              mock.patch('ovos_gui.__main__.LOG'):
@@ -63,7 +62,6 @@ class TestMain(unittest.TestCase):
         stopping_hook = mock.Mock()
 
         with mock.patch('ovos_gui.__main__.init_service_logger'), \
-             mock.patch('ovos_gui.__main__.setup_locale'), \
              mock.patch('ovos_gui.__main__.GUIService') as mock_gui_service, \
              mock.patch('ovos_gui.__main__.wait_for_exit_signal'), \
              mock.patch('ovos_gui.__main__.LOG'):
@@ -82,7 +80,6 @@ class TestMain(unittest.TestCase):
         error_hook = mock.Mock()
 
         with mock.patch('ovos_gui.__main__.init_service_logger'), \
-             mock.patch('ovos_gui.__main__.setup_locale'), \
              mock.patch('ovos_gui.__main__.GUIService') as mock_gui_service, \
              mock.patch('ovos_gui.__main__.LOG'):
             mock_service_instance = mock.MagicMock()
@@ -97,7 +94,6 @@ class TestMain(unittest.TestCase):
         """Test main() initializes service logger."""
         from ovos_gui.__main__ import main
         with mock.patch('ovos_gui.__main__.init_service_logger') as mock_init_logger, \
-             mock.patch('ovos_gui.__main__.setup_locale'), \
              mock.patch('ovos_gui.__main__.GUIService') as mock_gui_service, \
              mock.patch('ovos_gui.__main__.wait_for_exit_signal'), \
              mock.patch('ovos_gui.__main__.LOG'):
@@ -108,26 +104,10 @@ class TestMain(unittest.TestCase):
 
             mock_init_logger.assert_called_once_with("gui")
 
-    def test_main_sets_up_locale(self):
-        """Test main() sets up locale."""
-        from ovos_gui.__main__ import main
-        with mock.patch('ovos_gui.__main__.init_service_logger'), \
-             mock.patch('ovos_gui.__main__.setup_locale') as mock_setup_locale, \
-             mock.patch('ovos_gui.__main__.GUIService') as mock_gui_service, \
-             mock.patch('ovos_gui.__main__.wait_for_exit_signal'), \
-             mock.patch('ovos_gui.__main__.LOG'):
-            mock_service_instance = mock.MagicMock()
-            mock_gui_service.return_value = mock_service_instance
-
-            main()
-
-            mock_setup_locale.assert_called_once()
-
     def test_main_waits_for_exit_signal(self):
         """Test main() waits for exit signal."""
         from ovos_gui.__main__ import main
         with mock.patch('ovos_gui.__main__.init_service_logger'), \
-             mock.patch('ovos_gui.__main__.setup_locale'), \
              mock.patch('ovos_gui.__main__.GUIService') as mock_gui_service, \
              mock.patch('ovos_gui.__main__.wait_for_exit_signal') as mock_wait, \
              mock.patch('ovos_gui.__main__.LOG'):
