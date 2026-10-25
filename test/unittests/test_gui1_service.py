@@ -198,6 +198,11 @@ class TestStatusEvents(GUI1ServiceCase):
         forwarded = [c.args[0] for c in self.adapter.on_status_event.call_args_list]
         self.assertEqual(forwarded, list(STATUS_TOPICS))
 
+    def test_dinkum_stt_failure_topic_is_forwarded(self):
+        self.bus.emit(Message("recognizer_loop:speech.recognition.unknown", {}))
+        self.adapter.on_status_event.assert_called_once_with(
+            "recognizer_loop:speech.recognition.unknown", {}, "default")
+
     def test_ambient_is_kept_and_forwarded(self):
         self.bus.emit(Message("gui.ambient.notifications", {"count": 2}))
         self.adapter.on_status_event.assert_called_once_with(

@@ -315,7 +315,8 @@ class NamespaceManager:
             "recognizer_loop:wakeword",
             "recognizer_loop:record_begin",
             "recognizer_loop:record_end",
-            "recognizer_loop:recognition_unknown",
+            # what ovos-dinkum-listener emits when STT returns nothing
+            "recognizer_loop:speech.recognition.unknown",
             *ENCLOSURE_TOPICS,
         ]
         for msg in (*STATUS_TOPICS, *legacy_topics):
