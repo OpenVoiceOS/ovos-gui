@@ -43,7 +43,7 @@ class TestLegacyPage(GUI1ServiceCase):
         self.show(SKILL_A, ["Timer"], __idle=True)
         self.clear(SKILL_A)
         self.adapter.on_namespace_deactivated.assert_called_once_with(SKILL_A, "default")
-        self.adapter.on_idle.assert_called_once_with()
+        self.adapter.on_idle.assert_called_once_with("default")
 
     def test_legacy_namespace_stacks_with_template_namespace(self):
         self.show(SKILL_A, ["SYSTEM_text"], __idle=True)

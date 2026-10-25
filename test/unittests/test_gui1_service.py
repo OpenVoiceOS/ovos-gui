@@ -113,7 +113,7 @@ class TestIdle(GUI1ServiceCase):
         self.show(SKILL_A, ["SYSTEM_text"], __idle=True)
         self.clear(SKILL_A)
         self.adapter.on_namespace_deactivated.assert_called_once_with(SKILL_A, "default")
-        self.adapter.on_idle.assert_called_once_with()
+        self.adapter.on_idle.assert_called_once_with("default")
 
     def test_no_idle_while_stack_not_empty(self):
         self.show(SKILL_A, ["SYSTEM_text"], __idle=True)
@@ -138,10 +138,18 @@ class TestIdle(GUI1ServiceCase):
 
     def test_on_idle_after_timer_expiry(self):
         fired = threading.Event()
-        self.adapter.on_idle.side_effect = lambda: fired.set()
+        self.adapter.on_idle.side_effect = lambda session_id: fired.set()
         self.show(SKILL_A, ["SYSTEM_text"], __idle=1)
         self.assertTrue(fired.wait(3))
         self.assertEqual(self.stack(), [])
+        self.adapter.on_idle.assert_called_once_with("default")
+
+    def test_idle_names_only_the_session_that_emptied(self):
+        self.show(SKILL_A, ["SYSTEM_text"], __idle=True)
+        self.show(SKILL_B, ["SYSTEM_text"], session_id="kitchen", __idle=True)
+        self.clear(SKILL_B, session_id="kitchen")
+        self.adapter.on_idle.assert_called_once_with("kitchen")
+        self.assertEqual(self.stack(), [SKILL_A])
 
 
 class TestScreenClose(GUI1ServiceCase):

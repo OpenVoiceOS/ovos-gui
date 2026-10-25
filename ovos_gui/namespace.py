@@ -629,10 +629,10 @@ class NamespaceManager:
             self._safe_call(adapter, "on_namespace_activated", exposed, session_id)
 
     def _notify_idle(self, session_id: str):
-        """The stack of ``session_id`` emptied; ``on_idle`` is device-wide (§6.3)."""
+        """The stack of ``session_id`` emptied: idle is per session (GUI-1 6.3, amendment D)."""
         LOG.info(f"Session {session_id} stack is empty; notifying adapters of idle")
         for adapter in self.adapters:
-            self._safe_call(adapter, "on_idle")
+            self._safe_call(adapter, "on_idle", session_id)
 
     def _emit_namespace_displayed_event(self, session: GUISession):
         """
