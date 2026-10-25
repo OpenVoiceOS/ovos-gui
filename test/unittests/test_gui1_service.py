@@ -102,6 +102,13 @@ class TestShowPage(GUI1ServiceCase):
         self.assertIn("SYSTEM_hologram", log.warning.call_args[0][0])
         self.adapter.dispatch_template.assert_called_once()
 
+    @mock.patch("ovos_gui.gui1.LOG")
+    def test_interactive_companions_dispatch_without_diagnostic(self, log):
+        for name in ("SYSTEM_confirm", "SYSTEM_select", "SYSTEM_input"):
+            self.show(SKILL_A, [name], __idle=True)
+            self.adapter.dispatch_template.assert_called_with(name, SKILL_A, {}, "default")
+        log.warning.assert_not_called()
+
     def test_activation_order_is_dispatch_then_activate(self):
         self.show(SKILL_A, ["SYSTEM_text"])
         calls = [c[0] for c in self.adapter.method_calls]

@@ -17,9 +17,9 @@ SPEC_TEMPLATES = frozenset({
     "SYSTEM_audio_player", "SYSTEM_video_player", "SYSTEM_media_player",
     "SYSTEM_clock", "SYSTEM_timer", "SYSTEM_weather", "SYSTEM_map",
     "SYSTEM_face",
+    # interactive companions, proposed amendment A
+    "SYSTEM_confirm", "SYSTEM_select", "SYSTEM_input",
 })
-
-RESERVED_TEMPLATES = frozenset({"SYSTEM_confirm", "SYSTEM_select"})
 
 #: Frame names ovos-bus-client GUIInterface still emits (2.11.x).
 LEGACY_TO_SPEC: Dict[str, str] = {
@@ -77,9 +77,8 @@ def normalize_template(page_name: str, skill_id: str = "") -> str:
 
 def report_unknown_templates(page_names: List[str], skill_id: str) -> None:
     """§3.2 diagnostic for ``SYSTEM_*`` names outside the catalogue."""
-    known = SPEC_TEMPLATES | RESERVED_TEMPLATES
     for name in page_names:
-        if is_template_intent(name) and name not in known:
+        if is_template_intent(name) and name not in SPEC_TEMPLATES:
             LOG.warning(f"GUI-1 §3.2: '{skill_id}' requested unknown template "
                         f"'{name}'; no conformant adapter will render it")
 
