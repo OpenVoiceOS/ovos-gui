@@ -22,7 +22,7 @@ class TestPageFocus(PageFocusCase):
         self.adapter.reset_mock()
         self.focus(SKILL_A, 1)
         self.adapter.dispatch_template.assert_called_once_with(
-            "SYSTEM_image", SKILL_A, {"text": "hi"}, "default")
+            "SYSTEM_image", SKILL_A, {"text": "hi"}, "default", index=1, page_count=2)
         self.assertEqual(self.manager.get_active_namespace().active_index, 1)
 
     def test_focus_does_not_reorder_or_reactivate(self):
@@ -37,7 +37,7 @@ class TestPageFocus(PageFocusCase):
         self.adapter.reset_mock()
         self.focus(SKILL_A, 1)
         self.adapter.on_legacy_page.assert_called_once_with(SKILL_A, "HourlyForecast", {},
-                                                            "default")
+                                                            "default", index=1, page_count=2)
         self.adapter.dispatch_template.assert_not_called()
 
     def test_focus_on_current_entry_restarts_timer_without_dispatch(self):
@@ -54,7 +54,7 @@ class TestPageFocus(PageFocusCase):
         self.adapter.reset_mock()
         self.focus(SKILL_A, 1, session_id="kitchen")
         self.adapter.dispatch_template.assert_called_once_with(
-            "SYSTEM_image", SKILL_A, {}, "kitchen")
+            "SYSTEM_image", SKILL_A, {}, "kitchen", index=1, page_count=2)
 
 
 class TestIgnoredFocus(PageFocusCase):

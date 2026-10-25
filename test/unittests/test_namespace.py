@@ -137,23 +137,25 @@ class TestNamespaceManager(TestCase):
 
     def test_handle_show_page_template_routing(self):
         """SYSTEM_* templates are routed to adapters."""
-        self.namespace_manager._dispatch_template_to_adapters = Mock()
+        adapter = Mock()
+        self.namespace_manager.adapters = [adapter]
         message = Message("gui.page.show", data={
             "__from": "test_skill", "__idle": 10, "page_names": ["SYSTEM_weather"]
         })
         self.namespace_manager.handle_show_page(message)
-        self.namespace_manager._dispatch_template_to_adapters.assert_called()
+        adapter.dispatch_template.assert_called()
 
     def test_handle_show_page_non_template_not_dispatched_as_template(self):
         """Non-SYSTEM_* page names never reach template dispatch (§4.2)."""
-        self.namespace_manager._dispatch_template_to_adapters = Mock()
+        adapter = Mock()
+        self.namespace_manager.adapters = [adapter]
         message = Message("gui.page.show", data={
             "__from": "foo", "__idle": 10, "page_names": ["bar.qml"]
         })
         with mock.patch(f'{PATCH_MODULE}.LOG') as mock_log:
             self.namespace_manager.handle_show_page(message)
             mock_log.warning.assert_called()
-        self.namespace_manager._dispatch_template_to_adapters.assert_not_called()
+        adapter.dispatch_template.assert_not_called()
 
     def test_handle_show_page_invalid_message(self):
         message = Message("gui.page.show", data={"__from": "foo"})
@@ -217,16 +219,17 @@ class TestNamespaceManager(TestCase):
         mock_adapter.on_status_event.assert_called_once_with(
             "test.event", {"test": "data"}, "default")
 
-    def test_dispatch_template_to_adapters(self):
-        """Templates are dispatched with session_id only (no site_id)."""
+    def test_dispatch_entry_to_adapters(self):
+        """Templates are dispatched with session_id (no site_id) and the active entry."""
         mock_adapter = mock.Mock()
         self.namespace_manager.adapters = [mock_adapter]
 
-        self.namespace_manager._dispatch_template_to_adapters(
-            "SYSTEM_weather", "test_skill", {"current_temp": 22}, "session1"
+        self.namespace_manager.dispatch_entry(
+            "test_skill", ["SYSTEM_weather"], 0, {"current_temp": 22}, "session1"
         )
         mock_adapter.dispatch_template.assert_called_once_with(
-            "SYSTEM_weather", "test_skill", {"current_temp": 22}, "session1"
+            "SYSTEM_weather", "test_skill", {"current_temp": 22}, "session1",
+            index=0, page_count=1
         )
 
     def test_activate_namespace_already_active(self):

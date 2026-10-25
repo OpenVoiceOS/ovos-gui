@@ -16,7 +16,7 @@ class TestLegacyPage(GUI1ServiceCase):
         self.set_value(DATE_TIME, date_string="25/10/2026", ampm_string=None)
         self.show(DATE_TIME, ["time"], __idle=None)
         self.adapter.on_legacy_page.assert_called_once_with(
-            DATE_TIME, "time", {"time_string": "10:36 AM", "date_string": "25/10/2026"}, "default")
+            DATE_TIME, "time", {"time_string": "10:36 AM", "date_string": "25/10/2026"}, "default", index=0, page_count=1)
         self.adapter.dispatch_template.assert_not_called()
 
     def test_order_is_update_then_legacy_page_then_activate(self):
@@ -27,16 +27,16 @@ class TestLegacyPage(GUI1ServiceCase):
 
     def test_only_active_entry_is_forwarded(self):
         self.show(SKILL_A, ["CurrentWeather", "HourlyForecast"], index=1)
-        self.adapter.on_legacy_page.assert_called_once_with(SKILL_A, "HourlyForecast", {}, "default")
+        self.adapter.on_legacy_page.assert_called_once_with(SKILL_A, "HourlyForecast", {}, "default", index=1, page_count=2)
 
     def test_first_entry_decides_legacy_path_for_active_template_name(self):
         self.show(SKILL_A, ["time", "SYSTEM_text"], index=1)
-        self.adapter.on_legacy_page.assert_called_once_with(SKILL_A, "SYSTEM_text", {}, "default")
+        self.adapter.on_legacy_page.assert_called_once_with(SKILL_A, "SYSTEM_text", {}, "default", index=1, page_count=2)
         self.adapter.dispatch_template.assert_not_called()
 
     def test_first_entry_decides_template_path_for_active_page_name(self):
         self.show(SKILL_A, ["SYSTEM_text", "time"], index=1)
-        self.adapter.dispatch_template.assert_called_once_with("time", SKILL_A, {}, "default")
+        self.adapter.dispatch_template.assert_called_once_with("time", SKILL_A, {}, "default", index=1, page_count=2)
         self.adapter.on_legacy_page.assert_not_called()
 
     @mock.patch("ovos_gui.gui1.LOG")
@@ -53,12 +53,12 @@ class TestLegacyPage(GUI1ServiceCase):
 
     def test_aliased_legacy_frame_still_dispatches_template(self):
         self.show(SKILL_A, ["SYSTEM_TextFrame"])
-        self.adapter.dispatch_template.assert_called_once_with("SYSTEM_text", SKILL_A, {}, "default")
+        self.adapter.dispatch_template.assert_called_once_with("SYSTEM_text", SKILL_A, {}, "default", index=0, page_count=1)
         self.adapter.on_legacy_page.assert_not_called()
 
     def test_session_routing(self):
         self.show(SKILL_A, ["Timer"], session_id="kitchen", __idle=True)
-        self.adapter.on_legacy_page.assert_called_once_with(SKILL_A, "Timer", {}, "kitchen")
+        self.adapter.on_legacy_page.assert_called_once_with(SKILL_A, "Timer", {}, "kitchen", index=0, page_count=1)
         self.assertEqual(self.stack("kitchen"), [SKILL_A])
 
     def test_clear_deactivates_and_idles(self):
@@ -95,7 +95,7 @@ class TestLegacyPageIsolation(GUI1ServiceCase):
         manager = NamespaceManager(FakeBus(), adapters=[broken, healthy])
         manager.handle_show_page(Message("gui.page.show",
                                          {"__from": SKILL_A, "page_names": ["time"]}, _ctx()))
-        healthy.on_legacy_page.assert_called_once_with(SKILL_A, "time", {}, "default")
+        healthy.on_legacy_page.assert_called_once_with(SKILL_A, "time", {}, "default", index=0, page_count=1)
         broken.on_namespace_activated.assert_called_once_with(SKILL_A, "default")
         for timer in manager.get_session("default").remove_namespace_timers.values():
             timer.cancel()

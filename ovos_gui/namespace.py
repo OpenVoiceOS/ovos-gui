@@ -40,6 +40,7 @@ from ovos_bus_client import Message, MessageBusClient
 from ovos_utils.log import LOG
 
 from ovos_gui.page_focus import FOCUS_TOPIC, PageFocus
+from ovos_gui import page_dispatch
 from ovos_gui.gui1 import (AMBIENT_TOPICS, STATUS_TOPICS, active_index,
                            is_template_show, normalize_template,
                            report_mixed_page_names, report_unknown_templates,
@@ -399,31 +400,6 @@ class NamespaceManager:
             # Defines default behavior as displaying for 30 seconds
             return False, 30
 
-    def _dispatch_template_to_adapters(self, template: str, skill_id: str,
-                                       data: dict, session_id: str):
-        """Call matching handler on every loaded adapter for a SYSTEM_* template.
-
-        Args:
-            template: PageTemplates value, e.g. ``"SYSTEM_weather"``.
-            skill_id: Namespace / skill that requested the display.
-            data:     Current session data for the namespace.
-            session_id: Routing identifier (shared screens share a session_id).
-        """
-        for adapter in self.adapters:
-            try:
-                adapter.dispatch_template(template, skill_id, data, session_id)
-            except Exception:
-                LOG.exception(
-                    f"Error dispatching template '{template}' to adapter "
-                    f"{adapter.__class__.__name__}"
-                )
-
-    def _dispatch_legacy_page_to_adapters(self, page: str, skill_id: str,
-                                          data: dict, session_id: str):
-        """Hand a non-template page to every adapter's legacy hook (§4.2 legacy path)."""
-        for adapter in self.adapters:
-            self._safe_call(adapter, "on_legacy_page", skill_id, page, data, session_id)
-
     def _warn_legacy_page_once(self, namespace_name: str, page: str):
         """One warning per namespace and page; every show still takes the legacy path."""
         if (namespace_name, page) in self._legacy_pages_warned:
@@ -457,10 +433,9 @@ class NamespaceManager:
 
     def dispatch_entry(self, namespace_name: str, page_names: List[str], index: int,
                        data: dict, session_id: str):
-        """Dispatch the entry at ``index`` through the path the first entry picks (4.2)."""
-        dispatch = (self._dispatch_template_to_adapters if is_template_show(page_names)
-                    else self._dispatch_legacy_page_to_adapters)
-        dispatch(page_names[index], namespace_name, data, session_id)
+        """Dispatch the entry at ``index`` with its ``index`` and ``page_count`` (4.2, 6.3)."""
+        page_dispatch.dispatch_entry(self.adapters, self._safe_call, namespace_name,
+                                     page_names, index, data, session_id)
 
     def _show_page(self, namespace_name: str, page_names: List[str], index: int,
                    persistence, session_id: str):
