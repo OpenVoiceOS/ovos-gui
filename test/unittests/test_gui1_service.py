@@ -167,6 +167,14 @@ class TestScreenClose(GUI1ServiceCase):
         self.bus.emit(Message("mycroft.gui.screen.close", {"skill_id": SKILL_B}, _ctx()))
         self.assertEqual(self.stack(), [SKILL_A])
 
+    def test_back_on_empty_stack_is_a_no_op(self):
+        emitted = []
+        self.bus.on("message", emitted.append)
+        self.bus.emit(Message("mycroft.gui.screen.close", {}, _ctx()))
+        self.assertEqual(self.stack(), [])
+        self.adapter.on_idle.assert_not_called()
+        self.assertEqual(len(emitted), 1)
+
     def test_back_without_skill_id_removes_top(self):
         self.show(SKILL_A, ["SYSTEM_text"], __idle=True)
         self.show(SKILL_B, ["SYSTEM_text"], __idle=True)

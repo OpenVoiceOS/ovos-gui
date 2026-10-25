@@ -90,15 +90,9 @@ class TestNamespace(TestCase):
         self.namespace.data = {}
         self.assertEqual(self.namespace.get_position_of_last_item_in_data(), -1)
 
-    def test_namespace_set_persistence_generic(self):
-        self.namespace.set_persistence("genericSkill")
+    def test_namespace_default_persistence(self):
         self.assertEqual(self.namespace.duration, 30)
         self.assertFalse(self.namespace.persistent)
-
-    def test_namespace_set_persistence_idle(self):
-        self.namespace.set_persistence("idleDisplaySkill")
-        self.assertEqual(self.namespace.duration, 0)
-        self.assertTrue(self.namespace.persistent)
 
 
 class TestNamespaceManager(TestCase):

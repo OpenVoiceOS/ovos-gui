@@ -15,9 +15,10 @@
 """Defines the API for the GUI service.
 
 Manages what is displayed on a device with a screen using a LIFO stack of
-"active" namespaces (e.g. skills). At the bottom of the stack is the namespace
-for the idle screen skill (if one is specified in the device configuration).
-The namespace at the top of the stack represents what is visible on the device.
+"active" namespaces (e.g. skills). The namespace at the top of the stack
+represents what is visible on the device. There is no home-screen or idle-screen
+namespace (GUI-1 6.9): an empty stack is the resting state, and adapters hear of
+it through ``on_idle(session_id)``.
 When a skill is finished displaying information, its namespace is removed from
 the top of the stack, displaying the previously active namespace.
 
@@ -163,24 +164,6 @@ class Namespace:
         Get the position of the last item
         """
         return len(self.data) - 1
-
-    def set_persistence(self, skill_type: str):
-        """
-        Sets the duration of the namespace's time in the active list.
-
-        @param skill_type: if skill type is idleDisplaySkill, the namespace will
-            always persist.  Otherwise, the namespace persists for a default duration.
-        """
-        if skill_type == "idleDisplaySkill":
-            self.persistent = True
-            self.duration = 0
-        else:
-            self.persistent = False
-            self.duration = 30
-
-        LOG.info(
-            f"GUI PROTOCOL - Set persistence for \"{self.skill_id}\" -- "
-            f"persistent: {self.persistent}, duration: {self.duration}s")
 
 
 class GUISession:
@@ -760,6 +743,8 @@ class NamespaceManager:
 
         With a ``skill_id`` (``GUIInterface.release``) only that namespace is
         removed; without one (a "back" action) the top namespace is removed.
+        A "back" on an empty stack does nothing: there is no idle-screen
+        namespace to show (GUI-1 6.9).
         @param message: the event sent by the GUI or a producer
         """
         session_id = self._session_id(message)
@@ -772,9 +757,7 @@ class NamespaceManager:
                 top = session.active_namespaces[0].skill_id
                 self._remove_namespace(top, session, session_id)
             else:
-                LOG.debug("'back' with no active namespaces; requesting idle")
-                self.core_bus.emit(Message("mycroft.device.show.idle",
-                                           context={"session": {"session_id": session_id}}))
+                LOG.debug(f"'back' with an empty stack in session {session_id}; nothing to do")
 
     def _del_namespace_in_remove_timers(self, namespace_name: str, session: GUISession):
         """
