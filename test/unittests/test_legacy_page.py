@@ -29,6 +29,28 @@ class TestLegacyPage(GUI1ServiceCase):
         self.show(SKILL_A, ["CurrentWeather", "HourlyForecast"], index=1)
         self.adapter.on_legacy_page.assert_called_once_with(SKILL_A, "HourlyForecast", {}, "default")
 
+    def test_first_entry_decides_legacy_path_for_active_template_name(self):
+        self.show(SKILL_A, ["time", "SYSTEM_text"], index=1)
+        self.adapter.on_legacy_page.assert_called_once_with(SKILL_A, "SYSTEM_text", {}, "default")
+        self.adapter.dispatch_template.assert_not_called()
+
+    def test_first_entry_decides_template_path_for_active_page_name(self):
+        self.show(SKILL_A, ["SYSTEM_text", "time"], index=1)
+        self.adapter.dispatch_template.assert_called_once_with("time", SKILL_A, {}, "default")
+        self.adapter.on_legacy_page.assert_not_called()
+
+    @mock.patch("ovos_gui.gui1.LOG")
+    def test_mixed_page_names_logs_one_diagnostic(self, log):
+        self.show(SKILL_A, ["SYSTEM_text", "time", "date"], index=0)
+        mixed = [c.args[0] for c in log.warning.call_args_list if "mixed" in c.args[0]]
+        self.assertEqual(len(mixed), 1)
+        self.assertIn("template path", mixed[0])
+
+    @mock.patch("ovos_gui.gui1.LOG")
+    def test_uniform_page_names_log_no_mixed_diagnostic(self, log):
+        self.show(SKILL_A, ["CurrentWeather", "HourlyForecast"])
+        self.assertFalse([c for c in log.warning.call_args_list if "mixed" in c.args[0]])
+
     def test_aliased_legacy_frame_still_dispatches_template(self):
         self.show(SKILL_A, ["SYSTEM_TextFrame"])
         self.adapter.dispatch_template.assert_called_once_with("SYSTEM_text", SKILL_A, {}, "default")

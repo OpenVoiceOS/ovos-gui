@@ -39,8 +39,9 @@ from ovos_bus_client import Message, MessageBusClient
 from ovos_utils.log import LOG
 
 from ovos_gui.gui1 import (AMBIENT_TOPICS, STATUS_TOPICS, active_template,
-                           is_template_intent, normalize_template,
-                           report_unknown_templates, strip_reserved)
+                           is_template_show, normalize_template,
+                           report_mixed_page_names, report_unknown_templates,
+                           strip_reserved)
 
 namespace_lock = Lock()
 
@@ -442,8 +443,10 @@ class NamespaceManager:
 
     def handle_show_page(self, message: Message):
         """
-        Handles a request to show a template on the screen (§4.2, §4.3).
-        A non-``SYSTEM_*`` active page takes the legacy page hook instead.
+        Handles a request to show a template on the screen (GUI-1 4.2, 4.3).
+        The first ``page_names`` entry decides the path (4.2): a ``SYSTEM_*``
+        first entry is a template show, anything else takes the legacy page
+        hook. Either way only the active entry (``index``) is dispatched.
         @param message: the message containing the page show request
         """
         if not _validate_page_message(message) or not message.data["page_names"]:
@@ -455,7 +458,8 @@ class NamespaceManager:
         page = active_template(page_names, message.data.get("index", 0))
         persistence = message.data.get("__idle")
         session_id = self._session_id(message)
-        if not is_template_intent(page):
+        report_mixed_page_names(page_names, namespace_name)
+        if not is_template_show(page_names):
             self._warn_legacy_page_once(namespace_name, page)
             self._show_page(namespace_name, page, persistence, session_id,
                             self._dispatch_legacy_page_to_adapters)

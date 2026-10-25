@@ -84,6 +84,20 @@ def report_unknown_templates(page_names: List[str], skill_id: str) -> None:
                         f"'{name}'; no conformant adapter will render it")
 
 
+def is_template_show(page_names: List[str]) -> bool:
+    """4.2: a show is a template intent when its FIRST entry is a ``SYSTEM_*`` name."""
+    return bool(page_names) and is_template_intent(page_names[0])
+
+
+def report_mixed_page_names(page_names: List[str], skill_id: str) -> None:
+    """One diagnostic for a show that mixes ``SYSTEM_*`` and other page names."""
+    kinds = {is_template_intent(name) for name in page_names}
+    if len(kinds) > 1:
+        path = "template" if is_template_show(page_names) else "legacy page"
+        LOG.warning(f"GUI-1 4.2: '{skill_id}' sent mixed page_names {page_names}; "
+                    f"the first entry decides, so the active entry takes the {path} path")
+
+
 def active_template(page_names: List[str], index: Optional[int]) -> str:
     """The entry of ``page_names`` at ``index``, clamped to the list (§4.2)."""
     if not isinstance(index, int) or isinstance(index, bool) or index < 0:
