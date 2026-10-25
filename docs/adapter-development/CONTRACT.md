@@ -35,7 +35,8 @@ def handle_show_weather(self, skill_id: str, data: dict, session_id: str = "defa
 Override only the handlers you support; all default to no-ops. The full mapping
 of `SYSTEM_*` template names to handler methods is
 `AbstractGUIPlugin._TEMPLATE_HANDLERS`; dispatch goes through
-`dispatch_template(template, skill_id, data, session_id)`, which catches and
+`dispatch_template(template, skill_id, data, session_id, index=0, page_count=1)`,
+which catches and
 logs exceptions. It includes the interactive companions `SYSTEM_confirm`,
 `SYSTEM_select` and `SYSTEM_input` of the proposed amendment A.
 
@@ -44,10 +45,28 @@ ovos-gui decides "template or legacy page" on the **first** `page_names` entry
 **active** entry (`index`). A list that mixes `SYSTEM_*` and other names gets one
 diagnostic.
 
+## Active entry: `index` and `page_count`
+
+ovos-gui passes two keyword arguments to `dispatch_template` and `on_legacy_page`, as
+[6.3](https://github.com/OpenVoiceOS/architecture/blob/b6c1583/gui-1.md#63-events-received) (proposed amendment B) defines them:
+
+- `index`: the active entry's zero-based position in `page_names` (after clamping).
+- `page_count`: the length of `page_names`.
+
+They come on every show, and again on the dispatch after a valid `gui.page.focus`
+(below). That second dispatch, with the new `index`, is how a client learns that the
+focus took effect. A client that has not received both values for a namespace must not
+send `gui.page.focus` for it.
+
+ovos-gui inspects the hook's signature. A hook that has no `index` and `page_count`
+parameters (and no `**kwargs`) is called without them, and ovos-gui logs this once per
+adapter class and hook. An adapter written before these arguments therefore keeps working.
+
 ## Legacy page hook
 
 ```python
-def on_legacy_page(self, skill_id: str, page: str, data: dict, session_id: str = "default") -> None: ...
+def on_legacy_page(self, skill_id: str, page: str, data: dict, session_id: str = "default",
+                   index: int = 0, page_count: int = 1) -> None: ...
 ```
 
 When the first `page_names` entry is not a `SYSTEM_*` name, ovos-gui never
@@ -103,7 +122,8 @@ session in `context["session"]["session_id"]`. ovos-gui handles:
 
 - `gui.page.focus` `{namespace, page_number}` (proposed amendment B): for the
   namespace on top of that session's stack and an in-range entry, ovos-gui makes
-  the entry active and dispatches it again (a template or `on_legacy_page`). It
+  the entry active and dispatches it again (a template or `on_legacy_page`), with
+  the new `index`. It
   also restarts the namespace's removal timer. A request that names the current
   entry only restarts the timer. Any other request is ignored with one diagnostic.
 - `gui.interaction` `{namespace, event, data}` (proposed amendment A) is for the
