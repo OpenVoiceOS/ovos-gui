@@ -150,14 +150,16 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager.handle_show_page(message)
         self.namespace_manager._dispatch_template_to_adapters.assert_called()
 
-    def test_handle_show_page_non_template_rejected(self):
-        """Non-SYSTEM_* page names are rejected."""
+    def test_handle_show_page_non_template_not_dispatched_as_template(self):
+        """Non-SYSTEM_* page names never reach template dispatch (§4.2)."""
+        self.namespace_manager._dispatch_template_to_adapters = Mock()
         message = Message("gui.page.show", data={
             "__from": "foo", "__idle": 10, "page_names": ["bar.qml"]
         })
         with mock.patch(f'{PATCH_MODULE}.LOG') as mock_log:
             self.namespace_manager.handle_show_page(message)
-            mock_log.error.assert_called()
+            mock_log.warning.assert_called()
+        self.namespace_manager._dispatch_template_to_adapters.assert_not_called()
 
     def test_handle_show_page_invalid_message(self):
         message = Message("gui.page.show", data={"__from": "foo"})

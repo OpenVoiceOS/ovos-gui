@@ -33,7 +33,7 @@ session keeps its own namespace stack; the ``session_id`` is forwarded to every
 adapter so adapters can target the matching client(s).
 """
 from threading import Lock, Timer
-from typing import List, Union, Optional, Dict
+from typing import List, Union, Optional, Dict, Set, Tuple
 
 from ovos_bus_client import Message, MessageBusClient
 from ovos_utils.log import LOG
@@ -206,6 +206,7 @@ class NamespaceManager:
         self.adapters: List = adapters or []
         self.sessions: Dict[str, GUISession] = dict()
         self.ambient: Dict[str, dict] = dict()
+        self._legacy_pages_warned: Set[Tuple[str, str]] = set()
         self._define_message_handlers()
 
     def get_session(self, session_id: str) -> GUISession:
@@ -425,36 +426,52 @@ class NamespaceManager:
                     f"{adapter.__class__.__name__}"
                 )
 
+    def _dispatch_legacy_page_to_adapters(self, page: str, skill_id: str,
+                                          data: dict, session_id: str):
+        """Hand a non-template page to every adapter's legacy hook (§4.2 legacy path)."""
+        for adapter in self.adapters:
+            self._safe_call(adapter, "on_legacy_page", skill_id, page, data, session_id)
+
+    def _warn_legacy_page_once(self, namespace_name: str, page: str):
+        """One warning per namespace and page; every show still takes the legacy path."""
+        if (namespace_name, page) in self._legacy_pages_warned:
+            return
+        self._legacy_pages_warned.add((namespace_name, page))
+        LOG.warning(f"Namespace '{namespace_name}' sent non-template page '{page}'; "
+                    f"routing it to the legacy page hook, not as a GUI-1 template")
+
     def handle_show_page(self, message: Message):
         """
         Handles a request to show a template on the screen (§4.2, §4.3).
+        A non-``SYSTEM_*`` active page takes the legacy page hook instead.
         @param message: the message containing the page show request
         """
-        if not _validate_page_message(message):
+        if not _validate_page_message(message) or not message.data["page_names"]:
             LOG.error(f"invalid request: {message.data}")
             return
         namespace_name = message.data["__from"]
         page_names = [normalize_template(p, namespace_name)
                       for p in message.data["page_names"]]
-        if not page_names or not is_template_intent(page_names[0]):
-            LOG.error(f"Namespace '{namespace_name}' sent non-template page "
-                      f"names {message.data['page_names']}; GUI-1 dispatches "
-                      f"only SYSTEM_* templates")
-            return
-        report_unknown_templates(page_names, namespace_name)
-        template = active_template(page_names, message.data.get("index", 0))
+        page = active_template(page_names, message.data.get("index", 0))
         persistence = message.data.get("__idle")
         session_id = self._session_id(message)
-        self._show_template(namespace_name, template, persistence, session_id)
+        if not is_template_intent(page):
+            self._warn_legacy_page_once(namespace_name, page)
+            self._show_page(namespace_name, page, persistence, session_id,
+                            self._dispatch_legacy_page_to_adapters)
+            return
+        report_unknown_templates(page_names, namespace_name)
+        self._show_page(namespace_name, page, persistence, session_id,
+                        self._dispatch_template_to_adapters)
 
-    def _show_template(self, namespace_name: str, template: str,
-                       persistence, session_id: str):
-        """Dispatch the active template, then activate and persist the namespace."""
+    def _show_page(self, namespace_name: str, page: str, persistence,
+                   session_id: str, dispatch):
+        """Dispatch the active page, then activate and persist the namespace."""
         session = self.get_session(session_id)
-        LOG.debug(f"{namespace_name} shows {template} in session {session_id}")
+        LOG.debug(f"{namespace_name} shows {page} in session {session_id}")
         with namespace_lock:
             data = dict(self._ensure_namespace_exists(namespace_name, session).data)
-        self._dispatch_template_to_adapters(template, namespace_name, data, session_id)
+        dispatch(page, namespace_name, data, session_id)
         with namespace_lock:
             if not session.active_namespaces or \
                     session.active_namespaces[0].skill_id != namespace_name:
