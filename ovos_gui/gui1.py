@@ -97,11 +97,16 @@ def report_mixed_page_names(page_names: List[str], skill_id: str) -> None:
                     f"the first entry decides, so the active entry takes the {path} path")
 
 
-def active_template(page_names: List[str], index: Optional[int]) -> str:
-    """The entry of ``page_names`` at ``index``, clamped to the list (§4.2)."""
+def active_index(page_names: List[str], index: Optional[int]) -> int:
+    """``index`` clamped to ``page_names``; anything not a non-negative int is 0 (4.2)."""
     if not isinstance(index, int) or isinstance(index, bool) or index < 0:
-        index = 0
-    return page_names[min(index, len(page_names) - 1)]
+        return 0
+    return min(index, len(page_names) - 1)
+
+
+def active_template(page_names: List[str], index: Optional[int]) -> str:
+    """The entry of ``page_names`` at ``index``, clamped to the list (4.2)."""
+    return page_names[active_index(page_names, index)]
 
 
 def strip_reserved(data: dict) -> dict:

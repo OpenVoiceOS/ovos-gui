@@ -38,7 +38,8 @@ from typing import List, Union, Optional, Dict, Set, Tuple
 from ovos_bus_client import Message, MessageBusClient
 from ovos_utils.log import LOG
 
-from ovos_gui.gui1 import (AMBIENT_TOPICS, STATUS_TOPICS, active_template,
+from ovos_gui.page_focus import FOCUS_TOPIC, PageFocus
+from ovos_gui.gui1 import (AMBIENT_TOPICS, STATUS_TOPICS, active_index,
                            is_template_show, normalize_template,
                            report_mixed_page_names, report_unknown_templates,
                            strip_reserved)
@@ -103,6 +104,8 @@ class Namespace:
         self.duration = 30
         self.data = dict()
         self.session_set = False
+        self.page_names: List[str] = []
+        self.active_index = 0
 
     def add(self):
         """
@@ -132,6 +135,8 @@ class Namespace:
 
         self.session_set = False
         self.data = dict()
+        self.page_names = []
+        self.active_index = 0
 
     def load_data(self, name: str, value: str):
         """
@@ -208,6 +213,7 @@ class NamespaceManager:
         self.sessions: Dict[str, GUISession] = dict()
         self.ambient: Dict[str, dict] = dict()
         self._legacy_pages_warned: Set[Tuple[str, str]] = set()
+        self._page_focus = PageFocus(self, namespace_lock)
         self._define_message_handlers()
 
     def get_session(self, session_id: str) -> GUISession:
@@ -307,6 +313,7 @@ class NamespaceManager:
         self.core_bus.on("gui.value.set", self.handle_set_value)
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
+        self.core_bus.on(FOCUS_TOPIC, self._page_focus.handle)
         self.core_bus.on("mycroft.gui.screen.close", self.handle_namespace_global_back)
         self._define_messages_to_forward()
 
@@ -455,27 +462,32 @@ class NamespaceManager:
         namespace_name = message.data["__from"]
         page_names = [normalize_template(p, namespace_name)
                       for p in message.data["page_names"]]
-        page = active_template(page_names, message.data.get("index", 0))
-        persistence = message.data.get("__idle")
-        session_id = self._session_id(message)
+        index = active_index(page_names, message.data.get("index", 0))
         report_mixed_page_names(page_names, namespace_name)
-        if not is_template_show(page_names):
-            self._warn_legacy_page_once(namespace_name, page)
-            self._show_page(namespace_name, page, persistence, session_id,
-                            self._dispatch_legacy_page_to_adapters)
-            return
-        report_unknown_templates(page_names, namespace_name)
-        self._show_page(namespace_name, page, persistence, session_id,
-                        self._dispatch_template_to_adapters)
+        if is_template_show(page_names):
+            report_unknown_templates(page_names, namespace_name)
+        else:
+            self._warn_legacy_page_once(namespace_name, page_names[index])
+        self._show_page(namespace_name, page_names, index,
+                        message.data.get("__idle"), self._session_id(message))
 
-    def _show_page(self, namespace_name: str, page: str, persistence,
-                   session_id: str, dispatch):
-        """Dispatch the active page, then activate and persist the namespace."""
+    def dispatch_entry(self, namespace_name: str, page_names: List[str], index: int,
+                       data: dict, session_id: str):
+        """Dispatch the entry at ``index`` through the path the first entry picks (4.2)."""
+        dispatch = (self._dispatch_template_to_adapters if is_template_show(page_names)
+                    else self._dispatch_legacy_page_to_adapters)
+        dispatch(page_names[index], namespace_name, data, session_id)
+
+    def _show_page(self, namespace_name: str, page_names: List[str], index: int,
+                   persistence, session_id: str):
+        """Dispatch the active entry, then activate and persist the namespace."""
         session = self.get_session(session_id)
-        LOG.debug(f"{namespace_name} shows {page} in session {session_id}")
+        LOG.debug(f"{namespace_name} shows {page_names[index]} in session {session_id}")
         with namespace_lock:
-            data = dict(self._ensure_namespace_exists(namespace_name, session).data)
-        dispatch(page, namespace_name, data, session_id)
+            namespace = self._ensure_namespace_exists(namespace_name, session)
+            namespace.page_names, namespace.active_index = page_names, index
+            data = dict(namespace.data)
+        self.dispatch_entry(namespace_name, page_names, index, data, session_id)
         with namespace_lock:
             if not session.active_namespaces or \
                     session.active_namespaces[0].skill_id != namespace_name:
@@ -716,13 +728,15 @@ class NamespaceManager:
         session_id = self._session_id(message)
         session = self.get_session(session_id)
         namespace = session.loaded_namespaces.get(namespace_name)
+        if namespace:
+            self.restart_removal_timer(namespace, session)
 
-        # reschedule namespace timeout on user interaction
-        if namespace and not namespace.persistent and \
-                session.remove_namespace_timers.get(namespace.skill_id):
-            session.remove_namespace_timers[namespace.skill_id].cancel()
-            self._del_namespace_in_remove_timers(namespace.skill_id, session)
-            self._schedule_namespace_removal(namespace, session)
+    def restart_removal_timer(self, namespace: Namespace, session: GUISession):
+        """A user touch: restart the pending removal timer of a non-persistent namespace."""
+        if namespace.persistent or namespace.skill_id not in session.remove_namespace_timers:
+            return
+        self._cancel_namespace_removal(namespace.skill_id, session)
+        self._schedule_namespace_removal(namespace, session)
 
     def handle_page_gained_focus(self, message: Message):
         """
