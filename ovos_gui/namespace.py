@@ -607,7 +607,7 @@ class NamespaceManager:
         """The stack of ``session_id`` emptied: idle is per session (GUI-1 6.3, amendment D)."""
         LOG.info(f"Session {session_id} stack is empty; notifying adapters of idle")
         for adapter in self.adapters:
-            self._safe_call(adapter, "on_idle", session_id)
+            self._safe_call(adapter, "on_idle", *page_dispatch.idle_args(adapter, session_id))
 
     def _emit_namespace_displayed_event(self, session: GUISession):
         """

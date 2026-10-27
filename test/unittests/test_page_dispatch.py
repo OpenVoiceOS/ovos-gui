@@ -5,7 +5,7 @@ from ovos_bus_client.message import Message
 from ovos_utils.fakebus import FakeBus
 
 from ovos_gui.namespace import NamespaceManager
-from ovos_gui.page_dispatch import accepts_entry
+from ovos_gui.page_dispatch import accepts_entry, accepts_session
 from .test_gui1_service import GUI1ServiceCase, SKILL_A, _ctx
 
 
@@ -100,3 +100,43 @@ class TestAcceptsEntry(TestCase):
     @mock.patch("ovos_gui.page_dispatch.inspect.signature", side_effect=ValueError)
     def test_uninspectable_callable_is_old(self, _signature):
         self.assertFalse(accepts_entry(print))
+
+
+class OldIdleAdapter:
+    """An on_idle written before idle carried a session (amendment D)."""
+
+    def __init__(self):
+        self.idles = 0
+
+    def on_idle(self):
+        self.idles += 1
+
+
+class TestOldIdleSignature(TestCase):
+    def clear(self, adapters):
+        manager = NamespaceManager(FakeBus(), adapters=adapters)
+        manager.handle_show_page(Message("gui.page.show",
+                                         {"__from": SKILL_A, "page_names": ["SYSTEM_text"], "__idle": True},
+                                         _ctx()))
+        manager.handle_clear_namespace(Message("gui.clear.namespace", {"__from": SKILL_A}, _ctx()))
+
+    def test_old_idle_hook_still_called(self):
+        old, new = OldIdleAdapter(), mock.Mock()
+        self.clear([old, new])
+        self.assertEqual(old.idles, 1)
+        new.on_idle.assert_called_once_with("default")
+
+    @mock.patch("ovos_gui.page_dispatch.LOG")
+    def test_old_idle_hook_reported_once(self, log):
+        class OnceIdle(OldIdleAdapter):
+            pass
+        self.clear([OnceIdle()])
+        self.clear([OnceIdle()])
+        self.assertEqual(log.info.call_count, 1)
+        self.assertIn("OnceIdle.on_idle", log.info.call_args[0][0])
+
+    def test_signatures(self):
+        self.assertTrue(accepts_session(lambda session_id="default": None))
+        self.assertTrue(accepts_session(lambda session: None))
+        self.assertTrue(accepts_session(lambda *args, **kwargs: None))
+        self.assertFalse(accepts_session(lambda: None))

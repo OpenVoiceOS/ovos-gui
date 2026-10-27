@@ -47,6 +47,29 @@ def entry_kwargs(adapter, hook: str, index: int, page_count: int) -> Dict[str, i
     return {}
 
 
+def accepts_session(method: Callable) -> bool:
+    """True when ``method`` takes ``session_id``, a positional argument or ``**kwargs``."""
+    try:
+        params = list(inspect.signature(method).parameters.values())
+    except (TypeError, ValueError):
+        return False
+    return any(p.name == "session_id" or p.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL)
+               or (p.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD and p.default is inspect.Parameter.empty)
+               for p in params)
+
+
+def idle_args(adapter, session_id: str) -> Tuple[str, ...]:
+    """``(session_id,)`` for an ``on_idle`` that takes it, nothing (reported once) for the old ``on_idle(self)``."""
+    method = getattr(adapter, "on_idle", None)
+    if method is None or accepts_session(method):
+        return (session_id,)
+    key = (type(adapter), "on_idle")
+    if key not in _reported_old_hooks:
+        _reported_old_hooks.add(key)
+        LOG.info(f"{type(adapter).__name__}.on_idle takes no session_id; calling it without one (GUI-1 6.3, amendment D)")
+    return ()
+
+
 def dispatch_entry(adapters: List, safe_call: Callable, namespace_name: str,
                    page_names: List[str], index: int, data: dict, session_id: str) -> None:
     """Hand the entry at ``index`` to every adapter through the hook the first entry picks."""
