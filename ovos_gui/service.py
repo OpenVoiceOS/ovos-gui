@@ -4,6 +4,24 @@ from ovos_gui.namespace import NamespaceManager
 from ovos_plugin_manager.gui import OVOSGUIAdapterFactory
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import ProcessStatus, StatusCallbackMap, ProcessState
+from ovos_utils.skill_installer import ServiceInstaller
+from pyee import EventEmitter
+
+
+class OrderedEventEmitter(EventEmitter):
+    """Runs handlers in arrival order on the receive thread, isolating failures.
+
+    GUI messages are an ordered stream (gui.value.set before gui.page.show); the
+    bus client's default ExecutorEventEmitter handles them concurrently. A plain
+    EventEmitter would let a handler exception other than RuntimeError escape
+    into websocket-client and tear the connection down.
+    """
+
+    def _emit_run(self, f, args, kwargs):
+        try:
+            f(*args, **kwargs)
+        except Exception:
+            LOG.exception(f"GUI bus handler {getattr(f, '__name__', f)} failed")
 
 
 def on_started():
@@ -30,7 +48,7 @@ class GUIService:
     def __init__(self, alive_hook=on_alive, started_hook=on_started,
                  ready_hook=on_ready, error_hook=on_error,
                  stopping_hook=on_stopping):
-        self.bus = MessageBusClient()
+        self.bus = MessageBusClient(emitter=OrderedEventEmitter())
         self.namespace_manager = None
         callbacks = StatusCallbackMap(on_started=started_hook,
                                       on_alive=alive_hook,
@@ -39,6 +57,7 @@ class GUIService:
                                       on_stopping=stopping_hook)
         self.status = ProcessStatus('gui_service', callback_map=callbacks)
         self.status.bind(self.bus)
+        self.installer = ServiceInstaller(self.bus, service_name="ovos_gui")
 
     def _init_bus_client(self):
         """
@@ -92,4 +111,6 @@ class GUIService:
         """
         Perform any GUI shutdown processes.
         """
+        if getattr(self, "installer", None):
+            self.installer.shutdown()
         self.status.set_stopping()

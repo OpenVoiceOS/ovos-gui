@@ -33,10 +33,12 @@ class TestFactoryLoading:
     """Regression for B1: the real factory loads cleanly when headless."""
 
     def test_factory_create_all_headless_returns_empty(self, fake_bus):
+        from unittest import mock
         from ovos_plugin_manager.gui import OVOSGUIAdapterFactory
-        adapters = OVOSGUIAdapterFactory.create_all(bus=fake_bus, config={})
+        with mock.patch("ovos_plugin_manager.gui.find_gui_adapter_plugins", return_value={}):
+            adapters = OVOSGUIAdapterFactory.create_all(bus=fake_bus, config={})
         assert isinstance(adapters, list)
-        # no opm.gui_adapter plugins installed in the test env -> empty, no raise
+        # no opm.gui_adapter plugins discovered -> empty, no raise
         assert adapters == []
 
     def test_manager_runs_with_zero_adapters(self, fake_bus, message_factory):

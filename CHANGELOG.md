@@ -1,5 +1,61 @@
 # Changelog
 
+## [1.5.4a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.4a1) (2026-10-22)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.3a1...1.5.4a1)
+
+**Merged pull requests:**
+
+- fix\(deps\): accept ovos-plugin-manager 3 [\#137](https://github.com/OpenVoiceOS/ovos-gui/pull/137) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
+## [1.5.3a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.3a1) (2026-09-28)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.2a2...1.5.3a1)
+
+**Merged pull requests:**
+
+- fix\(gui\): build the system resource cache beside the served path and move it in [\#132](https://github.com/OpenVoiceOS/ovos-gui/pull/132) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
+## [1.5.2a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.2a2) (2026-09-26)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.2a1...1.5.2a2)
+
+**Merged pull requests:**
+
+- Update codecov/codecov-action action to v7 [\#103](https://github.com/OpenVoiceOS/ovos-gui/pull/103) ([renovate[bot]](https://github.com/apps/renovate))
+
+## [1.5.2a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.2a1) (2026-09-11)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.1a1...1.5.2a1)
+
+**Merged pull requests:**
+
+- fix: allow ovos-config 3.x [\#125](https://github.com/OpenVoiceOS/ovos-gui/pull/125) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.5.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.1a1) (2026-09-10)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.0a1...1.5.1a1)
+
+**Merged pull requests:**
+
+- fix: drop the deprecated setup\_locale call from the gui service [\#126](https://github.com/OpenVoiceOS/ovos-gui/pull/126) ([openvoiceos-bot](https://github.com/openvoiceos-bot))
+
+## [1.5.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.0a1) (2026-08-11)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.1a2...1.5.0a1)
+
+**Merged pull requests:**
+
+- feat: run ServiceInstaller so gui plugins install over the bus [\#123](https://github.com/OpenVoiceOS/ovos-gui/pull/123) ([JarbasAl](https://github.com/JarbasAl))
+
+## [1.4.1a2](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.1a2) (2026-07-31)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.1a1...1.4.1a2)
+
+**Merged pull requests:**
+
+- docs: rewrite README in Simplified Technical English [\#121](https://github.com/OpenVoiceOS/ovos-gui/pull/121) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.4.1a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.4.1a1) (2026-06-28)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.4.0a1...1.4.1a1)

@@ -170,3 +170,28 @@ class TestGuiService(unittest.TestCase):
 
             # Verify service initialized properly
             self.assertIsNotNone(service.namespace_manager)
+
+
+class TestGUIServiceBusOrdering(unittest.TestCase):
+    def test_bus_handles_messages_in_order(self):
+        from pyee.executor import ExecutorEventEmitter
+        from ovos_gui.service import GUIService, OrderedEventEmitter
+        with mock.patch('ovos_gui.service.ProcessStatus'), \
+                mock.patch('ovos_gui.service.ServiceInstaller'):
+            service = GUIService()
+        self.assertIsInstance(service.bus.emitter, OrderedEventEmitter)
+        self.assertNotIsInstance(service.bus.emitter, ExecutorEventEmitter)
+
+    def test_failing_handler_is_logged_and_does_not_stop_others(self):
+        from ovos_gui.service import OrderedEventEmitter
+        emitter, seen = OrderedEventEmitter(), []
+
+        def failing(_):
+            raise KeyError("__idle")
+
+        emitter.on("gui.page.show", failing)
+        emitter.on("gui.page.show", seen.append)
+        with mock.patch('ovos_gui.service.LOG') as log:
+            emitter.emit("gui.page.show", "msg")
+        log.exception.assert_called_once()
+        self.assertEqual(seen, ["msg"])

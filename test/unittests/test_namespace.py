@@ -36,13 +36,14 @@ class TestNamespaceFunctions(TestCase):
         invalid1 = Message("gui.page.show", data={"__from": "skill_id", "__idle": 30})
         self.assertFalse(_validate_page_message(invalid1))
 
-        # Invalid: missing __from
-        invalid2 = Message("gui.page.show", data={"page_names": ["SYSTEM_weather"], "__idle": 30})
-        self.assertFalse(_validate_page_message(invalid2))
+        # The namespace is not a data key (GUI-1 4.1): the handler reads it from
+        # the context, so its absence from data is not a validation error
+        no_sender = Message("gui.page.show", data={"page_names": ["SYSTEM_weather"], "__idle": 30})
+        self.assertTrue(_validate_page_message(no_sender))
 
-        # Missing __idle is NOT a validation error (only page_names and __from)
-        invalid3 = Message("gui.page.show", data={"page_names": ["SYSTEM_weather"], "__from": "skill_id"})
-        self.assertTrue(_validate_page_message(invalid3))
+        # Missing persistence is NOT a validation error (only page_names)
+        no_idle = Message("gui.page.show", data={"page_names": ["SYSTEM_weather"], "__from": "skill_id"})
+        self.assertTrue(_validate_page_message(no_idle))
 
 
 class TestNamespace(TestCase):
@@ -90,15 +91,9 @@ class TestNamespace(TestCase):
         self.namespace.data = {}
         self.assertEqual(self.namespace.get_position_of_last_item_in_data(), -1)
 
-    def test_namespace_set_persistence_generic(self):
-        self.namespace.set_persistence("genericSkill")
+    def test_namespace_default_persistence(self):
         self.assertEqual(self.namespace.duration, 30)
         self.assertFalse(self.namespace.persistent)
-
-    def test_namespace_set_persistence_idle(self):
-        self.namespace.set_persistence("idleDisplaySkill")
-        self.assertEqual(self.namespace.duration, 0)
-        self.assertTrue(self.namespace.persistent)
 
 
 class TestNamespaceManager(TestCase):
@@ -133,7 +128,8 @@ class TestNamespaceManager(TestCase):
 
     def test_parse_persistence(self):
         self.assertEqual(self.namespace_manager._parse_persistence(True), (True, 0))
-        self.assertEqual(self.namespace_manager._parse_persistence(False), (False, 0))
+        # GUI-1 §4.3: __idle false follows the same default as an omitted __idle
+        self.assertEqual(self.namespace_manager._parse_persistence(False), (False, 30))
         self.assertEqual(self.namespace_manager._parse_persistence(None), (False, 30))
         self.assertEqual(self.namespace_manager._parse_persistence(10), (False, 10))
         self.assertEqual(self.namespace_manager._parse_persistence(1.0), (False, 1))
@@ -142,21 +138,25 @@ class TestNamespaceManager(TestCase):
 
     def test_handle_show_page_template_routing(self):
         """SYSTEM_* templates are routed to adapters."""
-        self.namespace_manager._dispatch_template_to_adapters = Mock()
+        adapter = Mock()
+        self.namespace_manager.adapters = [adapter]
         message = Message("gui.page.show", data={
             "__from": "test_skill", "__idle": 10, "page_names": ["SYSTEM_weather"]
         })
         self.namespace_manager.handle_show_page(message)
-        self.namespace_manager._dispatch_template_to_adapters.assert_called()
+        adapter.dispatch_template.assert_called()
 
-    def test_handle_show_page_non_template_rejected(self):
-        """Non-SYSTEM_* page names are rejected."""
+    def test_handle_show_page_non_template_not_dispatched_as_template(self):
+        """Non-SYSTEM_* page names never reach template dispatch (§4.2)."""
+        adapter = Mock()
+        self.namespace_manager.adapters = [adapter]
         message = Message("gui.page.show", data={
             "__from": "foo", "__idle": 10, "page_names": ["bar.qml"]
         })
         with mock.patch(f'{PATCH_MODULE}.LOG') as mock_log:
             self.namespace_manager.handle_show_page(message)
-            mock_log.error.assert_called()
+            mock_log.warning.assert_called()
+        adapter.dispatch_template.assert_not_called()
 
     def test_handle_show_page_invalid_message(self):
         message = Message("gui.page.show", data={"__from": "foo"})
@@ -204,7 +204,7 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager.handle_set_value(message)
 
         self.assertEqual(ns.data["key"], "value")
-        # adapter notified with (skill_id, filtered_data, session_id) -- no __from
+        # adapter notified with (skill_id, content_data, session_id); the predecessor __from is not content
         mock_adapter.on_session_update.assert_called_once_with(
             "test", {"key": "value"}, "default")
 
@@ -220,16 +220,17 @@ class TestNamespaceManager(TestCase):
         mock_adapter.on_status_event.assert_called_once_with(
             "test.event", {"test": "data"}, "default")
 
-    def test_dispatch_template_to_adapters(self):
-        """Templates are dispatched with session_id only (no site_id)."""
+    def test_dispatch_entry_to_adapters(self):
+        """Templates are dispatched with session_id (no site_id) and the active entry."""
         mock_adapter = mock.Mock()
         self.namespace_manager.adapters = [mock_adapter]
 
-        self.namespace_manager._dispatch_template_to_adapters(
-            "SYSTEM_weather", "test_skill", {"current_temp": 22}, "session1"
+        self.namespace_manager.dispatch_entry(
+            "test_skill", ["SYSTEM_weather"], 0, {"current_temp": 22}, "session1"
         )
         mock_adapter.dispatch_template.assert_called_once_with(
-            "SYSTEM_weather", "test_skill", {"current_temp": 22}, "session1"
+            "SYSTEM_weather", "test_skill", {"current_temp": 22}, "session1",
+            index=0, page_count=1
         )
 
     def test_activate_namespace_already_active(self):

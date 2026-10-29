@@ -15,9 +15,10 @@
 """Defines the API for the GUI service.
 
 Manages what is displayed on a device with a screen using a LIFO stack of
-"active" namespaces (e.g. skills). At the bottom of the stack is the namespace
-for the idle screen skill (if one is specified in the device configuration).
-The namespace at the top of the stack represents what is visible on the device.
+"active" namespaces (e.g. skills). The namespace at the top of the stack
+represents what is visible on the device. There is no home-screen or idle-screen
+namespace (GUI-1 6.9): an empty stack is the resting state, and adapters hear of
+it through ``on_idle(session_id)``.
 When a skill is finished displaying information, its namespace is removed from
 the top of the stack, displaying the previously active namespace.
 
@@ -33,16 +34,29 @@ session keeps its own namespace stack; the ``session_id`` is forwarded to every
 adapter so adapters can target the matching client(s).
 """
 from threading import Lock, Timer
-from typing import List, Union, Optional, Dict
+from typing import List, Union, Optional, Dict, Set, Tuple
 
 from ovos_bus_client import Message, MessageBusClient
-from ovos_spec_tools import SpecMessage
 from ovos_utils.log import LOG
+
+from ovos_gui.page_focus import FOCUS_TOPIC, PageFocus
+from ovos_gui import page_dispatch
+from ovos_gui.gui1 import (AMBIENT_TOPICS, STATUS_TOPICS, active_index,
+                           content_data, is_template_show, normalize_template,
+                           persistence_of, producing_namespace,
+                           report_mixed_page_names, report_unknown_templates)
 
 namespace_lock = Lock()
 
-RESERVED_KEYS = ['__from', '__idle']
-
+ENCLOSURE_TOPICS = tuple(
+    [f"enclosure.eyes.{e}" for e in (
+        "on", "off", "blink", "narrow", "look", "color", "level", "volume",
+        "spin", "timedspin", "reset", "setpixel", "fill")] +
+    [f"enclosure.mouth.{m}" for m in (
+        "events.activate", "events.deactivate", "talk", "think", "listen",
+        "smile", "viseme", "viseme_list", "reset", "text", "display")] +
+    ["enclosure.weather.display"]
+)
 
 def _validate_page_message(message: Message) -> bool:
     """
@@ -54,7 +68,6 @@ def _validate_page_message(message: Message) -> bool:
     """
     valid = (
             "page_names" in message.data
-            and "__from" in message.data
             and isinstance(message.data["page_names"], list)
     )
     if not valid:
@@ -89,6 +102,8 @@ class Namespace:
         self.duration = 30
         self.data = dict()
         self.session_set = False
+        self.page_names: List[str] = []
+        self.active_index = 0
 
     def add(self):
         """
@@ -118,6 +133,8 @@ class Namespace:
 
         self.session_set = False
         self.data = dict()
+        self.page_names = []
+        self.active_index = 0
 
     def load_data(self, name: str, value: str):
         """
@@ -144,24 +161,6 @@ class Namespace:
         Get the position of the last item
         """
         return len(self.data) - 1
-
-    def set_persistence(self, skill_type: str):
-        """
-        Sets the duration of the namespace's time in the active list.
-
-        @param skill_type: if skill type is idleDisplaySkill, the namespace will
-            always persist.  Otherwise, the namespace persists for a default duration.
-        """
-        if skill_type == "idleDisplaySkill":
-            self.persistent = True
-            self.duration = 0
-        else:
-            self.persistent = False
-            self.duration = 30
-
-        LOG.info(
-            f"GUI PROTOCOL - Set persistence for \"{self.skill_id}\" -- "
-            f"persistent: {self.persistent}, duration: {self.duration}s")
 
 
 class GUISession:
@@ -192,6 +191,9 @@ class NamespaceManager:
         self.core_bus = core_bus
         self.adapters: List = adapters or []
         self.sessions: Dict[str, GUISession] = dict()
+        self.ambient: Dict[str, dict] = dict()
+        self._legacy_pages_warned: Set[Tuple[str, str]] = set()
+        self._page_focus = PageFocus(self, namespace_lock)
         self._define_message_handlers()
 
     def get_session(self, session_id: str) -> GUISession:
@@ -216,6 +218,16 @@ class NamespaceManager:
         ctx = message.context if message else {}
         session = ctx.get("session", {})
         return session.get("session_id") or "default"
+
+    @staticmethod
+    def _producing_namespace(message: Message) -> Optional[str]:
+        """The namespace a producer Message belongs to, or ``None`` after the
+        §4.1 diagnostic when its context names no ``skill_id``."""
+        namespace_name = producing_namespace(message)
+        if namespace_name is None:
+            LOG.error(f"GUI-1 §4.1: '{message.msg_type}' names no skill_id in its "
+                      f"context; ignored")
+        return namespace_name
 
     # ====== State Query API for Adapters ======
 
@@ -261,6 +273,11 @@ class NamespaceManager:
         """
         return list(self.sessions.keys())
 
+    def get_ambient(self, topic: str) -> Optional[dict]:
+        """Copy of the last ``gui.ambient.*`` payload kept for ``topic`` (§6.9.1)."""
+        data = self.ambient.get(topic)
+        return dict(data) if data is not None else None
+
     def is_namespace_active(self, namespace_name: str, session_id: str = "default") -> bool:
         """Check if a namespace is currently visible (top of active stack).
 
@@ -286,62 +303,38 @@ class NamespaceManager:
         self.core_bus.on("gui.value.set", self.handle_set_value)
         self.core_bus.on("gui.page_interaction", self.handle_page_interaction)
         self.core_bus.on("gui.page_gained_focus", self.handle_page_gained_focus)
+        self.core_bus.on(FOCUS_TOPIC, self._page_focus.handle)
         self.core_bus.on("mycroft.gui.screen.close", self.handle_namespace_global_back)
         self._define_messages_to_forward()
 
     def _define_messages_to_forward(self):
-        """Messages from the core bus to be forwarded to GUI clients."""
-        messages_to_forward = [
-            # Core
-            "ovos.utterance.handled",
+        """Status events for adapters: the §5.3 table, then legacy topics (MAY)."""
+        legacy_topics = [
             "ovos.utterance.cancelled",
             "mycroft.skill.handler.start",
             "mycroft.skill.handler.complete",
             "complete_intent_failure",
-            # Audio Service
             "speak",
             "recognizer_loop:audio_output_start",
             "recognizer_loop:audio_output_end",
-            # Speech Service
-            SpecMessage.LISTENER_SLEEP,
             "recognizer_loop:wake_up",
-            SpecMessage.LISTENER_AWOKEN,
             "recognizer_loop:utterance",
             "recognizer_loop:wakeword",
-            "recognizer_loop:recognition_unknown",
-            SpecMessage.LISTENER_RECORD_STARTED,
-            SpecMessage.LISTENER_RECORD_ENDED,
-            # Enclosure commands for eyes
-            "enclosure.eyes.on",
-            "enclosure.eyes.off",
-            "enclosure.eyes.blink",
-            "enclosure.eyes.narrow",
-            "enclosure.eyes.look",
-            "enclosure.eyes.color",
-            "enclosure.eyes.level",
-            "enclosure.eyes.volume",
-            "enclosure.eyes.spin",
-            "enclosure.eyes.timedspin",
-            "enclosure.eyes.reset",
-            "enclosure.eyes.setpixel",
-            "enclosure.eyes.fill",
-            # Enclosure commands for mouth
-            "enclosure.mouth.events.activate",
-            "enclosure.mouth.events.deactivate",
-            "enclosure.mouth.talk",
-            "enclosure.mouth.think",
-            "enclosure.mouth.listen",
-            "enclosure.mouth.smile",
-            "enclosure.mouth.viseme",
-            "enclosure.mouth.viseme_list",
-            # Mouth/matrix display
-            "enclosure.mouth.reset",
-            "enclosure.mouth.text",
-            "enclosure.mouth.display",
-            "enclosure.weather.display"
+            "recognizer_loop:record_begin",
+            "recognizer_loop:record_end",
+            # what ovos-dinkum-listener emits when STT returns nothing
+            "recognizer_loop:speech.recognition.unknown",
+            *ENCLOSURE_TOPICS,
         ]
-        for msg in messages_to_forward:
+        for msg in (*STATUS_TOPICS, *legacy_topics):
             self.core_bus.on(msg, self.forward_to_gui)
+        for msg in AMBIENT_TOPICS:
+            self.core_bus.on(msg, self.handle_ambient)
+
+    def handle_ambient(self, message: Message):
+        """Keep the latest ambient payload, then forward it as a status event."""
+        self.ambient[message.msg_type] = dict(message.data)
+        self.forward_to_gui(message)
 
     def _safe_call(self, adapter, method_name, *args, **kwargs):
         """Invoke an adapter hook safely.
@@ -378,31 +371,29 @@ class NamespaceManager:
         Handles a request to remove a namespace.
         @param message: the message requesting namespace removal
         """
-        try:
-            namespace_name = message.data['__from']
-        except KeyError:
-            LOG.error(
-                "Request to delete namespace failed: no namespace specified"
-            )
-        else:
-            session_id = self._session_id(message)
-            session = self.get_session(session_id)
-            if session.loaded_namespaces.get(namespace_name):
-                with namespace_lock:
-                    self._remove_namespace(namespace_name, session, session_id)
+        namespace_name = self._producing_namespace(message)
+        if namespace_name is None:
+            return
+        session_id = self._session_id(message)
+        session = self.get_session(session_id)
+        if session.loaded_namespaces.get(namespace_name):
+            with namespace_lock:
+                self._remove_namespace(namespace_name, session, session_id)
 
     @staticmethod
     def _parse_persistence(persistence: Optional[Union[int, bool]]) -> \
             (bool, int):
         """
         Parse a persistence spec into persist and duration.
-        @param persistence: message.data["__idle"] spec
+        @param persistence: the ``persist`` value of the show request
         @return: bool persistence, int duration
         """
         if isinstance(persistence, float):
             persistence = round(persistence)
-        if isinstance(persistence, bool):
-            return persistence, 0
+        if persistence is True:
+            return True, 0
+        if persistence is False:
+            return False, 30
         elif isinstance(persistence, int):
             if persistence < 0:
                 raise ValueError("Requested negative persistence")
@@ -411,66 +402,58 @@ class NamespaceManager:
             # Defines default behavior as displaying for 30 seconds
             return False, 30
 
-    def _dispatch_template_to_adapters(self, template: str, skill_id: str,
-                                       data: dict, session_id: str):
-        """Call matching handler on every loaded adapter for a SYSTEM_* template.
-
-        Args:
-            template: PageTemplates value, e.g. ``"SYSTEM_weather"``.
-            skill_id: Namespace / skill that requested the display.
-            data:     Current session data for the namespace.
-            session_id: Routing identifier (shared screens share a session_id).
-        """
-        for adapter in self.adapters:
-            try:
-                adapter.dispatch_template(template, skill_id, data, session_id)
-            except Exception:
-                LOG.exception(
-                    f"Error dispatching template '{template}' to adapter "
-                    f"{adapter.__class__.__name__}"
-                )
+    def _warn_legacy_page_once(self, namespace_name: str, page: str):
+        """One warning per namespace and page; every show still takes the legacy path."""
+        if (namespace_name, page) in self._legacy_pages_warned:
+            return
+        self._legacy_pages_warned.add((namespace_name, page))
+        LOG.warning(f"Namespace '{namespace_name}' sent non-template page '{page}'; "
+                    f"routing it to the legacy page hook, not as a GUI-1 template")
 
     def handle_show_page(self, message: Message):
         """
-        Handles a request to show one or more pages on the screen.
+        Handles a request to show a template on the screen (GUI-1 4.2, 4.3).
+        The first ``page_names`` entry decides the path (4.2): a ``SYSTEM_*``
+        first entry is a template show, anything else takes the legacy page
+        hook. Either way only the active entry (``index``) is dispatched.
         @param message: the message containing the page show request
         """
-        message_is_valid = _validate_page_message(message)
-        if not message_is_valid:
+        if not _validate_page_message(message) or not message.data["page_names"]:
             LOG.error(f"invalid request: {message.data}")
             return
+        namespace_name = self._producing_namespace(message)
+        if namespace_name is None:
+            return
+        page_names = [normalize_template(p, namespace_name)
+                      for p in message.data["page_names"]]
+        index = active_index(page_names, message.data.get("index", 0))
+        report_mixed_page_names(page_names, namespace_name)
+        if is_template_show(page_names):
+            report_unknown_templates(page_names, namespace_name)
+        else:
+            self._warn_legacy_page_once(namespace_name, page_names[index])
+        self._show_page(namespace_name, page_names, index,
+                        persistence_of(message.data), self._session_id(message))
 
-        namespace_name = message.data["__from"]
-        page_ids_to_show = message.data.get('page_names')
-        persistence = message.data["__idle"]
-        show_index = message.data.get("index", 0)
+    def dispatch_entry(self, namespace_name: str, page_names: List[str], index: int,
+                       data: dict, session_id: str):
+        """Dispatch the entry at ``index`` with its ``index`` and ``page_count`` (4.2, 6.3)."""
+        page_dispatch.dispatch_entry(self.adapters, self._safe_call, namespace_name,
+                                     page_names, index, data, session_id)
 
-        LOG.debug(f"Got {namespace_name} request to show: {page_ids_to_show} at index: {show_index}")
-
-        session_id = self._session_id(message)
+    def _show_page(self, namespace_name: str, page_names: List[str], index: int,
+                   persistence, session_id: str):
+        """Dispatch the active entry, then activate and persist the namespace."""
         session = self.get_session(session_id)
-
-        # All page shows must use SYSTEM_* templates (no legacy QML path)
-        if not page_ids_to_show:
-            LOG.error(f"Namespace '{namespace_name}' requested show with no page_names")
-            return
-
-        if not page_ids_to_show[0].startswith("SYSTEM_"):
-            LOG.error(
-                f"Namespace '{namespace_name}' sent non-template page name: {page_ids_to_show[0]}. "
-                f"All GUI display must use SYSTEM_* templates. Custom QML is not supported."
-            )
-            return
-
-        # Template-based routing: dispatch all templates to adapters
-        namespace = self._ensure_namespace_exists(namespace_name, session)
-        data = {k: v for k, v in namespace.data.items()}
-        for template in page_ids_to_show:
-            self._dispatch_template_to_adapters(template, namespace_name, data, session_id)
-
-        # Activate namespace (updates internal stack state)
+        LOG.debug(f"{namespace_name} shows {page_names[index]} in session {session_id}")
         with namespace_lock:
-            if not session.active_namespaces or session.active_namespaces[0].skill_id != namespace_name:
+            namespace = self._ensure_namespace_exists(namespace_name, session)
+            namespace.page_names, namespace.active_index = page_names, index
+            data = dict(namespace.data)
+        self.dispatch_entry(namespace_name, page_names, index, data, session_id)
+        with namespace_lock:
+            if not session.active_namespaces or \
+                    session.active_namespaces[0].skill_id != namespace_name:
                 self._activate_namespace(namespace_name, session, session_id)
             self._update_namespace_persistence(persistence, session)
 
@@ -520,36 +503,40 @@ class NamespaceManager:
 
         return namespace
 
-    def _update_namespace_persistence(self, persistence: Union[bool, int], session: GUISession):
+    def _update_namespace_persistence(self, persistence: Union[bool, int, None],
+                                      session: GUISession):
         """
-        Sets the persistence of the namespace being activated.
-        @param persistence: length of time the namespace should be displayed
+        Apply ``persist`` to the top namespace and drop superseded,
+        non-persistent namespaces below it (§4.3).
+        @param persistence: the ``persist`` value of the show request
         @param session: the session affected
         """
-        for idx, namespace in enumerate(session.active_namespaces):
-            if idx:
-                if not namespace.persistent:
-                    self._remove_namespace(namespace.skill_id, session, session.session_id)
-            else:
-                if namespace.persistent != persistence:
-                    LOG.info(f"Setting namespace '{namespace.skill_id}' persistence to: {persistence}")
-                    namespace.persistent = persistence
+        for namespace in list(session.active_namespaces[1:]):
+            if not namespace.persistent:
+                self._remove_namespace(namespace.skill_id, session, session.session_id)
+        if not session.active_namespaces:
+            return
+        top = session.active_namespaces[0]
+        top.persistent, top.duration = self._safe_persistence(persistence, top.skill_id)
+        self._cancel_namespace_removal(top.skill_id, session)
+        if not top.persistent:
+            self._schedule_namespace_removal(top, session)
+        LOG.info(f"Namespace '{top.skill_id}' persistent={top.persistent} "
+                 f"duration={top.duration}s")
 
-                namespace.set_persistence(skill_type="genericSkill")
-                if isinstance(persistence, int) and not isinstance(persistence, bool):
-                    namespace.duration = persistence
+    def _safe_persistence(self, persistence, skill_id: str) -> (bool, int):
+        """``_parse_persistence`` that falls back to the default on bad input."""
+        try:
+            return self._parse_persistence(persistence)
+        except ValueError:
+            LOG.error(f"'{skill_id}' sent invalid persist {persistence!r}; using default")
+            return self._parse_persistence(None)
 
-                # check if there is a scheduled remove_namespace_timer
-                # and cancel it
-                if namespace.persistent and namespace.skill_id in \
-                        session.remove_namespace_timers:
-                    session.remove_namespace_timers[namespace.skill_id].cancel()
-                    self._del_namespace_in_remove_timers(namespace.skill_id, session)
-
-                if not namespace.persistent:
-                    self._schedule_namespace_removal(namespace, session)
-
-                session.active_namespaces[idx] = namespace
+    def _cancel_namespace_removal(self, namespace_name: str, session: GUISession):
+        """Cancel and forget a pending auto-removal timer, if any."""
+        timer = session.remove_namespace_timers.pop(namespace_name, None)
+        if timer:
+            timer.cancel()
 
     def _schedule_namespace_removal(self, namespace: Namespace, session: GUISession):
         """
@@ -578,8 +565,9 @@ class NamespaceManager:
         @param session_id: ID of the session
         """
         session = self.get_session(session_id)
-        self._remove_namespace(namespace_name, session, session_id)
-        self._del_namespace_in_remove_timers(namespace_name, session)
+        with namespace_lock:
+            session.remove_namespace_timers.pop(namespace_name, None)
+            self._remove_namespace(namespace_name, session, session_id)
 
     def _remove_namespace(self, namespace_name: str, session: GUISession,
                           session_id: str):
@@ -603,11 +591,27 @@ class NamespaceManager:
             namespace_position = session.active_namespaces.index(namespace)
             namespace.remove(namespace_position)
             session.active_namespaces.remove(namespace)
-            # Notify adapters of namespace deactivation
             for adapter in self.adapters:
                 self._safe_call(adapter, "on_namespace_deactivated", namespace_name, session_id)
+            if not session.active_namespaces:
+                self._notify_idle(session_id)
+            elif namespace_position == 0:
+                self._notify_exposed_top(session, session_id)
 
         self._emit_namespace_displayed_event(session)
+
+    def _notify_exposed_top(self, session: GUISession, session_id: str):
+        """The namespace below a removed top is now on top: it was activated (§6.3)."""
+        exposed = session.active_namespaces[0].skill_id
+        LOG.info(f"Namespace {exposed} is back on top of session {session_id}")
+        for adapter in self.adapters:
+            self._safe_call(adapter, "on_namespace_activated", exposed, session_id)
+
+    def _notify_idle(self, session_id: str):
+        """The stack of ``session_id`` emptied: idle is per session (GUI-1 6.3, amendment D)."""
+        LOG.info(f"Session {session_id} stack is empty; notifying adapters of idle")
+        for adapter in self.adapters:
+            self._safe_call(adapter, "on_idle", *page_dispatch.idle_args(adapter, session_id))
 
     def _emit_namespace_displayed_event(self, session: GUISession):
         """
@@ -641,36 +645,34 @@ class NamespaceManager:
         Handles a request to set the value of namespace data attributes.
         @param message: the request to set attribute values
         """
-        try:
-            namespace_name = message.data['__from']
-        except KeyError:
-            LOG.error(
-                "Request to set gui attribute value failed: no "
-                "namespace specified"
-            )
-        else:
-            session_id = self._session_id(message)
-            session = self.get_session(session_id)
-            with namespace_lock:
-                self._update_namespace_data(namespace_name, message.data, session)
-            # Notify adapters of the session data update
-            filtered = {k: v for k, v in message.data.items() if k not in RESERVED_KEYS}
-            for adapter in self.adapters:
-                self._safe_call(adapter, "on_session_update", namespace_name, filtered, session_id)
+        namespace_name = self._producing_namespace(message)
+        if namespace_name is None:
+            return
+        session_id = self._session_id(message)
+        session = self.get_session(session_id)
+        with namespace_lock:
+            merged = self._update_namespace_data(namespace_name, message.data, session)
+        for adapter in self.adapters:
+            self._safe_call(adapter, "on_session_update", namespace_name, merged, session_id)
 
-    def _update_namespace_data(self, namespace_name: str, data: dict, session: GUISession):
+    def _update_namespace_data(self, namespace_name: str, data: dict,
+                               session: GUISession) -> dict:
         """
-        Updates the values of namespace data attributes, unless unchanged.
+        Merge content keys into the namespace; a ``None`` value removes the key (§4.2).
         @param namespace_name: the name of the namespace to update
         @param data: the name and new value of one or more data attributes
         @param session: the session affected
+        @return: copy of the merged session data
         """
         namespace = self._ensure_namespace_exists(namespace_name, session)
-        for key, value in data.items():
-            if key not in RESERVED_KEYS and namespace.data.get(key) != value:
+        for key, value in content_data(data).items():
+            if value is None:
+                namespace.unload_data(key)
+            elif namespace.data.get(key) != value:
                 namespace.data[key] = value
                 if namespace in session.active_namespaces:
                     namespace.load_data(key, value)
+        return dict(namespace.data)
 
     def handle_page_interaction(self, message: Message):
         """
@@ -684,13 +686,15 @@ class NamespaceManager:
         session_id = self._session_id(message)
         session = self.get_session(session_id)
         namespace = session.loaded_namespaces.get(namespace_name)
+        if namespace:
+            self.restart_removal_timer(namespace, session)
 
-        # reschedule namespace timeout on user interaction
-        if namespace and not namespace.persistent and \
-                session.remove_namespace_timers.get(namespace.skill_id):
-            session.remove_namespace_timers[namespace.skill_id].cancel()
-            self._del_namespace_in_remove_timers(namespace.skill_id, session)
-            self._schedule_namespace_removal(namespace, session)
+    def restart_removal_timer(self, namespace: Namespace, session: GUISession):
+        """A user touch: restart the pending removal timer of a non-persistent namespace."""
+        if namespace.persistent or namespace.skill_id not in session.remove_namespace_timers:
+            return
+        self._cancel_namespace_removal(namespace.skill_id, session)
+        self._schedule_namespace_removal(namespace, session)
 
     def handle_page_gained_focus(self, message: Message):
         """
@@ -710,22 +714,25 @@ class NamespaceManager:
 
     def handle_namespace_global_back(self, message: Optional[Message]):
         """
-        Handles global back events from the GUI.
-        Removes the current namespace and shows homescreen if none remain.
-        @param message: the event sent by the GUI
+        Handles ``mycroft.gui.screen.close``.
+
+        With a ``skill_id`` (``GUIInterface.release``) only that namespace is
+        removed; without one (a "back" action) the top namespace is removed.
+        A "back" on an empty stack does nothing: there is no idle-screen
+        namespace to show (GUI-1 6.9).
+        @param message: the event sent by the GUI or a producer
         """
         session_id = self._session_id(message)
         session = self.get_session(session_id)
-
-        if not session.active_namespaces:
-            LOG.debug("received 'back' signal but there are no active namespaces, attempting to show homescreen")
-            self.core_bus.emit(Message("mycroft.device.show.idle",
-                                       context={"session": {"session_id": session_id}}))
-            return
-
-        # Remove the current (top) namespace
-        namespace_name = session.active_namespaces[0].skill_id
-        self._remove_namespace(namespace_name, session, session_id)
+        skill_id = (message.data if message else {}).get("skill_id")
+        with namespace_lock:
+            if skill_id:
+                self._remove_namespace(skill_id, session, session_id)
+            elif session.active_namespaces:
+                top = session.active_namespaces[0].skill_id
+                self._remove_namespace(top, session, session_id)
+            else:
+                LOG.debug(f"'back' with an empty stack in session {session_id}; nothing to do")
 
     def _del_namespace_in_remove_timers(self, namespace_name: str, session: GUISession):
         """
