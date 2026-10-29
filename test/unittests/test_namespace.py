@@ -12,220 +12,112 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""Tests for the GUI namespace helper class."""
-from os.path import join, isdir, isfile
-from shutil import rmtree
+"""Tests for the GUI namespace helper classes (session_id-only routing)."""
 from unittest import TestCase, mock
 from unittest.mock import Mock
 
 from ovos_bus_client.message import Message
 from ovos_utils.fakebus import FakeBus
 
-from ovos_gui.constants import GUI_CACHE_PATH
-from ovos_gui.namespace import Namespace
-from ovos_gui.page import GuiPage
+from ovos_gui.namespace import Namespace, NamespaceManager, _validate_page_message
 
 PATCH_MODULE = "ovos_gui.namespace"
 
 
 class TestNamespaceFunctions(TestCase):
     def test_validate_page_message(self):
-        pass
-        # TODO
+        """Test _validate_page_message function."""
+        valid_msg = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "skill_id", "__idle": 30
+        })
+        self.assertTrue(_validate_page_message(valid_msg))
 
-    def test_get_idle_display_config(self):
-        pass
-        # TODO
+        # Invalid: missing page_names
+        invalid1 = Message("gui.page.show", data={"__from": "skill_id", "__idle": 30})
+        self.assertFalse(_validate_page_message(invalid1))
 
-    def test_get_active_gui_extension(self):
-        pass
-        # TODO
+        # The namespace is not a data key (GUI-1 4.1): the handler reads it from
+        # the context, so its absence from data is not a validation error
+        no_sender = Message("gui.page.show", data={"page_names": ["SYSTEM_weather"], "__idle": 30})
+        self.assertTrue(_validate_page_message(no_sender))
+
+        # Missing persistence is NOT a validation error (only page_names)
+        no_idle = Message("gui.page.show", data={"page_names": ["SYSTEM_weather"], "__from": "skill_id"})
+        self.assertTrue(_validate_page_message(no_idle))
 
 
 class TestNamespace(TestCase):
+    """Tests for Namespace class."""
+
     def setUp(self):
-        self.namespace = Namespace("foo")
+        self.namespace = Namespace("test_skill")
 
-    def test_init_gui_file_share(self):
-        # TODO: Test init with/without server and host config
-        pass
+    def test_namespace_initialization(self):
+        ns = Namespace("foo_skill")
+        self.assertEqual(ns.skill_id, "foo_skill")
+        self.assertFalse(ns.persistent)
+        self.assertEqual(ns.duration, 30)
+        self.assertEqual(ns.data, {})
+        self.assertFalse(ns.session_set)
 
-    def test_add(self):
-        add_namespace_message = dict(
-            type="mycroft.session.list.insert",
-            namespace="mycroft.system.active_skills",
-            position=0,
-            data=[dict(skill_id="foo")]
-        )
-        patch_function = PATCH_MODULE + ".send_message_to_gui"
-        with mock.patch(patch_function) as send_message_mock:
+    def test_namespace_add(self):
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
             self.namespace.add()
-            send_message_mock.assert_called_with(add_namespace_message)
 
-    def test_activate(self):
-        self.namespace.load_pages([
-            GuiPage(name="foo", persistent=False, duration=False),
-            GuiPage(name="bar", persistent=False, duration=False),
-            GuiPage(name="foobar", persistent=False, duration=False),
-            GuiPage(name="baz", persistent=False, duration=False),
-            GuiPage(name="foobaz", persistent=False, duration=False)
-        ])
-        activate_namespace_message = {
-            "type": "mycroft.session.list.move",
-            "namespace": "mycroft.system.active_skills",
-            "from": 5,
-            "to": 0,
-            "items_number": 1
-        }
-        patch_function = PATCH_MODULE + ".send_message_to_gui"
-        with mock.patch(patch_function) as send_message_mock:
-            self.namespace.activate(position=5)
-            send_message_mock.assert_called_with(activate_namespace_message)
+    def test_namespace_activate(self):
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace.activate(position=0)
 
-    def test_remove(self):
-        self.namespace.data = dict(foo="bar")
-        self.namespace.pages = ["foo", "bar"]
-        remove_namespace_message = dict(
-            type="mycroft.session.list.remove",
-            namespace="mycroft.system.active_skills",
-            position=3,
-            items_number=1
-        )
-        patch_function = PATCH_MODULE + ".send_message_to_gui"
-        with mock.patch(patch_function) as send_message_mock:
-            self.namespace.remove(position=3)
-            send_message_mock.assert_called_with(remove_namespace_message)
+    def test_namespace_remove(self):
+        self.namespace.data = {"key1": "value1", "key2": "value2"}
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace.remove(position=0)
+        self.assertEqual(self.namespace.data, {})
 
-        self.assertFalse(self.namespace.data)
-        self.assertFalse(self.namespace.pages)
+    def test_namespace_load_data(self):
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace.load_data("foo", "bar")
 
-    def test_load_data(self):
-        load_data_message = dict(
-            type="mycroft.session.set",
-            namespace="foo",
-            data=dict(foo="bar")
-        )
-        patch_function = PATCH_MODULE + ".send_message_to_gui"
-        with mock.patch(patch_function) as send_message_mock:
-            self.namespace.load_data(name="foo", value="bar")
-            send_message_mock.assert_called_with(load_data_message)
+    def test_namespace_unload_data(self):
+        self.namespace.data = {"key1": "value1", "key2": "value2"}
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace.unload_data("key1")
+        self.assertNotIn("key1", self.namespace.data)
+        self.assertIn("key2", self.namespace.data)
 
-    def test_unload_data(self):
-        # TODO
-        pass
+    def test_namespace_get_position_of_last_item(self):
+        self.namespace.data = {"key1": "val1", "key2": "val2", "key3": "val3"}
+        self.assertEqual(self.namespace.get_position_of_last_item_in_data(), 2)
+        self.namespace.data = {}
+        self.assertEqual(self.namespace.get_position_of_last_item_in_data(), -1)
 
-    def test_get_position_of_last_item_in_data(self):
-        # TODO
-        pass
-
-    def test_set_persistence_numeric(self):
-        self.namespace.set_persistence("genericSkill")
+    def test_namespace_default_persistence(self):
         self.assertEqual(self.namespace.duration, 30)
         self.assertFalse(self.namespace.persistent)
 
-    def test_set_persistence_boolean(self):
-        self.namespace.set_persistence("idleDisplaySkill")
-        self.assertEqual(self.namespace.duration, 0)
-        self.assertTrue(self.namespace.persistent)
-
-    def test_load_pages_new(self):
-        self.namespace.pages = [GuiPage(name="foo", persistent=True, duration=0),
-                                GuiPage(name="bar", persistent=False, duration=30)]
-        new_pages = [GuiPage(name="foobar", persistent=False, duration=30)]
-        load_page_message = dict(
-            type="mycroft.events.triggered",
-            namespace="foo",
-            event_name="page_gained_focus",
-            data=dict(number=2)
-        )
-        patch_function = PATCH_MODULE + ".send_message_to_gui"
-        with mock.patch(patch_function) as send_message_mock:
-            show_index = None
-            self.namespace.load_pages(new_pages, show_index)
-            send_message_mock.assert_called_with(load_page_message)
-        self.assertListEqual(self.namespace.pages, self.namespace.pages)
-
-    def test_load_pages_existing(self):
-        self.namespace.pages = [GuiPage(name="foo", persistent=True, duration=0),
-                                GuiPage(name="bar", persistent=False, duration=30)]
-        new_pages = [GuiPage(name="foo", persistent=True, duration=0)]
-        load_page_message = dict(
-            type="mycroft.events.triggered",
-            namespace="foo",
-            event_name="page_gained_focus",
-            data=dict(number=0)
-        )
-        patch_function = PATCH_MODULE + ".send_message_to_gui"
-        with mock.patch(patch_function) as send_message_mock:
-            show_index = None
-            self.namespace.load_pages(new_pages, show_index)
-            send_message_mock.assert_called_with(load_page_message)
-        self.assertListEqual(self.namespace.pages, self.namespace.pages)
-
-    def test_add_pages(self):
-        # TODO
-        pass
-
-    def test_activate_page(self):
-        # TODO
-        pass
-
-    def test_remove_pages(self):
-        self.namespace.pages = [GuiPage(name="foo", persistent=False, duration=False),
-                                GuiPage(name="bar", persistent=False, duration=False),
-                                GuiPage(name="foobar", persistent=False, duration=False)]
-        remove_page_message = dict(
-            type="mycroft.gui.list.remove",
-            namespace="foo",
-            position=2,
-            items_number=1
-        )
-        patch_function = PATCH_MODULE + ".send_message_to_gui"
-        with mock.patch(patch_function) as send_message_mock:
-            self.namespace.remove_pages([2])
-            send_message_mock.assert_called_with(remove_page_message)
-        self.assertListEqual(["foo", "bar"], self.namespace.page_names)
-
-    def test_page_gained_focus(self):
-        # TODO
-        pass
-
-    def test_page_update_interaction(self):
-        # TODO
-        pass
-
-    def test_get_page_at_position(self):
-        # TODO
-        pass
-
-    def test_get_active_page(self):
-        # TODO
-        pass
-
-    def test_index_in_pages_list(self):
-        # TODO
-        pass
-
-    def test_global_back(self):
-        # TODO
-        pass
-
 
 class TestNamespaceManager(TestCase):
+    """Tests for NamespaceManager with session_id-only architecture."""
+
     def setUp(self):
-        from ovos_gui.namespace import NamespaceManager
-        with mock.patch(PATCH_MODULE + ".create_gui_service"):
-            self.namespace_manager = NamespaceManager(FakeBus())
+        self.namespace_manager = NamespaceManager(FakeBus())
+
+    def tearDown(self):
+        # cancel any pending auto-removal timers so they don't fire post-test
+        for session in self.namespace_manager.sessions.values():
+            for timer in session.remove_namespace_timers.values():
+                timer.cancel()
 
     def test_handle_clear_namespace_active(self):
         namespace = Namespace("foo")
         namespace.remove = mock.Mock()
-        self.namespace_manager.loaded_namespaces = dict(foo=namespace)
-        self.namespace_manager.active_namespaces = [namespace]
+        session = self.namespace_manager.get_session("default")
+        session.loaded_namespaces = dict(foo=namespace)
+        session.active_namespaces = [namespace]
 
         message = Message("gui.clear.namespace", data={"__from": "foo"})
         self.namespace_manager.handle_clear_namespace(message)
-        namespace.remove.assert_called_with(0)
+        namespace.remove.assert_called()
 
     def test_handle_clear_namespace_inactive(self):
         message = Message("gui.clear.namespace", data={"__from": "foo"})
@@ -234,207 +126,260 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager.handle_clear_namespace(message)
         namespace.remove.assert_not_called()
 
-    def test_handle_send_event(self):
-        message_data = {
-            "__from": "foo", "event_name": "bar", "params": "foobar"
-        }
-        message = Message("gui.clear.namespace", data=message_data)
-        event_triggered_message = dict(
-            type='mycroft.events.triggered',
-            namespace="foo",
-            event_name="bar",
-            data="foobar"
-        )
-        patch_function = PATCH_MODULE + ".send_message_to_gui"
-        with mock.patch(patch_function) as send_message_mock:
-            self.namespace_manager.handle_send_event(message)
-            send_message_mock.assert_called_with(event_triggered_message)
-
-    def test_handle_delete_page_active_namespace(self):
-        namespace = Namespace("foo")
-        namespace.pages = [GuiPage(name="bar", persistent=True, duration=0)]
-        namespace.remove_pages = mock.Mock()
-        self.namespace_manager.loaded_namespaces = dict(foo=namespace)
-        self.namespace_manager.active_namespaces = [namespace]
-
-        message_data = {"__from": "foo", "page_names": ["bar"]}
-        message = Message("gui.clear.namespace", data=message_data)
-        self.namespace_manager.handle_delete_page(message)
-        namespace.remove_pages.assert_called_with([0])
-
-    def test_handle_delete_page_inactive_namespace(self):
-        namespace = Namespace("foo")
-        namespace.pages = ["bar"]
-        namespace.remove_pages = mock.Mock()
-
-        message_data = {"__from": "foo", "page": ["bar"]}
-        message = Message("gui.clear.namespace", data=message_data)
-        self.namespace_manager.handle_delete_page(message)
-        namespace.remove_pages.assert_not_called()
-
-    def test_handle_remove_pages(self):
-        # TODO
-        pass
-
     def test_parse_persistence(self):
-        self.assertEqual(self.namespace_manager._parse_persistence(True),
-                         (True, 0))
-        self.assertEqual(self.namespace_manager._parse_persistence(False),
-                         (False, 0))
-        self.assertEqual(self.namespace_manager._parse_persistence(None),
-                         (False, 30))
-        self.assertEqual(self.namespace_manager._parse_persistence(10),
-                         (False, 10))
-        self.assertEqual(self.namespace_manager._parse_persistence(1.0),
-                         (False, 1))
+        self.assertEqual(self.namespace_manager._parse_persistence(True), (True, 0))
+        # GUI-1 §4.3: __idle false follows the same default as an omitted __idle
+        self.assertEqual(self.namespace_manager._parse_persistence(False), (False, 30))
+        self.assertEqual(self.namespace_manager._parse_persistence(None), (False, 30))
+        self.assertEqual(self.namespace_manager._parse_persistence(10), (False, 10))
+        self.assertEqual(self.namespace_manager._parse_persistence(1.0), (False, 1))
         with self.assertRaises(ValueError):
             self.namespace_manager._parse_persistence(-10)
 
-    def test_handle_show_page(self):
-        real_activate_namespace = self.namespace_manager._activate_namespace
-        real_load_pages = self.namespace_manager._load_pages
-        real_update_persistence = self.namespace_manager._update_namespace_persistence
-        self.namespace_manager._activate_namespace = Mock()
-        self.namespace_manager._load_pages = Mock()
-        self.namespace_manager._update_namespace_persistence = Mock()
-
-        # Legacy message
-        message = Message("gui.page.show", data={"__from": "foo",
-                                                 "__idle": 10,
-                                                 "page_names": ["bar", "test/baz"]})
+    def test_handle_show_page_template_routing(self):
+        """SYSTEM_* templates are routed to adapters."""
+        adapter = Mock()
+        self.namespace_manager.adapters = [adapter]
+        message = Message("gui.page.show", data={
+            "__from": "test_skill", "__idle": 10, "page_names": ["SYSTEM_weather"]
+        })
         self.namespace_manager.handle_show_page(message)
-        self.namespace_manager._activate_namespace.assert_called_with("foo")
-        self.namespace_manager._load_pages.assert_called_with(
-            [GuiPage(name='bar', persistent=False, duration=10, namespace='foo'),
-             GuiPage(name='test/baz', persistent=False, duration=10, namespace='foo')], 0)
-        self.namespace_manager._update_namespace_persistence. \
-            assert_called_with(10)
+        adapter.dispatch_template.assert_called()
 
-        # With resource info
-        ui_directories = {"gui": "/tmp/test"}
-        message = Message("test", {"__from": "skill",
-                                   "__idle": False,
-                                   "index": 1,
-                                   "page_names": ["page_1", "test/page_2"],
-                                   "ui_directories": ui_directories})
-        self.namespace_manager.handle_show_page(message)
-        expected_page1 = GuiPage("page_1", False, 0, "skill")
-        expected_page2 = GuiPage("test/page_2", False, 0, "skill")
-        self.namespace_manager._activate_namespace.assert_called_with("skill")
-        self.namespace_manager._load_pages.assert_called_with([expected_page1,
-                                                               expected_page2],
-                                                              1)
-        self.namespace_manager._update_namespace_persistence. \
-            assert_called_with(False)
-
-        # System resources
-        message = Message("test", {"__from": "skill_no_res",
-                                   "__idle": True,
-                                   "index": 2,
-                                   "page": ["/gui/SYSTEM_TextFrame.qml"],
-                                   "page_names": ["SYSTEM_TextFrame"]})
-        self.namespace_manager.handle_show_page(message)
-        expected_page = GuiPage("SYSTEM_TextFrame", True, 0,  "skill_no_res")
-        self.namespace_manager._activate_namespace.assert_called_with(
-            "skill_no_res")
-        self.namespace_manager._load_pages.assert_called_with([expected_page],
-                                                              2)
-        self.namespace_manager._update_namespace_persistence. \
-            assert_called_with(True)
-        # TODO: Test page_names with files and URIs
-
-        self.namespace_manager._activate_namespace = real_activate_namespace
-        self.namespace_manager._load_pages = real_load_pages
-        self.namespace_manager._update_namespace_persistence = \
-            real_update_persistence
+    def test_handle_show_page_non_template_not_dispatched_as_template(self):
+        """Non-SYSTEM_* page names never reach template dispatch (§4.2)."""
+        adapter = Mock()
+        self.namespace_manager.adapters = [adapter]
+        message = Message("gui.page.show", data={
+            "__from": "foo", "__idle": 10, "page_names": ["bar.qml"]
+        })
+        with mock.patch(f'{PATCH_MODULE}.LOG') as mock_log:
+            self.namespace_manager.handle_show_page(message)
+            mock_log.warning.assert_called()
+        adapter.dispatch_template.assert_not_called()
 
     def test_handle_show_page_invalid_message(self):
-        namespace = Namespace("foo")
-        namespace.load_pages = mock.Mock()
-
-        message_data = {"__from": "foo"}
-        message = Message("gui.page.show", data=message_data)
-        patch_function = PATCH_MODULE + ".send_message_to_gui"
-        with mock.patch(patch_function):
+        message = Message("gui.page.show", data={"__from": "foo"})
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
             self.namespace_manager.handle_show_page(message)
-
-        self.assertListEqual([], self.namespace_manager.active_namespaces)
-        self.assertDictEqual({}, self.namespace_manager.loaded_namespaces)
-
-    def test_activate_namespace(self):
-        # TODO
-        pass
+        session = self.namespace_manager.get_session("default")
+        self.assertListEqual([], session.active_namespaces)
+        self.assertDictEqual({}, session.loaded_namespaces)
 
     def test_ensure_namespace_exists(self):
-        # TODO
-        pass
-
-    def test_load_pages(self):
-        # TODO
-        pass
+        session = self.namespace_manager.get_session("default")
+        ns = self.namespace_manager._ensure_namespace_exists("new_skill", session)
+        self.assertIsNotNone(ns)
+        self.assertEqual(ns.skill_id, "new_skill")
+        self.assertIn("new_skill", session.loaded_namespaces)
 
     def test_update_namespace_persistence(self):
-        # TODO
-        pass
-
-    def test_schedule_namespace_removal(self):
-        # TODO
-        pass
-
-    def test_remove_namespace_via_timer(self):
-        # TODO
-        pass
+        ns = Namespace("test")
+        session = self.namespace_manager.get_session("default")
+        session.loaded_namespaces["test"] = ns
+        session.active_namespaces = [ns]
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace_manager._update_namespace_persistence(15, session)
+        self.assertEqual(ns.duration, 15)
+        self.assertFalse(ns.persistent)
 
     def test_remove_namespace(self):
-        # TODO
-        pass
-
-    def test_emit_namespace_displayed_event(self):
-        # TODO
-        pass
-
-    def test_handle_status_request(self):
-        # TODO
-        pass
+        ns = Namespace("test")
+        session = self.namespace_manager.get_session("default")
+        session.loaded_namespaces["test"] = ns
+        session.active_namespaces.append(ns)
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace_manager._remove_namespace("test", session, "default")
+        self.assertNotIn(ns, session.active_namespaces)
 
     def test_handle_set_value(self):
-        # TODO
-        pass
+        ns = Namespace("test")
+        session = self.namespace_manager.get_session("default")
+        session.loaded_namespaces["test"] = ns
 
-    def test_update_namespace_data(self):
-        # TODO
-        pass
+        mock_adapter = Mock()
+        self.namespace_manager.adapters = [mock_adapter]
 
-    def test_handle_client_connected(self):
-        # TODO
-        pass
+        message = Message("gui.value.set", data={"__from": "test", "key": "value"})
+        self.namespace_manager.handle_set_value(message)
 
-    def test_handle_page_interaction(self):
-        # TODO
-        pass
+        self.assertEqual(ns.data["key"], "value")
+        # adapter notified with (skill_id, content_data, session_id); the predecessor __from is not content
+        mock_adapter.on_session_update.assert_called_once_with(
+            "test", {"key": "value"}, "default")
 
-    def test_handle_page_gained_focus(self):
-        # TODO
-        pass
+    def test_forward_to_gui_status_event(self):
+        """Status events are forwarded to adapters with the session_id."""
+        mock_adapter = mock.Mock()
+        self.namespace_manager.adapters = [mock_adapter]
 
-    def test_handle_namespace_global_back(self):
-        # TODO
-        pass
+        message = Message("test.event", data={"test": "data"})
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace_manager.forward_to_gui(message)
 
-    def test_del_namespace_in_remove_timers(self):
-        # TODO
-        pass
+        mock_adapter.on_status_event.assert_called_once_with(
+            "test.event", {"test": "data"}, "default")
 
-    def test_upload_system_resources(self):
-        p = f"{GUI_CACHE_PATH}/system"
-        rmtree(p)
-        self.namespace_manager._cache_system_resources()
-        self.assertTrue(isdir(join(p, "qt5")))
-        self.assertTrue(isfile(join(p, "qt5",
-                                    "SYSTEM_TextFrame.qml")))
-        # Test repeated copy doesn't raise any exception
-        self.namespace_manager._cache_system_resources()
-        self.assertTrue(isdir(join(p, "qt5")))
-        self.assertTrue(isfile(join(p, "qt5",
-                                    "SYSTEM_TextFrame.qml")))
-        rmtree(p)
+    def test_dispatch_entry_to_adapters(self):
+        """Templates are dispatched with session_id (no site_id) and the active entry."""
+        mock_adapter = mock.Mock()
+        self.namespace_manager.adapters = [mock_adapter]
+
+        self.namespace_manager.dispatch_entry(
+            "test_skill", ["SYSTEM_weather"], 0, {"current_temp": 22}, "session1"
+        )
+        mock_adapter.dispatch_template.assert_called_once_with(
+            "SYSTEM_weather", "test_skill", {"current_temp": 22}, "session1",
+            index=0, page_count=1
+        )
+
+    def test_activate_namespace_already_active(self):
+        ns = Namespace("existing")
+        other_ns = Namespace("other")
+        session = self.namespace_manager.get_session("default")
+        session.loaded_namespaces["existing"] = ns
+        session.loaded_namespaces["other"] = other_ns
+        session.active_namespaces = [other_ns, ns]
+
+        with mock.patch(f'{PATCH_MODULE}.LOG'):
+            self.namespace_manager._activate_namespace("existing", session, "default")
+        self.assertEqual(session.active_namespaces[0].skill_id, "existing")
+
+    def test_session_id_extraction(self):
+        """The routing key is the session_id; default when absent."""
+        self.assertEqual(self.namespace_manager._session_id(Message("test")), "default")
+        msg = Message("test", context={"session": {"session_id": "sid1"}})
+        self.assertEqual(self.namespace_manager._session_id(msg), "sid1")
+        # missing/None session_id falls back to "default"
+        msg2 = Message("test", context={"session": {}})
+        self.assertEqual(self.namespace_manager._session_id(msg2), "default")
+
+    def test_session_isolation(self):
+        """Two different session_ids keep independent state."""
+        msg1 = Message("gui.value.set", data={"__from": "skill", "val": 1},
+                       context={"session": {"session_id": "room1"}})
+        msg2 = Message("gui.value.set", data={"__from": "skill", "val": 2},
+                       context={"session": {"session_id": "room2"}})
+
+        self.namespace_manager.handle_set_value(msg1)
+        self.namespace_manager.handle_set_value(msg2)
+
+        session1 = self.namespace_manager.get_session("room1")
+        session2 = self.namespace_manager.get_session("room2")
+        self.assertEqual(session1.loaded_namespaces["skill"].data["val"], 1)
+        self.assertEqual(session2.loaded_namespaces["skill"].data["val"], 2)
+
+    def test_shared_session_id_shares_state(self):
+        """Two clients sharing one session_id share the same session/stack."""
+        msg1 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "shared"}})
+        msg2 = Message("gui.value.set", data={"__from": "weather.skill", "temp": 21},
+                       context={"session": {"session_id": "shared"}})
+
+        self.namespace_manager.handle_show_page(msg1)
+        self.namespace_manager.handle_set_value(msg2)
+
+        # both messages addressed the same session -> one session, shared data
+        self.assertEqual(self.namespace_manager.get_all_sessions(), ["shared"])
+        data = self.namespace_manager.get_namespace_data("weather.skill", "shared")
+        self.assertEqual(data["temp"], 21)
+
+    # ====== State Query API Tests ======
+
+    def test_get_active_namespace_empty_session(self):
+        self.assertIsNone(self.namespace_manager.get_active_namespace("default"))
+
+    def test_get_active_namespace_returns_top_of_stack(self):
+        msg = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default"}})
+        self.namespace_manager.handle_show_page(msg)
+        active = self.namespace_manager.get_active_namespace("default")
+        self.assertIsNotNone(active)
+        self.assertEqual(active.skill_id, "weather.skill")
+
+    def test_get_active_namespace_different_sessions(self):
+        msg1 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default"}})
+        self.namespace_manager.handle_show_page(msg1)
+        msg2 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_clock"], "__from": "clock.skill", "__idle": 30
+        }, context={"session": {"session_id": "kitchen"}})
+        self.namespace_manager.handle_show_page(msg2)
+
+        self.assertEqual(self.namespace_manager.get_active_namespace("default").skill_id, "weather.skill")
+        self.assertEqual(self.namespace_manager.get_active_namespace("kitchen").skill_id, "clock.skill")
+
+    def test_get_namespace_data_returns_none_for_missing(self):
+        self.assertIsNone(self.namespace_manager.get_namespace_data("nope.skill", "default"))
+
+    def test_get_namespace_data_returns_session_data(self):
+        msg = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default"}})
+        self.namespace_manager.handle_show_page(msg)
+        set_msg = Message("gui.value.set", data={
+            "__from": "weather.skill", "current_temp": 22, "condition": "sunny"
+        }, context={"session": {"session_id": "default"}})
+        self.namespace_manager.handle_set_value(set_msg)
+
+        data = self.namespace_manager.get_namespace_data("weather.skill", "default")
+        self.assertEqual(data["current_temp"], 22)
+        self.assertEqual(data["condition"], "sunny")
+
+    def test_get_namespace_data_is_copy(self):
+        msg = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_text"], "__from": "test.skill", "__idle": 30
+        }, context={"session": {"session_id": "default"}})
+        self.namespace_manager.handle_show_page(msg)
+        set_msg = Message("gui.value.set", data={"__from": "test.skill", "text": "original"},
+                          context={"session": {"session_id": "default"}})
+        self.namespace_manager.handle_set_value(set_msg)
+
+        data = self.namespace_manager.get_namespace_data("test.skill", "default")
+        data["text"] = "modified"
+        data2 = self.namespace_manager.get_namespace_data("test.skill", "default")
+        self.assertEqual(data2["text"], "original")
+
+    def test_get_all_sessions_empty(self):
+        self.assertEqual(self.namespace_manager.get_all_sessions(), [])
+
+    def test_get_all_sessions_returns_all(self):
+        for sid, skill, tpl in [("default", "weather.skill", "SYSTEM_weather"),
+                                ("kitchen", "clock.skill", "SYSTEM_clock"),
+                                ("bedroom", "text.skill", "SYSTEM_text")]:
+            msg = Message("gui.page.show", data={
+                "page_names": [tpl], "__from": skill, "__idle": 30
+            }, context={"session": {"session_id": sid}})
+            self.namespace_manager.handle_show_page(msg)
+
+        sessions = self.namespace_manager.get_all_sessions()
+        self.assertEqual(len(sessions), 3)
+        self.assertIn("default", sessions)
+        self.assertIn("kitchen", sessions)
+        self.assertIn("bedroom", sessions)
+
+    def test_is_namespace_active_returns_false_when_inactive(self):
+        self.assertFalse(self.namespace_manager.is_namespace_active("nope.skill", "default"))
+
+    def test_is_namespace_active_returns_true_for_active(self):
+        msg = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default"}})
+        self.namespace_manager.handle_show_page(msg)
+        self.assertTrue(self.namespace_manager.is_namespace_active("weather.skill", "default"))
+
+    def test_is_namespace_active_returns_false_for_lower_stack(self):
+        msg1 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_weather"], "__from": "weather.skill", "__idle": 30
+        }, context={"session": {"session_id": "default"}})
+        self.namespace_manager.handle_show_page(msg1)
+        msg2 = Message("gui.page.show", data={
+            "page_names": ["SYSTEM_text"], "__from": "text.skill", "__idle": 30
+        }, context={"session": {"session_id": "default"}})
+        self.namespace_manager.handle_show_page(msg2)
+
+        self.assertFalse(self.namespace_manager.is_namespace_active("weather.skill", "default"))
+        self.assertTrue(self.namespace_manager.is_namespace_active("text.skill", "default"))
