@@ -22,7 +22,7 @@ dependencies = [
     "ovos-config>=0.0.12,<4.0.0",
     "tornado~=6.0, >=6.0.3",
     # same range ovos-bus-client accepts; GUIService builds an ordered EventEmitter
-    "pyee>=8.1.0,<14.0.0",
+    "pyee>=16.0.0,<16.1.0",
     # >=2.5.0a1 carries OVOSGUIAdapterFactory (the opm.gui_adapter loader).
     "ovos-plugin-manager>=2.5.0a1,<4.0.0",
 ]
