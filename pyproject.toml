@@ -32,7 +32,7 @@ dependencies = [
 # opm.gui_adapter plugin to render. Headless installs need none of these.
 gui = ["ovos-legacy-mycroft-gui-plugin>=0.0.1,<1.0.0"]
 test = [
-    "pytest~=7.1",
+    "pytest~=9.2",
     "pytest-cov~=4.1",
     # skill-side interface — exercised by the full-path end2end integration test
     "ovos-gui-api-client>=0.0.1,<1.0.0",
