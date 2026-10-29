@@ -131,22 +131,18 @@ def message_factory():
                   session_id: str = "default", persistent: bool = False) -> Message:
         return Message("gui.page.show", data={
             "page_names": page_names,
-            "__from": skill_id,
-            "__idle": persistent,
+            "persist": persistent,
             "index": 0,
-        }, context={"session": {"session_id": session_id}})
+        }, context={"skill_id": skill_id, "session": {"session_id": session_id}})
 
     def set_value(namespace: str, key: str, value,
                   session_id: str = "default") -> Message:
-        return Message("gui.value.set", data={
-            "__from": namespace,
-            key: value,
-        }, context={"session": {"session_id": session_id}})
+        return Message("gui.value.set", data={key: value},
+                       context={"skill_id": namespace, "session": {"session_id": session_id}})
 
     def clear_namespace(namespace: str, session_id: str = "default") -> Message:
-        return Message("gui.clear.namespace", data={
-            "__from": namespace,
-        }, context={"session": {"session_id": session_id}})
+        return Message("gui.clear.namespace", data={},
+                       context={"skill_id": namespace, "session": {"session_id": session_id}})
 
     return {
         "page_show": page_show,

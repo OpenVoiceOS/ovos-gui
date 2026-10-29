@@ -46,21 +46,22 @@ class GUIMessageType(str, Enum):
     """Display a template-based page in a namespace.
 
     Sent by: Skills via ovos_workshop.gui.show_*() methods
+    Context: {skill_id: str}    # the producing namespace (GUI-1 4.1)
     Data: {
         page_names: [str],      # List of SYSTEM_* template names
-        __from: str,            # Skill ID (namespace)
-        __idle: int,            # Idle display timeout (seconds)
-        __duration: int,        # Display duration override
-        __persistent: bool,     # Persist across navigation
-        [template_data]: ...    # Template-specific fields (current_temp, etc)
+        index: int,             # the active entry (default 0)
+        persist: true | int | false,  # how long the namespace stays (4.3); omitted = default
     }
+    For one release cycle a predecessor producer sends __from and __idle in
+    data instead; they are read when the new form is absent.
     """
 
     GUI_CLEAR_NAMESPACE = "gui.clear.namespace"
     """Remove entire namespace from display stack (legacy name).
 
     Sent by: Core or skills
-    Data: {__from: skill_id}
+    Context: {skill_id: str}    # the namespace to remove (GUI-1 4.1)
+    Data: {}
 
     Note: Deprecated in favor of OVOS_GUI_SCREEN_CLOSE
     """
@@ -94,8 +95,10 @@ class GUIMessageType(str, Enum):
     """Update session data in active namespace.
 
     Sent by: Skills via self.gui.set_context()
-    Data: {__from: skill_id, [key: value]: ...}
-    Note: Keys prefixed with __ are reserved by the system
+    Context: {skill_id: str}    # the producing namespace (GUI-1 4.1)
+    Data: {[key: value]: ...}   # content only; a null value removes the key
+    Note: GUI-1 reserves no data key. A predecessor __from in data is read
+    for one release cycle and never kept as session data.
     """
 
     # Session list operations (for adapter list models)

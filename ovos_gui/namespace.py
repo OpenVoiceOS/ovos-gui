@@ -42,9 +42,9 @@ from ovos_utils.log import LOG
 from ovos_gui.page_focus import FOCUS_TOPIC, PageFocus
 from ovos_gui import page_dispatch
 from ovos_gui.gui1 import (AMBIENT_TOPICS, STATUS_TOPICS, active_index,
-                           is_template_show, normalize_template,
-                           report_mixed_page_names, report_unknown_templates,
-                           strip_reserved)
+                           content_data, is_template_show, normalize_template,
+                           persistence_of, producing_namespace,
+                           report_mixed_page_names, report_unknown_templates)
 
 namespace_lock = Lock()
 
@@ -58,9 +58,6 @@ ENCLOSURE_TOPICS = tuple(
     ["enclosure.weather.display"]
 )
 
-RESERVED_KEYS = ['__from', '__idle']
-
-
 def _validate_page_message(message: Message) -> bool:
     """
     Validates the contents of the message data for page add/remove messages.
@@ -71,7 +68,6 @@ def _validate_page_message(message: Message) -> bool:
     """
     valid = (
             "page_names" in message.data
-            and "__from" in message.data
             and isinstance(message.data["page_names"], list)
     )
     if not valid:
@@ -223,6 +219,16 @@ class NamespaceManager:
         session = ctx.get("session", {})
         return session.get("session_id") or "default"
 
+    @staticmethod
+    def _producing_namespace(message: Message) -> Optional[str]:
+        """The namespace a producer Message belongs to, or ``None`` after the
+        §4.1 diagnostic when its context names no ``skill_id``."""
+        namespace_name = producing_namespace(message)
+        if namespace_name is None:
+            LOG.error(f"GUI-1 §4.1: '{message.msg_type}' names no skill_id in its "
+                      f"context; ignored")
+        return namespace_name
+
     # ====== State Query API for Adapters ======
 
     def get_active_namespace(self, session_id: str = "default") -> Optional[Namespace]:
@@ -365,25 +371,21 @@ class NamespaceManager:
         Handles a request to remove a namespace.
         @param message: the message requesting namespace removal
         """
-        try:
-            namespace_name = message.data['__from']
-        except KeyError:
-            LOG.error(
-                "Request to delete namespace failed: no namespace specified"
-            )
-        else:
-            session_id = self._session_id(message)
-            session = self.get_session(session_id)
-            if session.loaded_namespaces.get(namespace_name):
-                with namespace_lock:
-                    self._remove_namespace(namespace_name, session, session_id)
+        namespace_name = self._producing_namespace(message)
+        if namespace_name is None:
+            return
+        session_id = self._session_id(message)
+        session = self.get_session(session_id)
+        if session.loaded_namespaces.get(namespace_name):
+            with namespace_lock:
+                self._remove_namespace(namespace_name, session, session_id)
 
     @staticmethod
     def _parse_persistence(persistence: Optional[Union[int, bool]]) -> \
             (bool, int):
         """
         Parse a persistence spec into persist and duration.
-        @param persistence: message.data["__idle"] spec
+        @param persistence: the ``persist`` value of the show request
         @return: bool persistence, int duration
         """
         if isinstance(persistence, float):
@@ -419,7 +421,9 @@ class NamespaceManager:
         if not _validate_page_message(message) or not message.data["page_names"]:
             LOG.error(f"invalid request: {message.data}")
             return
-        namespace_name = message.data["__from"]
+        namespace_name = self._producing_namespace(message)
+        if namespace_name is None:
+            return
         page_names = [normalize_template(p, namespace_name)
                       for p in message.data["page_names"]]
         index = active_index(page_names, message.data.get("index", 0))
@@ -429,7 +433,7 @@ class NamespaceManager:
         else:
             self._warn_legacy_page_once(namespace_name, page_names[index])
         self._show_page(namespace_name, page_names, index,
-                        message.data.get("__idle"), self._session_id(message))
+                        persistence_of(message.data), self._session_id(message))
 
     def dispatch_entry(self, namespace_name: str, page_names: List[str], index: int,
                        data: dict, session_id: str):
@@ -502,9 +506,9 @@ class NamespaceManager:
     def _update_namespace_persistence(self, persistence: Union[bool, int, None],
                                       session: GUISession):
         """
-        Apply ``__idle`` to the top namespace and drop superseded,
+        Apply ``persist`` to the top namespace and drop superseded,
         non-persistent namespaces below it (§4.3).
-        @param persistence: the ``__idle`` value of the show request
+        @param persistence: the ``persist`` value of the show request
         @param session: the session affected
         """
         for namespace in list(session.active_namespaces[1:]):
@@ -525,7 +529,7 @@ class NamespaceManager:
         try:
             return self._parse_persistence(persistence)
         except ValueError:
-            LOG.error(f"'{skill_id}' sent invalid __idle {persistence!r}; using default")
+            LOG.error(f"'{skill_id}' sent invalid persist {persistence!r}; using default")
             return self._parse_persistence(None)
 
     def _cancel_namespace_removal(self, namespace_name: str, session: GUISession):
@@ -641,20 +645,15 @@ class NamespaceManager:
         Handles a request to set the value of namespace data attributes.
         @param message: the request to set attribute values
         """
-        try:
-            namespace_name = message.data['__from']
-        except KeyError:
-            LOG.error(
-                "Request to set gui attribute value failed: no "
-                "namespace specified"
-            )
-        else:
-            session_id = self._session_id(message)
-            session = self.get_session(session_id)
-            with namespace_lock:
-                merged = self._update_namespace_data(namespace_name, message.data, session)
-            for adapter in self.adapters:
-                self._safe_call(adapter, "on_session_update", namespace_name, merged, session_id)
+        namespace_name = self._producing_namespace(message)
+        if namespace_name is None:
+            return
+        session_id = self._session_id(message)
+        session = self.get_session(session_id)
+        with namespace_lock:
+            merged = self._update_namespace_data(namespace_name, message.data, session)
+        for adapter in self.adapters:
+            self._safe_call(adapter, "on_session_update", namespace_name, merged, session_id)
 
     def _update_namespace_data(self, namespace_name: str, data: dict,
                                session: GUISession) -> dict:
@@ -666,7 +665,7 @@ class NamespaceManager:
         @return: copy of the merged session data
         """
         namespace = self._ensure_namespace_exists(namespace_name, session)
-        for key, value in strip_reserved(data).items():
+        for key, value in content_data(data).items():
             if value is None:
                 namespace.unload_data(key)
             elif namespace.data.get(key) != value:

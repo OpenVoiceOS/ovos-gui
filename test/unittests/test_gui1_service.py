@@ -12,8 +12,11 @@ SKILL_A = "skill-a.test"
 SKILL_B = "skill-b.test"
 
 
-def _ctx(session_id="default"):
-    return {"session": {"session_id": session_id}}
+def _ctx(session_id="default", skill_id=None):
+    ctx = {"session": {"session_id": session_id}}
+    if skill_id:
+        ctx["skill_id"] = skill_id
+    return ctx
 
 
 class GUI1ServiceCase(TestCase):
@@ -28,14 +31,17 @@ class GUI1ServiceCase(TestCase):
                 timer.cancel()
 
     def set_value(self, skill_id, session_id="default", **data):
-        self.bus.emit(Message("gui.value.set", {"__from": skill_id, **data}, _ctx(session_id)))
+        self.bus.emit(Message("gui.value.set", data, _ctx(session_id, skill_id)))
 
     def show(self, skill_id, pages, session_id="default", **extra):
-        data = {"__from": skill_id, "page_names": pages, **extra}
-        self.bus.emit(Message("gui.page.show", data, _ctx(session_id)))
+        """``__idle=`` in ``extra`` is sent as the spec field ``persist``."""
+        data = {"page_names": pages, **extra}
+        if "__idle" in data:
+            data["persist"] = data.pop("__idle")
+        self.bus.emit(Message("gui.page.show", data, _ctx(session_id, skill_id)))
 
     def clear(self, skill_id, session_id="default"):
-        self.bus.emit(Message("gui.clear.namespace", {"__from": skill_id}, _ctx(session_id)))
+        self.bus.emit(Message("gui.clear.namespace", {}, _ctx(session_id, skill_id)))
 
     def stack(self, session_id="default"):
         return [n.skill_id for n in self.manager.get_session(session_id).active_namespaces]
@@ -54,8 +60,15 @@ class TestSessionData(GUI1ServiceCase):
         self.adapter.on_session_update.assert_called_with(SKILL_A, {"text": "Hello"}, "default")
         self.assertEqual(self.manager.get_namespace_data(SKILL_A), {"text": "Hello"})
 
-    def test_reserved_keys_never_reach_adapters(self):
+    def test_double_underscore_keys_are_content(self):
+        # GUI-1 4.1 reserves no data key
         self.set_value(SKILL_A, __animations=True, text="Hello")
+        self.adapter.on_session_update.assert_called_with(
+            SKILL_A, {"__animations": True, "text": "Hello"}, "default")
+
+    def test_predecessor_keys_are_not_session_data(self):
+        self.bus.emit(Message("gui.value.set", {"__from": SKILL_A, "__idle": 30, "text": "Hello"},
+                              _ctx(skill_id=SKILL_A)))
         self.adapter.on_session_update.assert_called_with(SKILL_A, {"text": "Hello"}, "default")
 
     def test_template_event_carries_merged_data(self):
@@ -208,3 +221,69 @@ class TestStatusEvents(GUI1ServiceCase):
         self.adapter.on_status_event.assert_called_once_with(
             "gui.ambient.notifications", {"count": 2}, "default")
         self.assertEqual(self.manager.get_ambient("gui.ambient.notifications"), {"count": 2})
+
+
+class TestProducingNamespace(GUI1ServiceCase):
+    """GUI-1 4.1: the namespace is the context's skill_id; __from only for one cycle."""
+
+    def test_context_skill_id_wins_over_predecessor_key(self):
+        self.bus.emit(Message("gui.value.set", {"__from": SKILL_B, "text": "hi"}, _ctx(skill_id=SKILL_A)))
+        self.adapter.on_session_update.assert_called_once_with(SKILL_A, {"text": "hi"}, "default")
+
+    def test_predecessor_key_is_read_without_a_context_skill_id(self):
+        self.bus.emit(Message("gui.value.set", {"__from": SKILL_A, "text": "hi"}, _ctx()))
+        self.adapter.on_session_update.assert_called_once_with(SKILL_A, {"text": "hi"}, "default")
+
+    def test_message_without_any_namespace_is_ignored_with_a_diagnostic(self):
+        messages = [Message("gui.value.set", {"text": "hi"}, _ctx()),
+                    Message("gui.page.show", {"page_names": ["SYSTEM_text"], "persist": True}, _ctx()),
+                    Message("gui.clear.namespace", {}, _ctx())]
+        with mock.patch("ovos_gui.namespace.LOG") as log:
+            for message in messages:
+                self.bus.emit(message)
+        self.assertEqual(log.error.call_count, 3)
+        for call in log.error.call_args_list:
+            self.assertIn("skill_id", call.args[0])
+        self.adapter.on_session_update.assert_not_called()
+        self.adapter.dispatch_template.assert_not_called()
+        self.assertEqual(self.stack(), [])
+
+    def test_empty_skill_id_counts_as_absent(self):
+        ctx = _ctx()
+        ctx["skill_id"] = ""
+        with mock.patch("ovos_gui.namespace.LOG") as log:
+            self.bus.emit(Message("gui.value.set", {"__from": SKILL_A, "text": "hi"}, ctx))
+        log.error.assert_not_called()
+        self.adapter.on_session_update.assert_called_once_with(SKILL_A, {"text": "hi"}, "default")
+
+
+class TestPersistField(GUI1ServiceCase):
+    """GUI-1 4.2: persist is a plain page.show field; __idle is read for one cycle."""
+
+    def persistent(self, skill_id=SKILL_A):
+        return self.manager.get_session("default").loaded_namespaces[skill_id].persistent
+
+    def test_persist_true_keeps_the_namespace(self):
+        self.show(SKILL_A, ["SYSTEM_text"], persist=True)
+        self.assertTrue(self.persistent())
+
+    def test_persist_seconds_schedules_removal(self):
+        self.show(SKILL_A, ["SYSTEM_text"], persist=7)
+        self.assertFalse(self.persistent())
+        self.assertEqual(self.manager.get_session("default").loaded_namespaces[SKILL_A].duration, 7)
+
+    def test_predecessor_idle_is_read_when_persist_is_absent(self):
+        self.bus.emit(Message("gui.page.show", {"page_names": ["SYSTEM_text"], "__idle": True},
+                              _ctx(skill_id=SKILL_A)))
+        self.assertTrue(self.persistent())
+
+    def test_persist_wins_over_predecessor_idle(self):
+        self.bus.emit(Message("gui.page.show", {"page_names": ["SYSTEM_text"], "__idle": True, "persist": 5},
+                              _ctx(skill_id=SKILL_A)))
+        self.assertFalse(self.persistent())
+
+    def test_omitted_persist_takes_the_default(self):
+        self.show(SKILL_A, ["SYSTEM_text"])
+        ns = self.manager.get_session("default").loaded_namespaces[SKILL_A]
+        self.assertFalse(ns.persistent)
+        self.assertEqual(ns.duration, 30)

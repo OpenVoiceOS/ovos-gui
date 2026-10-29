@@ -105,7 +105,7 @@ value = self.gui.get("key", default)
 ```
 
 - Assigning a `dict` value wraps it in `_GUIDict`, which propagates mutations (nested key changes) back as sync events automatically.
-- Reserved keys `__from` and `__idle` must not be used by skills; they are stripped before delivery to adapters.
+- GUI-1 reserves no data keys. The producing namespace is the `skill_id` of the Message context; a predecessor `__from` in data is read for one release cycle and never kept as session data.
 - **Session data is not cleared between template calls.** Values accumulate until `release()` is called.
 
 ### 4.3 Template Methods
@@ -217,30 +217,27 @@ Skills may optionally guard display calls with `self.gui.connected`.
 
 ### 5.2 Key message payloads
 
-**`gui.value.set`**
+**`gui.value.set`** (context `{"skill_id": "skill.id", "session": {...}}`)
 ```json
 {
-  "__from": "skill.id",
   "key1": "value1",
   "key2": 42
 }
 ```
 
-**`gui.page.show`** (template path — triggers adapter dispatch)
+**`gui.page.show`** (template path — triggers adapter dispatch; context `{"skill_id": "weather.openvoiceos", ...}`)
 ```json
 {
-  "__from": "weather.openvoiceos",
   "page_names": ["SYSTEM_weather"],
-  "__idle": 30
+  "persist": 30
 }
 ```
 
-**`gui.page.show`** (legacy path — non-`SYSTEM_*` name)
+**`gui.page.show`** (legacy path — non-`SYSTEM_*` name; context `{"skill_id": "myskill.author", ...}`)
 ```json
 {
-  "__from": "myskill.author",
   "page_names": ["MyPage.qml"],
-  "__idle": true
+  "persist": true
 }
 ```
 
@@ -326,7 +323,7 @@ with namespace_lock:
 
 ### 6.4 Session data forwarding
 
-Every `gui.value.set` message calls `adapter.on_session_update(skill_id, filtered_data, session_id)` on all adapters after updating the internal namespace data. `__from` and `__idle` reserved keys are stripped before delivery.
+Every `gui.value.set` message calls `adapter.on_session_update(skill_id, filtered_data, session_id)` on all adapters after updating the internal namespace data. The predecessor `__from` and `__idle` keys, when a pre-GUI-1 producer still sends them, are not kept as session data; every other key is content.
 
 ### 6.5 Lifecycle hook invocation
 
@@ -342,9 +339,9 @@ broadcast them to all clients regardless of session.
 
 ### 6.6 Namespace persistence
 
-The `__idle` field in `gui.page.show` controls how long the namespace stays visible:
+The `persist` field in `gui.page.show` controls how long the namespace stays visible (a predecessor `__idle` is read when `persist` is absent):
 
-| `__idle` value | Behaviour |
+| `persist` value | Behaviour |
 |---|---|
 | `true` | Persistent — stays until `gui.clear.namespace` |
 | `30` (int) | Visible for 30 seconds, then auto-removed |

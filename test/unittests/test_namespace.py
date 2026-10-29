@@ -36,13 +36,14 @@ class TestNamespaceFunctions(TestCase):
         invalid1 = Message("gui.page.show", data={"__from": "skill_id", "__idle": 30})
         self.assertFalse(_validate_page_message(invalid1))
 
-        # Invalid: missing __from
-        invalid2 = Message("gui.page.show", data={"page_names": ["SYSTEM_weather"], "__idle": 30})
-        self.assertFalse(_validate_page_message(invalid2))
+        # The namespace is not a data key (GUI-1 4.1): the handler reads it from
+        # the context, so its absence from data is not a validation error
+        no_sender = Message("gui.page.show", data={"page_names": ["SYSTEM_weather"], "__idle": 30})
+        self.assertTrue(_validate_page_message(no_sender))
 
-        # Missing __idle is NOT a validation error (only page_names and __from)
-        invalid3 = Message("gui.page.show", data={"page_names": ["SYSTEM_weather"], "__from": "skill_id"})
-        self.assertTrue(_validate_page_message(invalid3))
+        # Missing persistence is NOT a validation error (only page_names)
+        no_idle = Message("gui.page.show", data={"page_names": ["SYSTEM_weather"], "__from": "skill_id"})
+        self.assertTrue(_validate_page_message(no_idle))
 
 
 class TestNamespace(TestCase):
@@ -203,7 +204,7 @@ class TestNamespaceManager(TestCase):
         self.namespace_manager.handle_set_value(message)
 
         self.assertEqual(ns.data["key"], "value")
-        # adapter notified with (skill_id, filtered_data, session_id) -- no __from
+        # adapter notified with (skill_id, content_data, session_id); the predecessor __from is not content
         mock_adapter.on_session_update.assert_called_once_with(
             "test", {"key": "value"}, "default")
 

@@ -1,8 +1,9 @@
 """OVOS-GUI-1 vocabulary the GUI service enforces.
 
 Template catalogue (§3.4), legacy frame-name aliases for producers that
-predate the rename, active-template selection (§4.2) and the status-event
-topic table (§5.3).
+predate the rename, active-template selection (§4.2), the producing
+namespace and persistence of a producer Message (§4.1, §4.2) and the
+status-event topic table (§5.3).
 """
 from typing import Dict, List, Optional, Tuple
 
@@ -109,6 +110,43 @@ def active_template(page_names: List[str], index: Optional[int]) -> str:
     return page_names[active_index(page_names, index)]
 
 
-def strip_reserved(data: dict) -> dict:
-    """Content keys only: every ``__``-prefixed key is protocol metadata (§4.1)."""
-    return {k: v for k, v in data.items() if not str(k).startswith("__")}
+#: ``gui.page.show`` field that says how long the namespace stays (§4.2, §4.3).
+PERSIST_KEY = "persist"
+
+#: Keys a predecessor producer (ovos-bus-client <= 2.11) puts in ``data``.
+#: Read for one release cycle (appendix/divergences 5.7), never kept as
+#: session data. GUI-1 reserves no data key: any other ``__`` key is content.
+PREDECESSOR_SENDER_KEY = "__from"
+PREDECESSOR_PERSIST_KEY = "__idle"
+PREDECESSOR_KEYS = frozenset({PREDECESSOR_SENDER_KEY, PREDECESSOR_PERSIST_KEY})
+
+
+def producing_namespace(message) -> Optional[str]:
+    """The namespace of a producer Message: the ``skill_id`` of its context (§4.1).
+
+    For one release cycle a predecessor producer names it in
+    ``data['__from']`` instead. ``None`` when neither names it; the caller
+    ignores the Message with a diagnostic.
+    """
+    skill_id = (message.context or {}).get("skill_id")
+    if isinstance(skill_id, str) and skill_id:
+        return skill_id
+    legacy = (message.data or {}).get(PREDECESSOR_SENDER_KEY)
+    if isinstance(legacy, str) and legacy:
+        return legacy
+    return None
+
+
+def persistence_of(data: dict):
+    """The ``persist`` value of a ``gui.page.show`` (§4.2); ``__idle`` for one cycle.
+
+    ``None`` means omitted either way, and takes the default of §4.3.
+    """
+    if PERSIST_KEY in data:
+        return data[PERSIST_KEY]
+    return data.get(PREDECESSOR_PERSIST_KEY)
+
+
+def content_data(data: dict) -> dict:
+    """Session data of a ``gui.value.set``: everything but the predecessor keys."""
+    return {k: v for k, v in data.items() if k not in PREDECESSOR_KEYS}

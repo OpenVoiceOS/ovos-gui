@@ -29,7 +29,7 @@ def handle_show_weather(self, skill_id: str, data: dict, session_id: str = "defa
 ```
 
 - `skill_id` — the namespace that requested the display.
-- `data` — the full session-data dict for that namespace at call time (reserved keys `__from`/`__idle` already stripped).
+- `data` — the full session-data dict for that namespace at call time (content only; GUI-1 reserves no data keys).
 - `session_id` — the target session; deliver only to clients on that session.
 
 Override only the handlers you support; all default to no-ops. The full mapping

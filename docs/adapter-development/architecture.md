@@ -23,7 +23,7 @@ ovos-gui / NamespaceManager
   adapters via `OVOSGUIAdapterFactory.create_all(bus, config)`. Zero adapters is
   a valid headless state (no-op dispatch), never an error.
 - **`NamespaceManager`** (`ovos_gui/namespace.py`) — owns the active-namespace
-  stack per `session_id`, parses persistence (`__idle`), schedules timed
+  stack per `session_id`, parses persistence (`persist`), schedules timed
   removals, and invokes adapter handlers/hooks. Exposes the read-only state
   query API for adapters.
 - **`AbstractGUIPlugin`** (`ovos_plugin_manager.templates.gui`) — the adapter
