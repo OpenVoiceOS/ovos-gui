@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.6.0a1) (2026-10-29)
+
+[Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.4a1...1.6.0a1)
+
+**Merged pull requests:**
+
+- feat: land GUI adapter/template rework \(session\_id-only\); fix B1-B9 \(supersedes \#100\) [\#112](https://github.com/OpenVoiceOS/ovos-gui/pull/112) ([JarbasAl](https://github.com/JarbasAl))
+
 ## [1.5.4a1](https://github.com/OpenVoiceOS/ovos-gui/tree/1.5.4a1) (2026-10-22)
 
 [Full Changelog](https://github.com/OpenVoiceOS/ovos-gui/compare/1.5.3a1...1.5.4a1)
