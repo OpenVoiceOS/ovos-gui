@@ -1,0 +1,152 @@
+"""OVOS-GUI-1 vocabulary the GUI service enforces.
+
+Template catalogue (§3.4), legacy frame-name aliases for producers that
+predate the rename, active-template selection (§4.2), the producing
+namespace and persistence of a producer Message (§4.1, §4.2) and the
+status-event topic table (§5.3).
+"""
+from typing import Dict, List, Optional, Tuple
+
+from ovos_utils.log import LOG
+
+SYSTEM_PREFIX = "SYSTEM_"
+
+SPEC_TEMPLATES = frozenset({
+    "SYSTEM_idle", "SYSTEM_loading", "SYSTEM_status", "SYSTEM_error",
+    "SYSTEM_text", "SYSTEM_image", "SYSTEM_animated_image", "SYSTEM_list",
+    "SYSTEM_grid", "SYSTEM_table", "SYSTEM_html", "SYSTEM_url",
+    "SYSTEM_audio_player", "SYSTEM_video_player", "SYSTEM_media_player",
+    "SYSTEM_clock", "SYSTEM_timer", "SYSTEM_weather", "SYSTEM_map",
+    "SYSTEM_face",
+    # interactive companions, proposed amendment A
+    "SYSTEM_confirm", "SYSTEM_select", "SYSTEM_input",
+})
+
+#: Frame names ovos-bus-client GUIInterface still emits (2.11.x).
+LEGACY_TO_SPEC: Dict[str, str] = {
+    "SYSTEM_TextFrame": "SYSTEM_text",
+    "SYSTEM_ImageFrame": "SYSTEM_image",
+    "SYSTEM_AnimatedImageFrame": "SYSTEM_animated_image",
+    "SYSTEM_HtmlFrame": "SYSTEM_html",
+    "SYSTEM_UrlFrame": "SYSTEM_url",
+    "SYSTEM_Status": "SYSTEM_status",
+    "SYSTEM_Loading": "SYSTEM_loading",
+    "SYSTEM_Face": "SYSTEM_face",
+}
+
+#: §5.3: every GUI service MUST deliver these as status events.
+STATUS_TOPICS: Tuple[str, ...] = (
+    "ovos.listener.wakeword",
+    "ovos.listener.record.started",
+    "ovos.listener.record.ended",
+    "ovos.stt.failed",
+    "ovos.utterance.handle",
+    "ovos.intent.handler.start",
+    "ovos.intent.handler.complete",
+    "ovos.intent.handler.error",
+    "ovos.intent.unmatched",
+    "ovos.utterance.handled",
+    "ovos.utterance.speak",
+    "ovos.audio.output.visemes",
+    "ovos.audio.output.started",
+    "ovos.audio.output.ended",
+    "ovos.listener.sleep",
+    "ovos.listener.awoken",
+)
+
+#: §6.9.1: the service keeps the last message per topic and forwards it.
+AMBIENT_TOPICS: Tuple[str, ...] = (
+    "gui.ambient.weather",
+    "gui.ambient.notifications",
+)
+
+
+def is_template_intent(page_name) -> bool:
+    """True when ``page_name`` carries the reserved ``SYSTEM_`` prefix (§3.2)."""
+    return isinstance(page_name, str) and page_name.startswith(SYSTEM_PREFIX)
+
+
+def normalize_template(page_name: str, skill_id: str = "") -> str:
+    """Map a legacy frame name to its spec name; log every alias used."""
+    spec_name = LEGACY_TO_SPEC.get(page_name)
+    if spec_name is None:
+        return page_name
+    LOG.info(f"GUI-1 alias: '{skill_id}' sent legacy page name "
+             f"'{page_name}', dispatching as '{spec_name}'")
+    return spec_name
+
+
+def report_unknown_templates(page_names: List[str], skill_id: str) -> None:
+    """§3.2 diagnostic for ``SYSTEM_*`` names outside the catalogue."""
+    for name in page_names:
+        if is_template_intent(name) and name not in SPEC_TEMPLATES:
+            LOG.warning(f"GUI-1 §3.2: '{skill_id}' requested unknown template "
+                        f"'{name}'; no conformant adapter will render it")
+
+
+def is_template_show(page_names: List[str]) -> bool:
+    """4.2: a show is a template intent when its FIRST entry is a ``SYSTEM_*`` name."""
+    return bool(page_names) and is_template_intent(page_names[0])
+
+
+def report_mixed_page_names(page_names: List[str], skill_id: str) -> None:
+    """One diagnostic for a show that mixes ``SYSTEM_*`` and other page names."""
+    kinds = {is_template_intent(name) for name in page_names}
+    if len(kinds) > 1:
+        path = "template" if is_template_show(page_names) else "legacy page"
+        LOG.warning(f"GUI-1 4.2: '{skill_id}' sent mixed page_names {page_names}; "
+                    f"the first entry decides, so the active entry takes the {path} path")
+
+
+def active_index(page_names: List[str], index: Optional[int]) -> int:
+    """``index`` clamped to ``page_names``; anything not a non-negative int is 0 (4.2)."""
+    if not isinstance(index, int) or isinstance(index, bool) or index < 0:
+        return 0
+    return min(index, len(page_names) - 1)
+
+
+def active_template(page_names: List[str], index: Optional[int]) -> str:
+    """The entry of ``page_names`` at ``index``, clamped to the list (4.2)."""
+    return page_names[active_index(page_names, index)]
+
+
+#: ``gui.page.show`` field that says how long the namespace stays (§4.2, §4.3).
+PERSIST_KEY = "persist"
+
+#: Keys a predecessor producer (ovos-bus-client <= 2.11) puts in ``data``.
+#: Read for one release cycle (appendix/divergences 5.7), never kept as
+#: session data. GUI-1 reserves no data key: any other ``__`` key is content.
+PREDECESSOR_SENDER_KEY = "__from"
+PREDECESSOR_PERSIST_KEY = "__idle"
+PREDECESSOR_KEYS = frozenset({PREDECESSOR_SENDER_KEY, PREDECESSOR_PERSIST_KEY})
+
+
+def producing_namespace(message) -> Optional[str]:
+    """The namespace of a producer Message: the ``skill_id`` of its context (§4.1).
+
+    For one release cycle a predecessor producer names it in
+    ``data['__from']`` instead. ``None`` when neither names it; the caller
+    ignores the Message with a diagnostic.
+    """
+    skill_id = (message.context or {}).get("skill_id")
+    if isinstance(skill_id, str) and skill_id:
+        return skill_id
+    legacy = (message.data or {}).get(PREDECESSOR_SENDER_KEY)
+    if isinstance(legacy, str) and legacy:
+        return legacy
+    return None
+
+
+def persistence_of(data: dict):
+    """The ``persist`` value of a ``gui.page.show`` (§4.2); ``__idle`` for one cycle.
+
+    ``None`` means omitted either way, and takes the default of §4.3.
+    """
+    if PERSIST_KEY in data:
+        return data[PERSIST_KEY]
+    return data.get(PREDECESSOR_PERSIST_KEY)
+
+
+def content_data(data: dict) -> dict:
+    """Session data of a ``gui.value.set``: everything but the predecessor keys."""
+    return {k: v for k, v in data.items() if k not in PREDECESSOR_KEYS}
