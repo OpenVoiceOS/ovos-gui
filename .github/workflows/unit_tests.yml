@@ -6,7 +6,6 @@ on:
     paths-ignore:
       - 'ovos_gui/version.py'
       - 'examples/**'
-      - '.github/**'
       - '.gitignore'
       - 'LICENSE'
       - 'CHANGELOG.md'
@@ -20,7 +19,6 @@ on:
       - 'ovos_gui/version.py'
       - 'requirements/**'
       - 'examples/**'
-      - '.github/**'
       - '.gitignore'
       - 'LICENSE'
       - 'CHANGELOG.md'
@@ -37,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
       - name: Set up python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
